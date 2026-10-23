@@ -1,0 +1,55 @@
+# OS / IDE
+.DS_Store
+.idea/
+*.iml
+.vscode/
+*.swp
+*~
+
+# Java / Gradle / Maven
+target/
+build/
+.gradle/
+out/
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+replay_pid*
+
+# Local env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+**/secrets/
+.credentials.local
+
+# Local Temporal / data
+.tmp/
+data/
+*.db
+*.sqlite
+
+# LLM / models (local weights)
+models/
+*.gguf
+ollama/
+
+# Experiments — keep schemas; ignore raw bulky outputs by default
+experiment/results/raw/
+experiment/results/**/*.parquet
+analysis/output/
+*.log
+
+# Python analysis venv (if used later)
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Node (if any tooling)
+node_modules/
