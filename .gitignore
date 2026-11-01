@@ -1,5 +1,6 @@
 # OS / IDE
 .DS_Store
+Thumbs.db
 .idea/
 *.iml
 .vscode/
@@ -11,8 +12,10 @@ target/
 build/
 .gradle/
 out/
+bin/
 *.class
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.ear
 hs_err_pid*
@@ -28,28 +31,34 @@ credentials*.json
 **/secrets/
 .credentials.local
 
-# Local Temporal / data
+# Local Temporal / data / Docker named-volume dumps
 .tmp/
 data/
 *.db
 *.sqlite
+infra/**/pgdata/
+**/backups/*.sql
+**/backups/*.tgz
 
 # LLM / models (local weights)
 models/
 *.gguf
 ollama/
 
-# Experiments — keep schemas; ignore raw bulky outputs by default
+# Experiments — keep schemas; ignore raw bulky outputs
 experiment/results/raw/
 experiment/results/**/*.parquet
 analysis/output/
 *.log
 
-# Python analysis venv (if used later)
+# Python
 .venv/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
 
-# Node (if any tooling)
+# Node
 node_modules/
+
+# Academic full-text PDFs (keep bibliographic notes only; never commit papers)
+*.pdf

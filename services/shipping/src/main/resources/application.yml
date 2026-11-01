@@ -1,0 +1,20 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: shipping
+  datasource:
+    url: jdbc:postgresql://localhost:5433/business?currentSchema=shipping
+    username: thesis
+    password: thesis
+    driver-class-name: org.postgresql.Driver
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

@@ -33,5 +33,8 @@ Client / harness
 
 ## Related
 
-- Vault: Scope and Non-Goals, Research Questions, Experimental Protocol
-- Coordination: `coordination/DECISION_LOG.md` (D-009)
+- GitHub: https://github.com/oskargawr/agentic-microservices-orchestration
+- Protocol: [`docs/protocol/`](../protocol/)
+- Coordination: [`coordination/DECISION_LOG.md`](../../coordination/DECISION_LOG.md) (D-009)
+- Local Obsidian vault (not in Git): Scope and Non-Goals, Research Questions, Experimental Protocol
+

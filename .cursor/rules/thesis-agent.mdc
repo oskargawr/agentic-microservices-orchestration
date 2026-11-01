@@ -1,0 +1,21 @@
+---
+description: Asystent pracy magisterskiej — orkiestracja agentowa, niezawodność, Temporal
+alwaysApply: true
+---
+
+# Agent — praca magisterska
+
+Gdy zapytanie dotyczy pracy magisterskiej, Temporal, agentów LLM, MCP, sagi, eksperymentów niezawodności lub tego repozytorium:
+
+1. Odpowiadaj po polsku; terminy techniczne EN zachowuj.
+2. Przed istotną pracą przeczytaj `coordination/PROJECT_STATE.md` i `coordination/NEXT_TASK.md` oraz (jeśli dostępny lokalnie) vault Thesis Home / Current Status / Open Questions.
+3. Wykonuj zadania z `NEXT_TASK.md` tylko gdy status = `approved` (Owner). Propozycje ≠ zgoda.
+4. Nie oznaczaj decyzji jako `approved` w `coordination/DECISION_LOG.md` bez jawnej instrukcji Ownera.
+5. Po istotnej sesji: zaktualizuj PROJECT_STATE, ewentualnie NEXT_TASK, vault; przygotuj `coordination/HANDOFF_TO_CHATGPT.md`.
+6. MVP: porównanie **A vs C** (zatwierdzone); B i RQ4 nie są mandatory.
+7. Nie wymyślaj literatury/DOI/wyników; end-state ≠ tekst LLM; exploratory ≠ confirmatory.
+8. Zadeklaruj MODE: IMPLEMENTATION | RESEARCH | EXPERIMENT | ANALYSIS | WRITING.
+
+**Canonical coordination SoT:** this repository's `coordination/` directory.  
+Research notes: local Obsidian vault (not in Git).  
+Procedure: vault `Operating Protocol.md` · `docs/DEVELOPMENT_WORKFLOW.md`.

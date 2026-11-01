@@ -1,0 +1,56 @@
+# Local infra for TH-100 — Postgres (business schemas) + Temporal Server.
+# Host Postgres published on 5433 to avoid conflict with other local :5432 instances.
+name: thesis-infra
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: thesis-postgres
+    environment:
+      POSTGRES_USER: thesis
+      POSTGRES_PASSWORD: thesis
+      POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - thesis-pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thesis -d postgres"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  temporal:
+    image: temporalio/auto-setup:1.25.2
+    container_name: thesis-temporal
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: thesis
+      POSTGRES_PWD: thesis
+      POSTGRES_SEEDS: postgres
+      DBNAME: temporal
+      VISIBILITY_DBNAME: temporal_visibility
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+    ports:
+      - "7233:7233"
+    volumes:
+      - ./temporal/dynamicconfig:/etc/temporal/config/dynamicconfig:ro
+
+  temporal-ui:
+    image: temporalio/ui:2.31.2
+    container_name: thesis-temporal-ui
+    depends_on:
+      - temporal
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8088:8080"
+
+volumes:
+  thesis-pgdata:

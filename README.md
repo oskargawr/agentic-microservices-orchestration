@@ -1,51 +1,141 @@
-# Agentic Orchestration Thesis
+# Agentic Microservices Orchestration
 
-**PL:** Analiza niezawodności agentowej orkiestracji procesów rozproszonych w architekturze mikroserwisowej  
-**EN:** Analysis of the Reliability of Agent-Based Orchestration of Distributed Processes in a Microservices Architecture
+Experimental evaluation of deterministic and LLM-assisted orchestration for reliable distributed processes in microservice architectures.
 
-## MVP scope (Owner-approved — D-009)
+**PL:** Analiza niezawodności agentowej orkiestracji procesów rozproszonych w architekturze mikroserwisowej.
 
 | | |
 | --- | --- |
-| **Mandatory** | **A** — deterministic Temporal + saga compensation · **C** — Temporal + bounded LLM decisions |
-| **Shared system** | Three local Spring Boot services: inventory, payment (simulation), shipping |
-| **Optional (not MVP)** | Variant B (no Temporal), MCP-as-transport, RQ4 adaptivity |
+| **Repository** | https://github.com/oskargawr/agentic-microservices-orchestration |
+| **Local path** | `agentic-orchestration-thesis/` |
+| **MVP (approved)** | Variant **A** vs Variant **C** |
+| **Status** | Infra bootstrap (TH-100) complete; domain APIs and workflows not yet implemented |
 
-Research coordination (Owner / ChatGPT / Cursor): sibling folder `../coordination/`.  
-Knowledge base: Obsidian vault under `../politechnika/Praca magisterska - Orkiestracja agentowa/`.  
-PM board: local Taiga — see `../infra/taiga-docker/README-LOCAL.md`.
+## Research objective
 
-## Repository layout
+Compare how two orchestration styles behave under controlled faults when driving the same business microservices:
 
+| Variant | Orchestration | Role in MVP |
+| --- | --- | --- |
+| **A** | Deterministic Temporal workflow with Saga-style compensation | Mandatory baseline |
+| **C** | Temporal workflow with **bounded** LLM-assisted decisions | Mandatory contrast |
+| **B** | (optional) | Out of MVP unless Owner expands |
+| **RQ4** | (optional) | Out of MVP unless Owner expands |
+
+End-state success is verified by an independent oracle against business invariants — **not** by free-form LLM text.
+
+## Current implementation status
+
+| Area | Status |
+| --- | --- |
+| Gradle multi-module monorepo (JDK 21) | Done |
+| Postgres + Temporal local infra (Compose) | Done |
+| Schema-per-service (`inventory`, `payment`, `shipping`) | Done |
+| Spring Boot service stubs + Actuator health | Done |
+| Business invariants & oracle spec (TH-011) | Spec done |
+| Experimental protocol v0 (TH-012) | Spec done |
+| Domain APIs / state model (TH-101+) | Planned |
+| Temporal workflows (A / C) | Planned |
+| Fault injection + experiment runner | Planned |
+| Confirmatory experiment runs | **Not started** |
+
+Do not treat this repository as containing completed experimental results.
+
+## Technology stack
+
+- **Java 21** · Gradle (Kotlin DSL) · Spring Boot (service stubs)
+- **PostgreSQL 16** (business DB on host port **5433**)
+- **Temporal Server** + Temporal UI (gRPC `:7233`, UI `:8088`)
+- Docker Compose for local infrastructure
+- GitHub Actions: `./gradlew build` on PRs and `main`
+
+## Repository structure
+
+```text
+services/{inventory,payment,shipping}/   Spring Boot stubs
+orchestration/platform/                  Future Temporal workers (no workflows yet)
+infra/                                   Compose: Postgres + Temporal
+docs/architecture/                       Architecture notes
+docs/protocol/                           Invariants, oracle, protocol-v0
+docs/DEVELOPMENT_WORKFLOW.md             Branching & Conventional Commits
+coordination/                            Owner / ChatGPT / Cursor SoT
+experiment/                              Runner / oracle / faults (later)
+analysis/                                Analysis notebooks/scripts (later)
+AGENTS.md                                Agent role instructions
 ```
-apps/                 # future runnable entrypoints / compose overlays
-services/             # inventory, payment, shipping (not implemented yet)
-orchestration/
-  variant-a/          # Temporal workflows — deterministic
-  variant-c/          # Temporal + bounded LLM activities
-experiment/
-  runner/             # experiment runner
-  faults/             # fault profiles
-  oracle/             # independent business-state checks
-analysis/             # scripts / notebooks for RQ metrics
-docs/
-  architecture/       # overview placeholders
-  adr/                # architecture decision records
-  protocol/           # experiment protocol drafts (links to vault)
-config/               # shared non-secret config examples
-scripts/              # local helper scripts
+
+Research literature notes remain in a **local Obsidian vault** (not in this Git repository).
+
+## Prerequisites
+
+- JDK **21** (`JAVA_HOME` must point at a real JDK, not the macOS `/usr/bin/java` stub)
+- Docker + Docker Compose
+- Git
+
+```bash
+export JAVA_HOME="$(/usr/libexec/java_home -v 21)"
+# or e.g. .../ms-21.0.7/Contents/Home
 ```
 
-## Status
+Copy env placeholders locally (never commit a filled `.env`):
 
-**Bootstrap only.** No business services, Temporal workflows, LLM integration, or experiments are implemented in this commit.
+```bash
+cp .env.example .env
+```
 
-Next research/engineering task: **TH-011** — freeze business invariants and independent end-state oracle (`../coordination/NEXT_TASK.md`).
+## Start local infrastructure
 
-## Local development (planned)
+```bash
+cd infra
+docker compose up -d
+cd ..
+./scripts/verify-infra.sh
+```
 
-Stack (provisional until locked in ADRs): Java, Spring Boot, Temporal, local LLM (e.g. Ollama). Exact versions and module boundaries will be added with TH-100+.
+| Endpoint | URL |
+| --- | --- |
+| Postgres | `localhost:5433` (user/password `thesis` — local-dev only) |
+| Temporal gRPC | `localhost:7233` |
+| Temporal UI | http://localhost:8088 |
+
+Details: [`infra/README.md`](infra/README.md).
+
+## Build and run services
+
+```bash
+./gradlew build
+```
+
+Optional stub smoke (infra must be up):
+
+```bash
+./gradlew :services:inventory:bootRun
+# curl http://localhost:8081/actuator/health
+```
+
+| Stub | Port |
+| --- | --- |
+| Inventory | `8081` |
+| Payment | `8082` |
+| Shipping | `8083` |
+
+Basic CI does **not** require Temporal or Postgres — only `./gradlew build`.
+
+## Documentation
+
+- Architecture: [`docs/architecture/OVERVIEW.md`](docs/architecture/OVERVIEW.md)
+- Business invariants & oracle: [`docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md`](docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md)
+- Experimental protocol v0: [`docs/protocol/EXPERIMENTAL_PROTOCOL_V0.md`](docs/protocol/EXPERIMENTAL_PROTOCOL_V0.md)
+- Git workflow: [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md)
+- Coordination: [`coordination/README.md`](coordination/README.md)
+
+## Research limitations and scope
+
+- MVP is **A vs C** only; B and RQ4 are optional.
+- Protocol timings (`T_observe`, `T_run_max`) are provisional until a pilot.
+- LLM model choice (OWN-2) and confirmatory sample size (OWN-1) remain open Owner decisions.
+- No claim that experiments have been conducted or that variant C is superior.
 
 ## License / academic use
 
-Personal master's thesis project. Do not commit secrets, API keys, or large model weights.
+Thesis engineering artefact. Do not commit copyrighted full-text papers or real secrets.

@@ -1,0 +1,5 @@
+# Minimal dynamic config for local Temporal auto-setup (SQL).
+# Empty system defaults are fine for TH-100 smoke verification.
+system.forceSearchAttributesCacheRefreshOnRead:
+  - value: true
+    constraints: {}

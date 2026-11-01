@@ -1,0 +1,22 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: inventory
+  datasource:
+    url: jdbc:postgresql://localhost:5433/business?currentSchema=inventory
+    username: thesis
+    password: thesis
+    driver-class-name: org.postgresql.Driver
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+# TH-100: connectivity only — no domain schema migrations yet
