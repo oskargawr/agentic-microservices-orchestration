@@ -84,8 +84,13 @@ OpenAPI: `npx @redocly/cli@1.25.0 lint --config docs/contracts/redocly.yaml` (un
 
 ## Commits / branch
 
-See `git log feature/th-102-inventory-service` after commits.  
-`main` already contains TH-101/101.1 (pushed).
+| | |
+| --- | --- |
+| **Branch** | `feature/th-102-inventory-service` |
+| **HEAD** | `19bc5ce` |
+| **main** | contracts TH-101/101.1 already pushed |
+
+
 
 ## Recommended next
 
