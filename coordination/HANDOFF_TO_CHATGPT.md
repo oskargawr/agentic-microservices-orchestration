@@ -1,90 +1,64 @@
 # HANDOFF_TO_CHATGPT
 
 **Date:** 2026-11-01  
-**Task:** TH-104 — Shipping service (+ TH-103 acceptance verification)  
+**Task:** TH-200 — Variant A Temporal happy path (+ TH-104 closure)  
 **Prepared by:** Cursor Agent  
 **MODE:** IMPLEMENTATION  
-**Branch:** `feature/th-104-shipping-service`
+**Branch:** `feature/th-200-variant-a-happy-path`
 
 ---
 
-## TH-103 closure
+## TH-104 closure
 
-Merged to `main` via PR #2 (`5bdf809`). Owner verification points 1–5 **passed** (see `PROJECT_STATE.md`). No TH-103 code expansion.
+PR #3 **merged** to `main` (`45849ab`). CI run `41324579450`: Postgres healthy; shipping/payment/inventory HikariPool + `:test` tasks succeeded (not skipped); local re-verify 7/7 + 13/13.
 
 ---
 
-## TH-104 — Schema / migrations
+## TH-200 — Architecture
 
-Flyway `V1__shipping_schema.sql` (schema `shipping`):
+Module `:orchestration:variant-a`:
 
-- `shipments` — `shipment_id`, unique `order_id`, `state` ∈ {NONE, ARRANGED, CANCELLED}
-- `idempotency_records`
-- `operation_log` — `operation`, `shipment_id`, `order_id`, `idempotency_key`, `detail`, `created_at`
+- `OrderFulfillmentWorkflow` / `OrderFulfillmentWorkflowImpl` — deterministic steps only
+- `OrderFulfillmentActivities` / `HttpOrderFulfillmentActivities` — HTTP to inventory/payment/shipping
+- Docs: `docs/architecture/VARIANT_A_HAPPY_PATH.md`
 
-**State note:** `NONE` is conceptual (no row until arrange creates `ARRANGED`).
+Sequence: **reserve → charge → arrange → consume** (C-101-1).
 
-## Endpoints / contract
+## Activity contracts / retries
 
-Per `openapi-shipping.yaml`, port **8083**:
-
-| Method | Path | Notes |
-| --- | --- | --- |
-| POST | `/api/v1/shipments/arrange` | Idempotency-Key required |
-| POST | `/api/v1/shipments/{id}/cancel` | Idempotency-Key required |
-| GET | `/api/v1/shipments/{id}` | Snapshot for oracle |
-
-Redocly lint: **valid**.
-
-## State transitions / concurrency
-
-See `docs/architecture/SHIPPING_CONCURRENCY.md`.
-
-- arrange: advisory lock on key + unique `order_id`
-- cancel: advisory lock + `FOR UPDATE` on shipment row
-- Mutation + idempotency + operation_log in one transaction
-
-## Idempotency
-
-Same key + same fingerprint → replay stored HTTP body; mismatch → `IDEMPOTENCY_KEY_CONFLICT`.
-
-## Operation log fields
-
-`id`, `operation`, `shipment_id`, `order_id`, `idempotency_key`, `detail` (JSON text, e.g. arrange state / cancel from→to), `created_at`.
+| | |
+| --- | --- |
+| Start-to-close | 10s |
+| Schedule-to-close | 60s |
+| Retry | 5 attempts, 200ms→2s backoff |
+| Non-retryable | `BUSINESS` (4xx / wrong state) |
 
 ## Tests
 
+| Test | Result |
+| --- | --- |
+| `OrderFulfillmentWorkflowOrderTest` | 1/1 — order reserve/charge/arrange/consume |
+| `OrderFulfillmentHappyPathIT` | 1/1 — Temporal test env + 3 bootJar processes + Postgres; GET snapshots CONSUMED/CAPTURED/ARRANGED; stock 99/0 |
+| Skipped | **0** (when Postgres up) |
+
 ```bash
-cd infra && docker compose up -d   # Postgres :5433
-./gradlew :services:shipping:test build
-# 7/7 shipping tests, 0 skipped (when Postgres reachable)
-# If Postgres down: @EnabledIf skips entire class
+./gradlew :orchestration:variant-a:test build
 ```
 
-Also re-ran payment: **13/13**, 0 skipped.
+## Final business states (IT)
 
-## Build / lint
+- reservation = `CONSUMED`
+- payment = `CAPTURED`
+- shipment = `ARRANGED`
+- Workflow result consistent with independent GETs
 
-- `./gradlew build` — SUCCESS  
-- `npx @redocly/cli lint docs/contracts/openapi-shipping.yaml --config docs/contracts/redocly.yaml` — valid
+## Unresolved
 
-## Acceptance checklist
+- Protocol says fixed amount without numeric value — tests use `Money.plnMinor(2599)` (documented assumption, not a new invariant).
 
-| Criterion | Status |
-| --- | --- |
-| Taiga: tests + compensation cancel | **Met** (integration) |
-| Real Postgres | **Met** |
-| Idempotency + concurrency | **Met** |
-| No Temporal/LLM/runner | **Met** |
+## Commits / PR
 
-## Unresolved design
+| **HEAD** | 951305b96ff5e9845bf40bea11abb15c8ef52f74 |
+| **PR** | https://github.com/oskargawr/agentic-microservices-orchestration/pull/4 (open) |
 
-- None requiring Owner approval. `NONE` without persisted row matches inventory-style conceptual initial state (documented).
-
-## Commits / next
-
-| **Branch** | `feature/th-104-shipping-service` |
-| **HEAD** | fdd727fcc6fbcfb4e555e9fb92545615154484e5 |
-| **PR / merge** | https://github.com/oskargawr/agentic-microservices-orchestration/pull/3 — open; merge when CI green (no force-push) |
-
-**Next proposed:** TH-200 Variant A happy path (or parallel lit. TH-021/022).
+**Next proposed:** TH-201 Saga compensations A.
