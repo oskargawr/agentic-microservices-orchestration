@@ -65,4 +65,4 @@ cd infra && docker compose up -d
 
 ## Commits / next
 
-HEAD recorded after push. **Next:** TH-104 Shipping (`proposed`).
+HEAD . **Next:** TH-104 Shipping (`proposed`).
