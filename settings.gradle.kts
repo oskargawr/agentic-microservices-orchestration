@@ -1,6 +1,7 @@
 rootProject.name = "agentic-orchestration-thesis"
 
 include(
+    "contracts",
     "services:inventory",
     "services:payment",
     "services:shipping",
