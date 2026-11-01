@@ -1,35 +1,35 @@
 # NEXT_TASK
 
-**Status:** `in_progress` — implementation complete; awaiting PR merge  
+**Status:** `approved` — Owner brief TH-200 after TH-104 closure  
 **Last updated:** 2026-11-01
 
 ## Task ID and title
 
-**TH-104** — Shipping service (arrange / cancel)
+**TH-200** — Variant A: Temporal happy path (reserve → charge → arrange → consume)
 
 ## Objective
 
-Implement Shipping with Postgres persistence and HTTP APIs per `openapi-shipping.yaml`: arrange, cancel, snapshot, idempotency, concurrency-safe cancellation.
+Deterministic Temporal workflow using shared service HTTP APIs; no LLM, no saga/faults, no runner.
 
 ## Acceptance criteria
 
-- Taiga: tests + compensation cancel
-- Owner brief: Flyway schema `shipping`, port 8083, real Postgres integration tests
+- Taiga: End-to-end COMPLETED (happy path)
+- Workflow + activity tests; independent oracle states CONSUMED / CAPTURED / ARRANGED
 
 ## Implementation status
 
-- Schema, HTTP, idempotency, concurrency docs, 7/7 Postgres tests green
-- OpenAPI lint green
-- PR #3 opened against `main` (merge pending CI)
+- Module `:orchestration:variant-a` implemented
+- Tests green locally (workflow + Postgres IT)
+- PR pending
 
 ## Precondition verified
 
-- TH-103 merged to `main` (PR #2, `5bdf809`); payment verification checks OK
+- TH-104 merged to `main` (PR #3, `45849ab`); CI Postgres + service tests verified
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-01 | proposed | Cursor |
-| 2026-11-01 | approved | Owner (TH-104 preparation brief) |
+| 2026-11-01 | proposed | Cursor (after TH-104) |
+| 2026-11-01 | approved | Owner (TH-200 preparation brief) |
 | 2026-11-01 | in_progress | Cursor |

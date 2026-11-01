@@ -6,4 +6,5 @@ include(
     "services:payment",
     "services:shipping",
     "orchestration:platform",
+    "orchestration:variant-a",
 )

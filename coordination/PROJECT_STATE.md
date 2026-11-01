@@ -1,7 +1,7 @@
 # PROJECT_STATE
 
 **Last updated:** 2026-11-01  
-**Updated by:** Cursor Agent (TH-104 Shipping implementation)
+**Updated by:** Cursor Agent (TH-200 Variant A happy path)
 
 ## Current thesis scope (MVP)
 
@@ -9,37 +9,37 @@
 | --- | --- |
 | **Mandatory** | A vs C (D-009) |
 | **Protocol** | `protocol-v0` + F3 via Payment fault header (test-gated) |
-| **Services** | Inventory **Done**; Payment **Done**; Shipping **implemented** (PR pending) |
+| **Services** | Inventory / Payment / Shipping **Done** (merged `main`) |
+| **Orchestration** | Variant A happy path **implemented** (PR pending) |
 | **OPTIONAL** | B, MCP, RQ4 |
 
 ## Phase / milestone
 
-- **Done:** … TH-102, TH-103 (merged `main` @ `5bdf809`)
-- **In progress:** TH-104 Shipping — branch `feature/th-104-shipping-service`
+- **Done:** TH-102, TH-103, **TH-104** (PR #3 → `main` @ `45849ab`)
+- **In progress:** TH-200 Variant A Temporal happy path
 - **Open:** OWN-1 *n*; OWN-2 model
 
 ## Engineering
 
 | | |
 | --- | --- |
-| **Branch** | `feature/th-104-shipping-service` |
-| **Base** | `main` @ `5bdf809` (TH-103 PR #2 merged) |
-| **Shipping tests** | 7/7 Postgres integration, 0 skipped |
-| **Payment re-verify** | 13/13 Postgres (TH-103 acceptance checks) |
-| **PR** | https://github.com/oskargawr/agentic-microservices-orchestration/pull/3 (open; merge pending) |
+| **Branch** | `feature/th-200-variant-a-happy-path` |
+| **Base** | `main` @ `45849ab` |
+| **Variant A tests** | workflow order 1/1; happy-path IT 1/1 (Postgres + bootJar processes), 0 skipped |
 
-## TH-103 acceptance verification (2026-11-01)
+## TH-104 CI closure evidence (PR #3 run `41324579450`)
 
-| # | Check | Result |
-| --- | --- | --- |
-| 1 | Repeated charge after F3 cannot duplicate capture | **Pass** — unique `order_id` + idempotency replay; concurrent charge test |
-| 2 | Refund only if persisted `CAPTURED` | **Pass** — `assertRefundAllowed` + `refundCapturedAndRefuseOtherwise` |
-| 3 | Op log: order + persisted vs observed | **Pass** — F3 detail has `persistedState`/`observedResponse` |
-| 4 | F3 independent of A/C | **Pass** — Payment HTTP header only; no orchestration coupling |
-| 5 | Fault injection off by default | **Pass** — `fault-injection-enabled: false`; test profile enables |
+| Check | Evidence |
+| --- | --- |
+| Postgres started | `postgres service is healthy` + PostgreSQL 16.15 logs |
+| Shipping tests ran | `:services:shipping:test` + HikariPool `[shipping]` (not `@EnabledIf` skip) |
+| Payment tests ran | `:services:payment:test` + HikariPool `[payment]` |
+| Build | `BUILD SUCCESSFUL` |
+| Local re-verify | shipping 7/7, payment 13/13, 0 skipped |
+| Merge | PR #3 **MERGED** (`45849ab`) |
 
 ## Next three actions
 
-1. Merge TH-104 PR into `main`
-2. Propose TH-200 Variant A (or lit. TH-021 / TH-022 in parallel)
-3. Update Taiga TH-102–104 Done if board reachable
+1. Merge TH-200 PR when CI green
+2. Propose TH-201 Saga compensations A
+3. Parallel lit. TH-021 / TH-022
