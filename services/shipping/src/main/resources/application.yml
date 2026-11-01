@@ -9,6 +9,12 @@ spring:
     username: thesis
     password: thesis
     driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    schemas: shipping
+    default-schema: shipping
+    create-schemas: true
+    locations: classpath:db/migration
 
 management:
   endpoints:

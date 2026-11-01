@@ -1,9 +1,7 @@
 # NEXT_TASK
 
-**Status:** `proposed` — awaiting Owner approval  
+**Status:** `in_progress` — implementation complete; awaiting PR merge  
 **Last updated:** 2026-11-01
-
-> **TH-103 completed.** Do not start TH-104 until Owner sets `approved`.
 
 ## Task ID and title
 
@@ -11,18 +9,27 @@
 
 ## Objective
 
-Implement Shipping service with Postgres persistence and HTTP APIs per `openapi-shipping.yaml`: arrange, cancel compensation, idempotency, snapshots — shared A/C surface.
+Implement Shipping with Postgres persistence and HTTP APIs per `openapi-shipping.yaml`: arrange, cancel, snapshot, idempotency, concurrency-safe cancellation.
 
-## Acceptance criteria (backlog)
+## Acceptance criteria
 
-- Tests + compensation cancel
+- Taiga: tests + compensation cancel
+- Owner brief: Flyway schema `shipping`, port 8083, real Postgres integration tests
 
-## Dependencies
+## Implementation status
 
-- TH-101, TH-103 (**done**)
+- Schema, HTTP, idempotency, concurrency docs, 7/7 Postgres tests green
+- OpenAPI lint green
+- PR #3 opened against `main` (merge pending CI)
+
+## Precondition verified
+
+- TH-103 merged to `main` (PR #2, `5bdf809`); payment verification checks OK
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-01 | proposed | Cursor (after TH-103) |
+| 2026-11-01 | proposed | Cursor |
+| 2026-11-01 | approved | Owner (TH-104 preparation brief) |
+| 2026-11-01 | in_progress | Cursor |
