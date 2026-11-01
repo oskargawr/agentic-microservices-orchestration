@@ -65,4 +65,7 @@ cd infra && docker compose up -d
 
 ## Commits / next
 
-HEAD . **Next:** TH-104 Shipping (`proposed`).
+| **Branch** | `feature/th-103-payment-service` |
+| **HEAD** | `b942231` |
+
+**Next:** TH-104 Shipping (`proposed`).
