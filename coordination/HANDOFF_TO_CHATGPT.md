@@ -1,71 +1,90 @@
 # HANDOFF_TO_CHATGPT
 
 **Date:** 2026-11-01  
-**Task:** TH-103 — Payment service  
+**Task:** TH-104 — Shipping service (+ TH-103 acceptance verification)  
 **Prepared by:** Cursor Agent  
 **MODE:** IMPLEMENTATION  
-**Branch:** `feature/th-103-payment-service`
+**Branch:** `feature/th-104-shipping-service`
 
 ---
 
-## Schema / migrations
+## TH-103 closure
 
-Flyway `V1__payment_schema.sql` (schema `payment`):
+Merged to `main` via PR #2 (`5bdf809`). Owner verification points 1–5 **passed** (see `PROJECT_STATE.md`). No TH-103 code expansion.
 
-- `payments` — oracle ground truth `state`; unique `order_id`
+---
+
+## TH-104 — Schema / migrations
+
+Flyway `V1__shipping_schema.sql` (schema `shipping`):
+
+- `shipments` — `shipment_id`, unique `order_id`, `state` ∈ {NONE, ARRANGED, CANCELLED}
 - `idempotency_records`
-- `operation_log` — includes F3 `persistedState` vs `observedResponse`
+- `operation_log` — `operation`, `shipment_id`, `order_id`, `idempotency_key`, `detail`, `created_at`
 
-## Endpoints
+**State note:** `NONE` is conceptual (no row until arrange creates `ARRANGED`).
 
-Per `openapi-payment.yaml`: charge, refund, resolve, GET snapshot. Port **8082**.
+## Endpoints / contract
 
-## State semantics
+Per `openapi-shipping.yaml`, port **8083**:
 
-As protocol: CAPTURED / FAILED / UNKNOWN / PENDING / REFUNDED; refund only CAPTURED; inconclusive resolve preserves UNKNOWN/PENDING.
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/api/v1/shipments/arrange` | Idempotency-Key required |
+| POST | `/api/v1/shipments/{id}/cancel` | Idempotency-Key required |
+| GET | `/api/v1/shipments/{id}` | Snapshot for oracle |
 
-## Idempotency / concurrency
+Redocly lint: **valid**.
 
-See `docs/architecture/PAYMENT_CONCURRENCY.md`. Advisory locks + unique order_id; tested concurrent charge/refund/resolve.
+## State transitions / concurrency
 
-## F3 mechanism (demonstrated)
+See `docs/architecture/SHIPPING_CONCURRENCY.md`.
 
-`thesis.payment.fault-injection-enabled=true` (profile `test`) + header `X-Thesis-Fault: F3_CAPTURE_LOST_RESPONSE`:
+- arrange: advisory lock on key + unique `order_id`
+- cancel: advisory lock + `FOR UPDATE` on shipment row
+- Mutation + idempotency + operation_log in one transaction
 
-1. Persist `CAPTURED`
-2. Charge HTTP returns `UNKNOWN`
-3. GET/oracle sees `CAPTURED`
-4. Resolve returns `CAPTURED`
-5. Log distinguishes observed vs persisted
+## Idempotency
 
-Not enabled by default in normal runtime.
+Same key + same fingerprint → replay stored HTTP body; mismatch → `IDEMPOTENCY_KEY_CONFLICT`.
+
+## Operation log fields
+
+`id`, `operation`, `shipment_id`, `order_id`, `idempotency_key`, `detail` (JSON text, e.g. arrange state / cancel from→to), `created_at`.
 
 ## Tests
 
 ```bash
-cd infra && docker compose up -d
-./gradlew :services:payment:test build
-# 13/13 payment tests, 0 skipped
+cd infra && docker compose up -d   # Postgres :5433
+./gradlew :services:shipping:test build
+# 7/7 shipping tests, 0 skipped (when Postgres reachable)
+# If Postgres down: @EnabledIf skips entire class
 ```
+
+Also re-ran payment: **13/13**, 0 skipped.
+
+## Build / lint
+
+- `./gradlew build` — SUCCESS  
+- `npx @redocly/cli lint docs/contracts/openapi-shipping.yaml --config docs/contracts/redocly.yaml` — valid
 
 ## Acceptance checklist
 
 | Criterion | Status |
 | --- | --- |
-| Taiga: Paid/Failed/UNKNOWN + query | **Met** (CAPTURED/FAILED/UNKNOWN + GET) |
-| F3 integration-tested | **Met** |
-| Idempotency + concurrency tested | **Met** |
+| Taiga: tests + compensation cancel | **Met** (integration) |
 | Real Postgres | **Met** |
-| No Shipping/Temporal/LLM | **Met** |
+| Idempotency + concurrency | **Met** |
+| No Temporal/LLM/runner | **Met** |
 
-## Limitations
+## Unresolved design
 
-- Fault header is experimental/test control (gated); not a public product API.
-- Default charge without fault injection = CAPTURED (deterministic).
+- None requiring Owner approval. `NONE` without persisted row matches inventory-style conceptual initial state (documented).
 
 ## Commits / next
 
-| **Branch** | `feature/th-103-payment-service` |
-| **HEAD** | `b942231` |
+| **Branch** | `feature/th-104-shipping-service` |
+| **HEAD** | *(set after commit)* |
+| **PR / merge** | Open PR → merge when CI green (do not force-push) |
 
-**Next:** TH-104 Shipping (`proposed`).
+**Next proposed:** TH-200 Variant A happy path (or parallel lit. TH-021/022).
