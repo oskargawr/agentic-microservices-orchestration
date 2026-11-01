@@ -58,7 +58,7 @@ Sequence: **reserve → charge → arrange → consume** (C-101-1).
 
 ## Commits / PR
 
-| **HEAD** | *(set after commit)* |
+| **HEAD** | 951305b96ff5e9845bf40bea11abb15c8ef52f74 |
 | **PR** | *(set after open)* |
 
 **Next proposed:** TH-201 Saga compensations A.
