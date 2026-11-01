@@ -91,8 +91,8 @@ No change to approved research MVP (A vs C).
 | | |
 | --- | --- |
 | **Branch** | `feature/th-101-domain-contracts` |
-| **HEAD** | `40cc40d` |
-| **Commits** | `664efae` feat(contracts) · `5d683fc` docs(contracts) · `40cc40d` docs(coordination) |
+| **HEAD** | `a8c2b88` |
+| **Commits** | `664efae` feat(contracts) · `5d683fc` docs(contracts) · `40cc40d`/`a8c2b88` docs(coordination) |
 
 **Do not push** until GitHub auth for `oskargawr` is verified (prior session blocker).
 
