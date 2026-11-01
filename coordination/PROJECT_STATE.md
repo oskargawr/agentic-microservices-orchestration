@@ -38,13 +38,13 @@
 
 ## In progress
 
-- GitHub publication / remote verification (this session)
+- **GitHub push blocked:** local `main` ready (`c2a67c6`); remote still empty until Owner re-auths as `oskargawr`
 
 ## Blockers
 
-1. Owner approve TH-101 (or TH-021 parallel lit.)
-2. OWN-1 / OWN-2 still open (not blocking TH-101)
-3. If push fails: authenticate `gh` / Git as account that can write `oskargawr/…`
+1. **Auth:** `gh auth login -h github.com -u oskargawr` then `git push -u origin main`
+2. Owner approve TH-101 (or TH-021 parallel lit.)
+3. OWN-1 / OWN-2 still open (not blocking TH-101)
 
 ## Next three actions
 

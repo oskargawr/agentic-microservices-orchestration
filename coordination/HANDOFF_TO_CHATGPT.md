@@ -76,6 +76,13 @@ See [`docs/DEVELOPMENT_WORKFLOW.md`](../docs/DEVELOPMENT_WORKFLOW.md).
 
 ---
 
+## Push status (verified)
+
+- Local HEAD: `c2a67c6` on `main`
+- `origin` = `https://github.com/oskargawr/agentic-microservices-orchestration.git`
+- Remote remains **empty** (size 0): push denied — active `gh` account `ogawryszewski-gd` lacks write; `oskargawr` token in keyring is **invalid**
+- Manual step required: `gh auth login -h github.com -u oskargawr` then `git push -u origin main`
+
 ## Claims requiring verification
 
 - Remote push and commit-hash match must be confirmed after `git push` / `gh` succeeds.
