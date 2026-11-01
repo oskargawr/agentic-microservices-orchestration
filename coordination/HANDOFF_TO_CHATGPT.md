@@ -68,7 +68,7 @@ cd console-ui && npm install && npm run dev
 
 ## Commits / PR
 
-| **HEAD** | *(after push)* |
+| **HEAD** | 46aca570f02bb302a53b447504fb95763b825eef |
 | **PR** | *(after open)* |
 
 **Next:** TH-201 Saga compensations A (not started).
