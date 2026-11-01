@@ -3,31 +3,26 @@
 **Status:** `proposed` — awaiting Owner approval  
 **Last updated:** 2026-11-01
 
-> **TH-102 completed** on `feature/th-102-inventory-service`. Do not start TH-103 until Owner sets `approved`.
+> **TH-103 completed.** Do not start TH-104 until Owner sets `approved`.
 
 ## Task ID and title
 
-**TH-103** — Payment simulation (charge / refund / UNKNOWN)
+**TH-104** — Shipping service (arrange / cancel)
 
 ## Objective
 
-Implement Payment service with Postgres persistence and HTTP APIs per `openapi-payment.yaml`: charge outcomes including `UNKNOWN`, resolve probes, refund only from `CAPTURED`, idempotency header semantics, query snapshot.
+Implement Shipping service with Postgres persistence and HTTP APIs per `openapi-shipping.yaml`: arrange, cancel compensation, idempotency, snapshots — shared A/C surface.
 
-## Why it matters
+## Acceptance criteria (backlog)
 
-Second shared service for A/C; enables F3 ambiguous-payment fault and compensation refund path.
-
-## Acceptance criteria (from backlog)
-
-- States Paid/Failed/UNKNOWN + query (map to CAPTURED/FAILED/UNKNOWN)
-- Align with TH-101.1 resolve / refund rules
+- Tests + compensation cancel
 
 ## Dependencies
 
-- TH-101, TH-101.1, TH-102 (**done**)
+- TH-101, TH-103 (**done**)
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-01 | proposed | Cursor (after TH-102) |
+| 2026-11-01 | proposed | Cursor (after TH-103) |

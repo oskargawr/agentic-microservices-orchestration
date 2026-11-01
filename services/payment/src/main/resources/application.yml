@@ -9,6 +9,17 @@ spring:
     username: thesis
     password: thesis
     driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    schemas: payment
+    default-schema: payment
+    create-schemas: true
+    locations: classpath:db/migration
+
+# Deterministic fault simulation for experiments/tests (off by default)
+thesis:
+  payment:
+    fault-injection-enabled: false
 
 management:
   endpoints:

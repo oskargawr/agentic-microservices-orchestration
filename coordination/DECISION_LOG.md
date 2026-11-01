@@ -58,6 +58,18 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-016 — TH-103 Payment F3 fault-injection header (test-gated)
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-01 |
+| **Status** | **approved** (Owner TH-103 brief) |
+| **Decision-maker** | Project Owner |
+| **Decision** | Deterministic F3 via `X-Thesis-Fault: F3_CAPTURE_LOST_RESPONSE` when `thesis.payment.fault-injection-enabled=true`: persist CAPTURED, return UNKNOWN; resolve/GET expose capture; independent of A/C |
+| **Related** | TH-103 · protocol-v0 F3 · D-012 |
+
+---
+
 ## D-015 — TH-101.1 contract hardening (idempotency, resolve, OpenAPI split)
 
 | Field | Value |
