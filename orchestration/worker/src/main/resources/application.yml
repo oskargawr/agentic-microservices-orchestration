@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: variant-a-worker
+  main:
+    web-application-type: none
+    banner-mode: "off"
+
+thesis:
+  temporal:
+    target: ${TEMPORAL_TARGET:localhost:7233}
+    namespace: ${TEMPORAL_NAMESPACE:default}
+  services:
+    inventory-base-url: ${INVENTORY_BASE_URL:http://localhost:8081}
+    payment-base-url: ${PAYMENT_BASE_URL:http://localhost:8082}
+    shipping-base-url: ${SHIPPING_BASE_URL:http://localhost:8083}
+
+logging:
+  level:
+    root: INFO
+    io.temporal: INFO
