@@ -7,4 +7,6 @@ include(
     "services:shipping",
     "orchestration:platform",
     "orchestration:variant-a",
+    "orchestration:worker",
+    "orchestration:console",
 )

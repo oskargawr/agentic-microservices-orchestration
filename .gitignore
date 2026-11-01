@@ -59,6 +59,10 @@ __pycache__/
 
 # Node
 node_modules/
+console-ui/dist/
+
+# Local process PIDs / logs from scripts/dev-up.sh
+.run/
 
 # Academic full-text PDFs (keep bibliographic notes only; never commit papers)
 *.pdf

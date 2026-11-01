@@ -1,0 +1,23 @@
+server:
+  port: ${CONSOLE_PORT:8090}
+  address: 127.0.0.1
+
+spring:
+  application:
+    name: experiment-console-bff
+
+thesis:
+  temporal:
+    target: ${TEMPORAL_TARGET:localhost:7233}
+    namespace: ${TEMPORAL_NAMESPACE:default}
+    ui-base-url: ${TEMPORAL_UI:http://localhost:8088}
+  services:
+    inventory-base-url: ${INVENTORY_BASE_URL:http://localhost:8081}
+    payment-base-url: ${PAYMENT_BASE_URL:http://localhost:8082}
+    shipping-base-url: ${SHIPPING_BASE_URL:http://localhost:8083}
+  cors:
+    allowed-origins: ${CONSOLE_CORS_ORIGINS:http://localhost:3000}
+
+logging:
+  level:
+    root: INFO
