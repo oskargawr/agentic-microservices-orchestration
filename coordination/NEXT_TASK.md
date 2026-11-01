@@ -3,32 +3,31 @@
 **Status:** `proposed` — awaiting Owner approval  
 **Last updated:** 2026-11-01
 
-> **TH-101.1 completed.** Do not start TH-102 until Owner sets `approved`.
+> **TH-102 completed** on `feature/th-102-inventory-service`. Do not start TH-103 until Owner sets `approved`.
 
 ## Task ID and title
 
-**TH-102** — Inventory service (reserve / release / consume)
+**TH-103** — Payment simulation (charge / refund / UNKNOWN)
 
 ## Objective
 
-Implement inventory domain persistence and HTTP APIs per hardened `:contracts` / OpenAPI (`openapi-inventory.yaml`): idempotent `reserve`, `release`, `consume` (`HELD→CONSUMED` once), stock I1/I2, `Idempotency-Key` header semantics.
+Implement Payment service with Postgres persistence and HTTP APIs per `openapi-payment.yaml`: charge outcomes including `UNKNOWN`, resolve probes, refund only from `CAPTURED`, idempotency header semantics, query snapshot.
 
 ## Why it matters
 
-First concrete service shared by A and C; unblocks payment/shipping and Temporal activities.
+Second shared service for A/C; enables F3 ambiguous-payment fault and compensation refund path.
 
 ## Acceptance criteria (from backlog)
 
-- Unit tests + idempotency key behavior
-- Consistent with TH-011 / TH-101 / TH-101.1 contracts
+- States Paid/Failed/UNKNOWN + query (map to CAPTURED/FAILED/UNKNOWN)
+- Align with TH-101.1 resolve / refund rules
 
 ## Dependencies
 
-- TH-101, TH-101.1 (**done**)
+- TH-101, TH-101.1, TH-102 (**done**)
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-01 | proposed | Cursor (after TH-101) |
-| 2026-11-01 | still proposed | Cursor (after TH-101.1; ready to start when approved) |
+| 2026-11-01 | proposed | Cursor (after TH-102) |

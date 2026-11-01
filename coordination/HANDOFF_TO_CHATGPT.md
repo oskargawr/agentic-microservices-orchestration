@@ -1,70 +1,92 @@
 # HANDOFF_TO_CHATGPT
 
 **Date:** 2026-11-01  
-**Task:** TH-101.1 — Contract clarification and OpenAPI hardening  
+**Task:** TH-102 — Inventory service implementation  
 **Prepared by:** Cursor Agent  
 **MODE:** IMPLEMENTATION  
-**Branch:** `feature/th-101.1-contract-hardening`
+**Branch:** `feature/th-102-inventory-service`
 
 ---
 
-## Exact changes
+## Database schema and migrations
 
-1. **Idempotency** — `Idempotency-Key` header only; body fields removed from DTOs. Same key+payload → replay; same key+different payload → `IDEMPOTENCY_KEY_CONFLICT` (`IdempotencyRules`). Recommended key values in `IdempotencyKeys` (single-SKU MVP).
-2. **Payment resolve** — `PaymentResolveRules` + `ResolveProbeOutcome`: confirmed capture → CAPTURED; authoritative non-capture → FAILED; inconclusive keeps UNKNOWN/PENDING; contradiction check; no refund without CAPTURED.
-3. **OpenAPI** — split into per-service specs + shared `components.yaml` (correct server per service). Removed monolithic `openapi.yaml`.
-4. **Errors / validation** — `ErrorCode` enum; `ApiError.code` typed; charge `amountMinor > 0`.
-5. **Consume** — documented C-101-1: orchestration after confirmed arrange; atomic once-only stock update; RELEASED/CONSUMED terminal.
+Flyway `V1__inventory_schema.sql` in schema `inventory`:
 
-Owner C-101-1..3 recorded as **confirmed** in D-014; D-015 for hardening.
-
----
-
-## Spec layout
-
-| File | Server |
+| Table | Role |
 | --- | --- |
-| `docs/contracts/components.yaml` | shared schemas |
-| `docs/contracts/openapi-inventory.yaml` | `:8081` |
-| `docs/contracts/openapi-payment.yaml` | `:8082` |
-| `docs/contracts/openapi-shipping.yaml` | `:8083` |
-| `docs/contracts/redocly.yaml` | lint config |
-| `docs/contracts/STATE_MODELS.md` | semantics |
-| `docs/contracts/README.md` | index |
+| `stock` | `sku`, `on_hand`, `held` (+ check `on_hand >= held`) |
+| `reservations` | id, order_id, sku, qty, state; partial unique index one `HELD` per order |
+| `idempotency_records` | key PK, fingerprint, http_status, response_body |
+| `operation_log` | append-only forensic log for oracle |
 
----
+Seed: `SKU-MVP-1` on_hand=100, held=0.
 
-## Idempotency & resolve (summary)
+## API implementation
 
-| Topic | Rule |
+Controller `/api/v1` matches `openapi-inventory.yaml`:
+
+- `POST /reservations` (+ Idempotency-Key)
+- `POST /reservations/{id}/release|consume`
+- `GET /reservations/{id}`, `GET /stock/{sku}`
+
+Uses `:contracts` DTOs / `ErrorCode` / header-only idempotency.
+
+## Idempotency & transaction strategy
+
+Documented in `docs/architecture/INVENTORY_CONCURRENCY.md`.
+
+Per mutating call (single `@Transactional`):
+
+1. `pg_advisory_xact_lock(hashtext(key))`
+2. Load idempotency row `FOR UPDATE` → replay or `IDEMPOTENCY_KEY_CONFLICT`
+3. `stock` / `reservations` `FOR UPDATE`
+4. Mutate + insert idempotency + `operation_log`
+5. Commit
+
+## Concurrency evidence (tests)
+
+Against real Postgres `localhost:5433` (Compose `thesis-postgres`):
+
+| Test | Result |
 | --- | --- |
-| Transport | Header `Idempotency-Key` |
-| Conflict | 409 `IDEMPOTENCY_KEY_CONFLICT` |
-| Resolve inconclusive | preserve UNKNOWN/PENDING |
-| Timeout | ≠ FAILED |
-| Refund | CAPTURED only |
+| concurrent same Idempotency-Key (8 threads) | single reservationId; held=1 |
+| 10 concurrent reserves on stock=5 | 5 success / 5 INSUFFICIENT_STOCK; no oversell |
+| concurrent consume vs release | one 200, one 409; held=0; single terminal state |
 
----
+**11/11** integration tests passed (0 skipped).
 
-## Tests & validation
+## Commands
 
-```text
-./gradlew :contracts:test build  → BUILD SUCCESSFUL
-npx @redocly/cli@1.25.0 lint --config docs/contracts/redocly.yaml
-  → Woohoo! Your API descriptions are valid. (inventory + payment + shipping)
+```bash
+cd infra && docker compose up -d   # Postgres :5433
+cd .. && ./gradlew :services:inventory:test build
+# CI also starts Postgres service; env INVENTORY_TEST_JDBC_URL=...
 ```
 
+OpenAPI: `npx @redocly/cli@1.25.0 lint --config docs/contracts/redocly.yaml` (unchanged inventory paths).
 
-No Temporal / LLM / persistence / TH-102 HTTP.
+## Acceptance checklist
 
----
+| Criterion | Status |
+| --- | --- |
+| Taiga: tests + idempotency key | **Met** |
+| Real Postgres persistence + Flyway | **Met** |
+| Reserve/release/consume accounting | **Met** |
+| Header idempotency + conflict | **Met** |
+| Concurrent oversell / double-effect covered by tests | **Met** |
+| No Payment/Shipping/Temporal/LLM | **Met** |
 
-## Unresolved
+## Known limitations / unresolved
 
-None blocking TH-102. Optional later: exact MVP charge amountMinor value (TH-103).
+- Integration tests use shared Compose DB (reset tables in `@BeforeEach`), not Testcontainers (Docker detection flaky on this Mac; documented alternative + CI Postgres service).
+- Exact charge amount still TH-103.
+- Consume authorization “only after arrange” is orchestration responsibility (C-101-1), not enforced inside Inventory.
 
----
+## Commits / branch
+
+See `git log feature/th-102-inventory-service` after commits.  
+`main` already contains TH-101/101.1 (pushed).
 
 ## Recommended next
 
-**TH-102** Inventory — Owner must set `NEXT_TASK` to `approved`.
+**TH-103** Payment — charge/refund/UNKNOWN/resolve on same contract surface.

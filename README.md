@@ -34,8 +34,9 @@ End-state success is verified by an independent oracle against business invarian
 | Spring Boot service stubs + Actuator health | Done |
 | Business invariants & oracle spec (TH-011) | Spec done |
 | Experimental protocol v0 (TH-012) | Spec done |
-| Domain contracts / state models (TH-101) | Done (OpenAPI + `:contracts`; HTTP impl → TH-102..104) |
-| Domain service implementations (TH-102..104) | Planned |
+| Domain contracts / state models (TH-101 / 101.1) | Done |
+| Inventory service (TH-102) | Done (Postgres + HTTP + concurrency tests) |
+| Payment / Shipping (TH-103..104) | Planned |
 | Temporal workflows (A / C) | Planned |
 | Fault injection + experiment runner | Planned |
 | Confirmatory experiment runs | **Not started** |
@@ -128,6 +129,7 @@ Basic CI does **not** require Temporal or Postgres — only `./gradlew build`.
 
 - Architecture: [`docs/architecture/OVERVIEW.md`](docs/architecture/OVERVIEW.md)
 - Contracts / state models: [`docs/contracts/README.md`](docs/contracts/README.md) · [`docs/contracts/STATE_MODELS.md`](docs/contracts/STATE_MODELS.md)
+- Inventory concurrency: [`docs/architecture/INVENTORY_CONCURRENCY.md`](docs/architecture/INVENTORY_CONCURRENCY.md)
 - Business invariants & oracle: [`docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md`](docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md)
 - Experimental protocol v0: [`docs/protocol/EXPERIMENTAL_PROTOCOL_V0.md`](docs/protocol/EXPERIMENTAL_PROTOCOL_V0.md)
 - Git workflow: [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md)
