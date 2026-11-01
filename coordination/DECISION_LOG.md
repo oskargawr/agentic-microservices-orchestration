@@ -58,6 +58,21 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-014 — TH-101 shared domain contracts
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-01 |
+| **Status** | **approved** (Owner tasked TH-101 execution) |
+| **Decision-maker** | Project Owner |
+| **Context** | Lock identical API/state surface for A and C before service implementation |
+| **Decision** | Add Gradle module `:contracts` (DTOs, enums, transition guards, idempotency helpers) + `docs/contracts/openapi.yaml` + state diagrams; services depend on module; **no** HTTP business endpoints, persistence, Temporal, LLM, or runner in this ticket |
+| **Assumptions (Owner may veto)** | **C-101-1** orchestration calls inventory `consume` after `arrange`; **C-101-2** money as `amountMinor`+currency; **C-101-3** HTTP prefix `/api/v1` |
+| **Evidence** | `:contracts` tests green; `./gradlew build` SUCCESS; branch `feature/th-101-domain-contracts` |
+| **Related** | TH-101 · TH-011 · TH-012 · next TH-102..104 |
+
+---
+
 ## D-013 — TH-100 infra bootstrap (Postgres schemas + Temporal server)
 
 | Field | Value |

@@ -3,32 +3,31 @@
 **Status:** `proposed` — awaiting Owner approval  
 **Last updated:** 2026-11-01
 
-> **TH-100 completed.** Do not start TH-101 until Owner sets `approved`.
+> **TH-101 completed** on branch `feature/th-101-domain-contracts`. Do not start TH-102 until Owner sets `approved`.
 
 ## Task ID and title
 
-**TH-101** — Kontrakty API + model stanu zamówienia
+**TH-102** — Inventory service (reserve / release / consume)
 
 ## Objective
 
-Define shared API contracts (OpenAPI/DTO) and the order/reservation/payment/shipment state model matching `BUSINESS_INVARIANTS_AND_ORACLE.md` (`HELD→CONSUMED`, payment `UNKNOWN`, etc.) — without full service business logic if split across TH-102..104.
+Implement inventory domain persistence and HTTP APIs per `:contracts` / OpenAPI: idempotent `reserve`, `release`, `consume` (`HELD→CONSUMED` without double stock decrement), stock accounting I1/I2.
 
 ## Why it matters
 
-Locks the shared surface for A and C before implementing inventory/payment/shipping.
+First concrete service shared by A and C; unblocks payment/shipping and Temporal activities.
 
 ## Acceptance criteria (from backlog)
 
-- OpenAPI/DTO + state diagram
-- Consistent with TH-011/D-012 invariants (no double stock decrement on consume)
-- No Temporal workflows / LLM / experiment runner in this ticket unless Owner expands
+- Unit tests + idempotency key behavior
+- Consistent with TH-011 / TH-101 contracts
 
 ## Dependencies
 
-- TH-011, TH-012, TH-100 (**done**)
+- TH-101 (**done** on feature branch)
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-01 | proposed | Cursor (after TH-100) |
+| 2026-11-01 | proposed | Cursor (after TH-101) |

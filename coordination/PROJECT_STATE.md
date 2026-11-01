@@ -1,7 +1,7 @@
 # PROJECT_STATE
 
 **Last updated:** 2026-11-01  
-**Updated by:** Cursor Agent (GitHub publish + workflow)
+**Updated by:** Cursor Agent (TH-101 complete)
 
 ## Current thesis scope (MVP)
 
@@ -15,43 +15,42 @@
 
 ## Phase / milestone
 
-- **Phase:** Infra bootstrap complete → publish repo → domain contracts next
-- **Done:** TH-010 … TH-012, **TH-100**, coordination migrated into Git repo
-- **Next proposed:** TH-101 (API contracts + order state model)
-- **Open:** OWN-1 confirmatory *n*; OWN-2 LLM model
+- **Phase:** Shared contracts done → implement services
+- **Done:** TH-010 … TH-012, TH-100, **TH-101**
+- **Next proposed:** TH-102 (Inventory reserve/release/consume) — or TH-021 lit. in parallel
+- **Open:** OWN-1 confirmatory *n*; OWN-2 LLM model; C-101-1..3 contract assumptions (Owner confirm)
 
 ## Engineering SoT
 
 | | |
 | --- | --- |
-| **GitHub** | https://github.com/oskargawr/agentic-microservices-orchestration (public) |
-| **Local clone** | `agentic-orchestration-thesis/` |
-| **Coordination** | **this directory** (`coordination/`) — canonical |
-| **Workflow** | [`docs/DEVELOPMENT_WORKFLOW.md`](../docs/DEVELOPMENT_WORKFLOW.md) |
+| **GitHub** | https://github.com/oskargawr/agentic-microservices-orchestration (public; push may still need `oskargawr` auth) |
+| **Branch (this work)** | `feature/th-101-domain-contracts` |
+| **Coordination** | this directory |
+| **Contracts** | `:contracts` + `docs/contracts/` |
 
 ## Completed (verified)
 
-- Gradle multi-module stubs build green (`./gradlew build`)
-- Compose: Postgres `:5433` + Temporal `:7233` + UI `:8088`
-- Schemas `inventory`, `payment`, `shipping` in DB `business`
-- Coordination / AGENTS / thesis Cursor rule live inside the app Git repo
+- OpenAPI + Java DTOs/enums + transition guards + unit tests
+- `./gradlew :contracts:test build` SUCCESS
+- No Temporal / LLM / runner / persistence in TH-101
 
 ## In progress
 
-- **GitHub push blocked:** local `main` ready (`c2a67c6`); remote still empty until Owner re-auths as `oskargawr`
+- None (TH-101 ready for Owner review / merge)
 
 ## Blockers
 
-1. **Auth:** `gh auth login -h github.com -u oskargawr` then `git push -u origin main`
-2. Owner approve TH-101 (or TH-021 parallel lit.)
-3. OWN-1 / OWN-2 still open (not blocking TH-101)
+1. GitHub push auth for `oskargawr` (if remote still empty)
+2. Owner confirm C-101 assumptions (consume caller, money minor units) — non-blocking for TH-102 if accepted
+3. OWN-1 / OWN-2 still open
 
 ## Next three actions
 
-1. Verify remote `main` matches local HEAD
-2. Owner: approve TH-101
-3. TH-101 — OpenAPI/DTO + state diagram aligned to invariants
+1. Owner: review TH-101 branch / merge when satisfied
+2. Approve **TH-102** (Inventory service)
+3. Parallel: TH-021 / TH-022
 
 ## Pointers
 
-- [NEXT_TASK.md](NEXT_TASK.md) · [HANDOFF_TO_CHATGPT.md](HANDOFF_TO_CHATGPT.md) · [README.md](../README.md)
+- [NEXT_TASK.md](NEXT_TASK.md) · [HANDOFF_TO_CHATGPT.md](HANDOFF_TO_CHATGPT.md) · [docs/contracts/STATE_MODELS.md](../docs/contracts/STATE_MODELS.md)

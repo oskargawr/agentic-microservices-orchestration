@@ -1,89 +1,108 @@
 # HANDOFF_TO_CHATGPT
 
 **Date:** 2026-11-01  
-**Task:** Publish thesis monorepo to GitHub + establish Git workflow  
+**Task:** TH-101 — Domain contracts and state models  
 **Prepared by:** Cursor Agent  
-**MODE:** IMPLEMENTATION
+**MODE:** IMPLEMENTATION  
+**Branch:** `feature/th-101-domain-contracts`
 
 ---
 
-## Context
+## What was implemented
 
-Engineering SoT for the thesis application is the Git repository  
-https://github.com/oskargawr/agentic-microservices-orchestration  
-(local directory: `agentic-orchestration-thesis/`).
+Shared contract surface for Inventory / Payment / Shipping aligned to TH-011 and protocol-v0:
 
-`coordination/` now lives **inside** that repository (canonical). Workspace-level copies are redirects only.
+- Java module `:contracts` — enums, request/response records, snapshots, `Money`, `IdempotencyKeys`, transition guards, `CompensationOrder`
+- OpenAPI 3: `docs/contracts/openapi.yaml`
+- State diagrams + assumptions: `docs/contracts/STATE_MODELS.md`
+- Focused unit tests for valid/invalid transitions and DTO validation
+- Services declare `implementation(project(":contracts"))` (no domain HTTP yet)
+- Taiga story TH-101 → **Done**
 
-MVP research scope unchanged: **A vs C** mandatory; B / RQ4 optional. No new research decisions marked approved.
-
----
-
-## What was completed (this session)
-
-### Intended
-
-1. Security review of working tree + Git history before push.
-2. Migrate `coordination/`, thesis `AGENTS.md`, `.cursor/rules/thesis-agent.mdc` into the app repo.
-3. Add `docs/DEVELOPMENT_WORKFLOW.md`, GitHub Actions CI (`./gradlew build`, JDK 21), professional README.
-4. Harden `.gitignore` (`.env`, build, volumes, PDFs, models).
-5. Push existing `main` history to empty public remote `oskargawr/agentic-microservices-orchestration`.
-6. Point Obsidian / workspace docs at the GitHub URL.
-
-### Not done / deferred
-
-- Domain APIs, Temporal workflows, experiments (unchanged — later tickets).
-- Branch protection — only if GitHub permissions allow after successful push.
-- Re-auth as `oskargawr` if active `gh` account cannot push.
+**Explicitly not implemented:** Temporal workflows, LLM, experiment runner, DB migrations/tables, full service logic, e2e slice.
 
 ---
 
-## Security review (summary)
+## Files created / modified (high level)
 
-- No API keys / cloud tokens / private credentials found in tracked files or history of this repo.
-- Documented **local-dev** passwords only (`thesis` / `thesis` in Compose and `.env.example`).
-- `.env` ignored; `.env.example` placeholders only.
-- No DB dumps / Docker volume contents / Gradle `build/` in Git.
-- Full-text academic PDFs excluded via `*.pdf` ignore.
-
-If push is blocked by auth, do **not** bypass with personal access tokens pasted into chat.
+| Path | Role |
+| --- | --- |
+| `contracts/**` | DTOs, transitions, tests |
+| `docs/contracts/openapi.yaml` | HTTP contract |
+| `docs/contracts/STATE_MODELS.md` | Mermaid + assumptions |
+| `docs/architecture/OVERVIEW.md` | Points at contracts |
+| `settings.gradle.kts` / service `build.gradle.kts` | Module wiring |
+| `README.md` | Status + layout |
+| `coordination/*` | State, next task TH-102 proposed, D-014 |
 
 ---
 
-## Git conventions established
+## Contract / state overview
 
-See [`docs/DEVELOPMENT_WORKFLOW.md`](../docs/DEVELOPMENT_WORKFLOW.md).
+| Entity | States | Key ops |
+| --- | --- | --- |
+| Reservation | HELD, RELEASED, CONSUMED | reserve, release, **consume** |
+| Payment | PENDING, CAPTURED, FAILED, UNKNOWN, REFUNDED | charge, refund (CAPTURED only), resolve |
+| Shipment | NONE, ARRANGED, CANCELLED | arrange, cancel |
+| Oracle labels | CONFIRMED_SUCCESS / FAILURE / AMBIGUOUS / INVALID | `BusinessOutcome` enum (doc alignment) |
 
-- Branches: `feature|fix|docs|experiment|chore/<short-description>`
-- Commits: Conventional Commits
-- Prefer PRs into `main`; CI = `./gradlew build`
+Compensation order: cancel → refund → release.
+
+Semantics enforced in guards: HELD→CONSUMED success path; timeout→UNKNOWN ≠ FAILED; no refund without CAPTURED.
+
+---
+
+## Tests and build
+
+```text
+./gradlew :contracts:test build
+→ BUILD SUCCESSFUL
+```
+
+---
+
+## Acceptance criteria verification
+
+| Criterion | Status |
+| --- | --- |
+| OpenAPI/DTO + state diagram (Taiga/backlog AC) | **Met** — openapi.yaml + `:contracts` DTOs + STATE_MODELS.md |
+| Consistent with TH-011/D-012 (no double decrement on consume) | **Met** — consume transition HELD→CONSUMED only; release forbidden on CONSUMED; docs state single decrement |
+| No Temporal / LLM / experiment runner | **Met** |
+| Inventory / payment / shipping contracts + idempotency | **Met** at contract level |
+| Transition unit tests | **Met** |
+| Persistence / HTTP impl | **Out of scope** → TH-102..104 |
+
+---
+
+## Deviations / unresolved for Owner
+
+| ID | Topic | Cursor choice | Action |
+| --- | --- | --- | --- |
+| C-101-1 | Who calls `consume`? | Orchestration after arrange | Confirm or override |
+| C-101-2 | Money | `amountMinor` + currency | Confirm |
+| C-101-3 | Path prefix | `/api/v1` | Cosmetic |
+
+No change to approved research MVP (A vs C).
+
+---
+
+## Commits / branch
+
+See `git log feature/th-101-domain-contracts` after commits in this session.  
+**Do not push** until GitHub auth for `oskargawr` is verified (prior session blocker).
 
 ---
 
 ## Questions for ChatGPT
 
-1. Any objection to keeping coordination Markdown in the public GitHub repo (vs private)?
-2. Prefer requiring status checks on `main` as soon as first CI run is green?
-3. Confirm next engineering ticket remains TH-101 (contracts) before vertical slice.
+1. Prefer explicit inventory `consume` API (chosen) vs shipping-side consume coupling?
+2. Any missing fields on DTOs before TH-102 (e.g. reason codes on failures)?
+3. Should OpenAPI be split per service file for TH-102..104?
 
 ---
 
 ## Recommended next
 
-1. Owner: verify GitHub `main` contents.
-2. Owner: approve **TH-101**.
-3. Parallel lit. TH-021/TH-022 as before.
+**TH-102** — Inventory service with real schema tables, idempotent reserve/release/consume, unit tests. Rationale: unblocks payment/shipping and Temporal activities on a frozen contract.
 
----
-
-## Push status (verified)
-
-- Local HEAD: `c2a67c6` on `main`
-- `origin` = `https://github.com/oskargawr/agentic-microservices-orchestration.git`
-- Remote remains **empty** (size 0): push denied — active `gh` account `ogawryszewski-gd` lacks write; `oskargawr` token in keyring is **invalid**
-- Manual step required: `gh auth login -h github.com -u oskargawr` then `git push -u origin main`
-
-## Claims requiring verification
-
-- Remote push and commit-hash match must be confirmed after `git push` / `gh` succeeds.
-- `gh` currently shows active account `ogawryszewski-gd`; target repo owner is `oskargawr` — write access must be verified.
+Parallel optional: TH-021 / TH-022 literature.
