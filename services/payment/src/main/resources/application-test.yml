@@ -1,0 +1,3 @@
+thesis:
+  payment:
+    fault-injection-enabled: true

@@ -1,97 +1,71 @@
 # HANDOFF_TO_CHATGPT
 
 **Date:** 2026-11-01  
-**Task:** TH-102 — Inventory service implementation  
+**Task:** TH-103 — Payment service  
 **Prepared by:** Cursor Agent  
 **MODE:** IMPLEMENTATION  
-**Branch:** `feature/th-102-inventory-service`
+**Branch:** `feature/th-103-payment-service`
 
 ---
 
-## Database schema and migrations
+## Schema / migrations
 
-Flyway `V1__inventory_schema.sql` in schema `inventory`:
+Flyway `V1__payment_schema.sql` (schema `payment`):
 
-| Table | Role |
-| --- | --- |
-| `stock` | `sku`, `on_hand`, `held` (+ check `on_hand >= held`) |
-| `reservations` | id, order_id, sku, qty, state; partial unique index one `HELD` per order |
-| `idempotency_records` | key PK, fingerprint, http_status, response_body |
-| `operation_log` | append-only forensic log for oracle |
+- `payments` — oracle ground truth `state`; unique `order_id`
+- `idempotency_records`
+- `operation_log` — includes F3 `persistedState` vs `observedResponse`
 
-Seed: `SKU-MVP-1` on_hand=100, held=0.
+## Endpoints
 
-## API implementation
+Per `openapi-payment.yaml`: charge, refund, resolve, GET snapshot. Port **8082**.
 
-Controller `/api/v1` matches `openapi-inventory.yaml`:
+## State semantics
 
-- `POST /reservations` (+ Idempotency-Key)
-- `POST /reservations/{id}/release|consume`
-- `GET /reservations/{id}`, `GET /stock/{sku}`
+As protocol: CAPTURED / FAILED / UNKNOWN / PENDING / REFUNDED; refund only CAPTURED; inconclusive resolve preserves UNKNOWN/PENDING.
 
-Uses `:contracts` DTOs / `ErrorCode` / header-only idempotency.
+## Idempotency / concurrency
 
-## Idempotency & transaction strategy
+See `docs/architecture/PAYMENT_CONCURRENCY.md`. Advisory locks + unique order_id; tested concurrent charge/refund/resolve.
 
-Documented in `docs/architecture/INVENTORY_CONCURRENCY.md`.
+## F3 mechanism (demonstrated)
 
-Per mutating call (single `@Transactional`):
+`thesis.payment.fault-injection-enabled=true` (profile `test`) + header `X-Thesis-Fault: F3_CAPTURE_LOST_RESPONSE`:
 
-1. `pg_advisory_xact_lock(hashtext(key))`
-2. Load idempotency row `FOR UPDATE` → replay or `IDEMPOTENCY_KEY_CONFLICT`
-3. `stock` / `reservations` `FOR UPDATE`
-4. Mutate + insert idempotency + `operation_log`
-5. Commit
+1. Persist `CAPTURED`
+2. Charge HTTP returns `UNKNOWN`
+3. GET/oracle sees `CAPTURED`
+4. Resolve returns `CAPTURED`
+5. Log distinguishes observed vs persisted
 
-## Concurrency evidence (tests)
+Not enabled by default in normal runtime.
 
-Against real Postgres `localhost:5433` (Compose `thesis-postgres`):
-
-| Test | Result |
-| --- | --- |
-| concurrent same Idempotency-Key (8 threads) | single reservationId; held=1 |
-| 10 concurrent reserves on stock=5 | 5 success / 5 INSUFFICIENT_STOCK; no oversell |
-| concurrent consume vs release | one 200, one 409; held=0; single terminal state |
-
-**11/11** integration tests passed (0 skipped).
-
-## Commands
+## Tests
 
 ```bash
-cd infra && docker compose up -d   # Postgres :5433
-cd .. && ./gradlew :services:inventory:test build
-# CI also starts Postgres service; env INVENTORY_TEST_JDBC_URL=...
+cd infra && docker compose up -d
+./gradlew :services:payment:test build
+# 13/13 payment tests, 0 skipped
 ```
-
-OpenAPI: `npx @redocly/cli@1.25.0 lint --config docs/contracts/redocly.yaml` (unchanged inventory paths).
 
 ## Acceptance checklist
 
 | Criterion | Status |
 | --- | --- |
-| Taiga: tests + idempotency key | **Met** |
-| Real Postgres persistence + Flyway | **Met** |
-| Reserve/release/consume accounting | **Met** |
-| Header idempotency + conflict | **Met** |
-| Concurrent oversell / double-effect covered by tests | **Met** |
-| No Payment/Shipping/Temporal/LLM | **Met** |
+| Taiga: Paid/Failed/UNKNOWN + query | **Met** (CAPTURED/FAILED/UNKNOWN + GET) |
+| F3 integration-tested | **Met** |
+| Idempotency + concurrency tested | **Met** |
+| Real Postgres | **Met** |
+| No Shipping/Temporal/LLM | **Met** |
 
-## Known limitations / unresolved
+## Limitations
 
-- Integration tests use shared Compose DB (reset tables in `@BeforeEach`), not Testcontainers (Docker detection flaky on this Mac; documented alternative + CI Postgres service).
-- Exact charge amount still TH-103.
-- Consume authorization “only after arrange” is orchestration responsibility (C-101-1), not enforced inside Inventory.
+- Fault header is experimental/test control (gated); not a public product API.
+- Default charge without fault injection = CAPTURED (deterministic).
 
-## Commits / branch
+## Commits / next
 
-| | |
-| --- | --- |
-| **Branch** | `feature/th-102-inventory-service` |
-| **HEAD** | `19bc5ce` |
-| **main** | contracts TH-101/101.1 already pushed |
+| **Branch** | `feature/th-103-payment-service` |
+| **HEAD** | `b942231` |
 
-
-
-## Recommended next
-
-**TH-103** Payment — charge/refund/UNKNOWN/resolve on same contract surface.
+**Next:** TH-104 Shipping (`proposed`).
