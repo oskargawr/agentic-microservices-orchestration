@@ -1,64 +1,74 @@
 # HANDOFF_TO_CHATGPT
 
 **Date:** 2026-11-01  
-**Task:** TH-200 — Variant A Temporal happy path (+ TH-104 closure)  
+**Task:** TH-205 — Manual Testing Runtime & Experiment Console  
 **Prepared by:** Cursor Agent  
 **MODE:** IMPLEMENTATION  
-**Branch:** `feature/th-200-variant-a-happy-path`
+**Branch:** `feature/th-205-experiment-console`
 
 ---
 
-## TH-104 closure
+## Architecture / modules
 
-PR #3 **merged** to `main` (`45849ab`). CI run `41324579450`: Postgres healthy; shipping/payment/inventory HikariPool + `:test` tasks succeeded (not skipped); local re-verify 7/7 + 13/13.
-
----
-
-## TH-200 — Architecture
-
-Module `:orchestration:variant-a`:
-
-- `OrderFulfillmentWorkflow` / `OrderFulfillmentWorkflowImpl` — deterministic steps only
-- `OrderFulfillmentActivities` / `HttpOrderFulfillmentActivities` — HTTP to inventory/payment/shipping
-- Docs: `docs/architecture/VARIANT_A_HAPPY_PATH.md`
-
-Sequence: **reserve → charge → arrange → consume** (C-101-1).
-
-## Activity contracts / retries
-
-| | |
+| Module | Role |
 | --- | --- |
-| Start-to-close | 10s |
-| Schedule-to-close | 60s |
-| Retry | 5 attempts, 200ms→2s backoff |
-| Non-retryable | `BUSINESS` (4xx / wrong state) |
+| `:orchestration:variant-a` | + `runtime` (TemporalSettings/Clients/Workers) |
+| `:orchestration:worker` | Independent worker Boot app (web none) |
+| `:orchestration:console` | BFF on `127.0.0.1:8090` |
+| `console-ui/` | Vite + React + TS on `127.0.0.1:3000` |
+
+Docs: `docs/architecture/EXPERIMENT_CONSOLE.md`  
+Scripts: `scripts/dev-up.sh`, `scripts/dev-down.sh`
+
+## Temporal compatibility
+
+- Server Compose `1.25.2` + Java SDK `1.40.0`
+- Temporal docs: SDK and server version independently; all SDKs support all servers
+- Verified by E2E: `GetSystemInfo` + completed workflow on real server
+
+## BFF contracts
+
+- `POST /api/console/runs` — required orderId, sku, qty, amountMinor, currency; 409 duplicate workflowId
+- `GET /api/console/runs/{id}` — Temporal status, history steps, result/errors
+- `GET /api/console/runs/{id}/business` — fresh service GETs + console consistency check (not formal oracle)
 
 ## Tests
 
-| Test | Result |
+| Suite | Result |
 | --- | --- |
-| `OrderFulfillmentWorkflowOrderTest` | 1/1 — order reserve/charge/arrange/consume |
-| `OrderFulfillmentHappyPathIT` | 1/1 — Temporal test env + 3 bootJar processes + Postgres; GET snapshots CONSUMED/CAPTURED/ARRANGED; stock 99/0 |
-| Skipped | **0** (when Postgres up) |
+| `ConsoleRealTemporalE2EIT` | **1/1, skipped=0** (real Temporal + Postgres + HTTP services) |
+| variant-a | 2/2, skipped=0 |
+| inventory/payment/shipping | 11/13/7, skipped=0 |
+| `./gradlew build` | SUCCESS |
 
-```bash
-./gradlew :orchestration:variant-a:test build
+## Example manual/E2E execution
+
+```
+workflowId=order-34fd5c47-07ef-448e-8d52-ae23b42408de
+reservation=CONSUMED · payment=CAPTURED · shipment=ARRANGED
+stock onHand=99 held=0
+consistencyCheck.looksConsistentWithConfirmedSuccess=true
 ```
 
-## Final business states (IT)
+## Startup
 
-- reservation = `CONSUMED`
-- payment = `CAPTURED`
-- shipment = `ARRANGED`
-- Workflow result consistent with independent GETs
+```bash
+cd infra && docker compose up -d
+./scripts/dev-up.sh
+cd console-ui && npm install && npm run dev
+```
 
-## Unresolved
+## Known limitations
 
-- Protocol says fixed amount without numeric value — tests use `Money.plnMinor(2599)` (documented assumption, not a new invariant).
+- Amount `2599` only as explicit test input — not protocol-approved
+- Console consistency check ≠ TH-401 oracle
+- No fault UI / saga / Variant C
+- Activity history types are PascalCase (`Reserve`…) per Java SDK
+- CI may skip E2E if Temporal service absent (local verification used real Temporal; CI currently Postgres-only — consider adding Temporal later)
 
 ## Commits / PR
 
-| **HEAD** | 951305b96ff5e9845bf40bea11abb15c8ef52f74 |
-| **PR** | https://github.com/oskargawr/agentic-microservices-orchestration/pull/4 (open) |
+| **HEAD** | *(after push)* |
+| **PR** | *(after open)* |
 
-**Next proposed:** TH-201 Saga compensations A.
+**Next:** TH-201 Saga compensations A (not started).
