@@ -26,6 +26,7 @@
 | **Base** | `main` @ `5bdf809` (TH-103 PR #2 merged) |
 | **Shipping tests** | 7/7 Postgres integration, 0 skipped |
 | **Payment re-verify** | 13/13 Postgres (TH-103 acceptance checks) |
+| **PR** | https://github.com/oskargawr/agentic-microservices-orchestration/pull/3 (open; merge pending) |
 
 ## TH-103 acceptance verification (2026-11-01)
 

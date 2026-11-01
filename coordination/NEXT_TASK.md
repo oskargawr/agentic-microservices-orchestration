@@ -20,7 +20,7 @@ Implement Shipping with Postgres persistence and HTTP APIs per `openapi-shipping
 
 - Schema, HTTP, idempotency, concurrency docs, 7/7 Postgres tests green
 - OpenAPI lint green
-- PR to be opened against `main`
+- PR #3 opened against `main` (merge pending CI)
 
 ## Precondition verified
 

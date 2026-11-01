@@ -85,6 +85,6 @@ Also re-ran payment: **13/13**, 0 skipped.
 
 | **Branch** | `feature/th-104-shipping-service` |
 | **HEAD** | fdd727fcc6fbcfb4e555e9fb92545615154484e5 |
-| **PR / merge** | Open PR → merge when CI green (do not force-push) |
+| **PR / merge** | https://github.com/oskargawr/agentic-microservices-orchestration/pull/3 — open; merge when CI green (no force-push) |
 
 **Next proposed:** TH-200 Variant A happy path (or parallel lit. TH-021/022).
