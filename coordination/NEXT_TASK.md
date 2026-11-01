@@ -3,7 +3,7 @@
 **Status:** `proposed` — awaiting Owner approval  
 **Last updated:** 2026-11-01
 
-> **TH-101 completed** on branch `feature/th-101-domain-contracts`. Do not start TH-102 until Owner sets `approved`.
+> **TH-101.1 completed.** Do not start TH-102 until Owner sets `approved`.
 
 ## Task ID and title
 
@@ -11,7 +11,7 @@
 
 ## Objective
 
-Implement inventory domain persistence and HTTP APIs per `:contracts` / OpenAPI: idempotent `reserve`, `release`, `consume` (`HELD→CONSUMED` without double stock decrement), stock accounting I1/I2.
+Implement inventory domain persistence and HTTP APIs per hardened `:contracts` / OpenAPI (`openapi-inventory.yaml`): idempotent `reserve`, `release`, `consume` (`HELD→CONSUMED` once), stock I1/I2, `Idempotency-Key` header semantics.
 
 ## Why it matters
 
@@ -20,14 +20,15 @@ First concrete service shared by A and C; unblocks payment/shipping and Temporal
 ## Acceptance criteria (from backlog)
 
 - Unit tests + idempotency key behavior
-- Consistent with TH-011 / TH-101 contracts
+- Consistent with TH-011 / TH-101 / TH-101.1 contracts
 
 ## Dependencies
 
-- TH-101 (**done** on feature branch)
+- TH-101, TH-101.1 (**done**)
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
 | 2026-11-01 | proposed | Cursor (after TH-101) |
+| 2026-11-01 | still proposed | Cursor (after TH-101.1; ready to start when approved) |

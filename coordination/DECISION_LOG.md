@@ -58,18 +58,32 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-015 — TH-101.1 contract hardening (idempotency, resolve, OpenAPI split)
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-01 |
+| **Status** | **approved** (Owner TH-101.1 brief) |
+| **Decision-maker** | Project Owner |
+| **Context** | Harden contracts before TH-102 |
+| **Decision** | Header-only `Idempotency-Key` (same key+payload replay; conflict → 409); payment resolve rules (inconclusive keeps UNKNOWN/PENDING); per-service OpenAPI + shared `components.yaml`; stable `ErrorCode`s; charge amount must be strictly positive |
+| **Confirmed** | C-101-1, C-101-2, C-101-3 (see D-014) |
+| **Related** | TH-101.1 · TH-102 next |
+
+---
+
 ## D-014 — TH-101 shared domain contracts
 
 | Field | Value |
 | --- | --- |
 | **Date** | 2026-11-01 |
-| **Status** | **approved** (Owner tasked TH-101 execution) |
+| **Status** | **approved** (Owner tasked TH-101 execution; C-101-1..3 confirmed 2026-11-01) |
 | **Decision-maker** | Project Owner |
 | **Context** | Lock identical API/state surface for A and C before service implementation |
-| **Decision** | Add Gradle module `:contracts` (DTOs, enums, transition guards, idempotency helpers) + `docs/contracts/openapi.yaml` + state diagrams; services depend on module; **no** HTTP business endpoints, persistence, Temporal, LLM, or runner in this ticket |
-| **Assumptions (Owner may veto)** | **C-101-1** orchestration calls inventory `consume` after `arrange`; **C-101-2** money as `amountMinor`+currency; **C-101-3** HTTP prefix `/api/v1` |
-| **Evidence** | `:contracts` tests green; `./gradlew build` SUCCESS; branch `feature/th-101-domain-contracts` |
-| **Related** | TH-101 · TH-011 · TH-012 · next TH-102..104 |
+| **Decision** | Add Gradle module `:contracts` (DTOs, enums, transition guards, idempotency helpers) + OpenAPI + state diagrams; services depend on module; **no** HTTP business endpoints, persistence, Temporal, LLM, or runner in this ticket |
+| **Confirmed (Owner)** | **C-101-1** orchestration calls inventory `consume` after confirmed `arrange`; **C-101-2** money as `amountMinor`+currency; **C-101-3** HTTP prefix `/api/v1` |
+| **Evidence** | `:contracts` tests green; `./gradlew build` SUCCESS; branch `feature/th-101-domain-contracts` (+ TH-101.1 hardening) |
+| **Related** | TH-101 · TH-101.1 · TH-011 · TH-012 · next TH-102..104 |
 
 ---
 

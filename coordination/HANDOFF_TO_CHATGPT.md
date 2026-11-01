@@ -1,113 +1,70 @@
 # HANDOFF_TO_CHATGPT
 
 **Date:** 2026-11-01  
-**Task:** TH-101 — Domain contracts and state models  
+**Task:** TH-101.1 — Contract clarification and OpenAPI hardening  
 **Prepared by:** Cursor Agent  
 **MODE:** IMPLEMENTATION  
-**Branch:** `feature/th-101-domain-contracts`
+**Branch:** `feature/th-101.1-contract-hardening`
 
 ---
 
-## What was implemented
+## Exact changes
 
-Shared contract surface for Inventory / Payment / Shipping aligned to TH-011 and protocol-v0:
+1. **Idempotency** — `Idempotency-Key` header only; body fields removed from DTOs. Same key+payload → replay; same key+different payload → `IDEMPOTENCY_KEY_CONFLICT` (`IdempotencyRules`). Recommended key values in `IdempotencyKeys` (single-SKU MVP).
+2. **Payment resolve** — `PaymentResolveRules` + `ResolveProbeOutcome`: confirmed capture → CAPTURED; authoritative non-capture → FAILED; inconclusive keeps UNKNOWN/PENDING; contradiction check; no refund without CAPTURED.
+3. **OpenAPI** — split into per-service specs + shared `components.yaml` (correct server per service). Removed monolithic `openapi.yaml`.
+4. **Errors / validation** — `ErrorCode` enum; `ApiError.code` typed; charge `amountMinor > 0`.
+5. **Consume** — documented C-101-1: orchestration after confirmed arrange; atomic once-only stock update; RELEASED/CONSUMED terminal.
 
-- Java module `:contracts` — enums, request/response records, snapshots, `Money`, `IdempotencyKeys`, transition guards, `CompensationOrder`
-- OpenAPI 3: `docs/contracts/openapi.yaml`
-- State diagrams + assumptions: `docs/contracts/STATE_MODELS.md`
-- Focused unit tests for valid/invalid transitions and DTO validation
-- Services declare `implementation(project(":contracts"))` (no domain HTTP yet)
-- Taiga story TH-101 → **Done**
-
-**Explicitly not implemented:** Temporal workflows, LLM, experiment runner, DB migrations/tables, full service logic, e2e slice.
+Owner C-101-1..3 recorded as **confirmed** in D-014; D-015 for hardening.
 
 ---
 
-## Files created / modified (high level)
+## Spec layout
 
-| Path | Role |
+| File | Server |
 | --- | --- |
-| `contracts/**` | DTOs, transitions, tests |
-| `docs/contracts/openapi.yaml` | HTTP contract |
-| `docs/contracts/STATE_MODELS.md` | Mermaid + assumptions |
-| `docs/architecture/OVERVIEW.md` | Points at contracts |
-| `settings.gradle.kts` / service `build.gradle.kts` | Module wiring |
-| `README.md` | Status + layout |
-| `coordination/*` | State, next task TH-102 proposed, D-014 |
+| `docs/contracts/components.yaml` | shared schemas |
+| `docs/contracts/openapi-inventory.yaml` | `:8081` |
+| `docs/contracts/openapi-payment.yaml` | `:8082` |
+| `docs/contracts/openapi-shipping.yaml` | `:8083` |
+| `docs/contracts/redocly.yaml` | lint config |
+| `docs/contracts/STATE_MODELS.md` | semantics |
+| `docs/contracts/README.md` | index |
 
 ---
 
-## Contract / state overview
+## Idempotency & resolve (summary)
 
-| Entity | States | Key ops |
-| --- | --- | --- |
-| Reservation | HELD, RELEASED, CONSUMED | reserve, release, **consume** |
-| Payment | PENDING, CAPTURED, FAILED, UNKNOWN, REFUNDED | charge, refund (CAPTURED only), resolve |
-| Shipment | NONE, ARRANGED, CANCELLED | arrange, cancel |
-| Oracle labels | CONFIRMED_SUCCESS / FAILURE / AMBIGUOUS / INVALID | `BusinessOutcome` enum (doc alignment) |
-
-Compensation order: cancel → refund → release.
-
-Semantics enforced in guards: HELD→CONSUMED success path; timeout→UNKNOWN ≠ FAILED; no refund without CAPTURED.
+| Topic | Rule |
+| --- | --- |
+| Transport | Header `Idempotency-Key` |
+| Conflict | 409 `IDEMPOTENCY_KEY_CONFLICT` |
+| Resolve inconclusive | preserve UNKNOWN/PENDING |
+| Timeout | ≠ FAILED |
+| Refund | CAPTURED only |
 
 ---
 
-## Tests and build
+## Tests & validation
 
 ```text
-./gradlew :contracts:test build
-→ BUILD SUCCESSFUL
+./gradlew :contracts:test build  → BUILD SUCCESSFUL
+npx @redocly/cli@1.25.0 lint --config docs/contracts/redocly.yaml
+  → Woohoo! Your API descriptions are valid. (inventory + payment + shipping)
 ```
 
----
 
-## Acceptance criteria verification
-
-| Criterion | Status |
-| --- | --- |
-| OpenAPI/DTO + state diagram (Taiga/backlog AC) | **Met** — openapi.yaml + `:contracts` DTOs + STATE_MODELS.md |
-| Consistent with TH-011/D-012 (no double decrement on consume) | **Met** — consume transition HELD→CONSUMED only; release forbidden on CONSUMED; docs state single decrement |
-| No Temporal / LLM / experiment runner | **Met** |
-| Inventory / payment / shipping contracts + idempotency | **Met** at contract level |
-| Transition unit tests | **Met** |
-| Persistence / HTTP impl | **Out of scope** → TH-102..104 |
+No Temporal / LLM / persistence / TH-102 HTTP.
 
 ---
 
-## Deviations / unresolved for Owner
+## Unresolved
 
-| ID | Topic | Cursor choice | Action |
-| --- | --- | --- | --- |
-| C-101-1 | Who calls `consume`? | Orchestration after arrange | Confirm or override |
-| C-101-2 | Money | `amountMinor` + currency | Confirm |
-| C-101-3 | Path prefix | `/api/v1` | Cosmetic |
-
-No change to approved research MVP (A vs C).
-
----
-
-## Commits / branch
-
-| | |
-| --- | --- |
-| **Branch** | `feature/th-101-domain-contracts` |
-| **HEAD** | `a8c2b88` |
-| **Commits** | `664efae` feat(contracts) · `5d683fc` docs(contracts) · `40cc40d`/`a8c2b88` docs(coordination) |
-
-**Do not push** until GitHub auth for `oskargawr` is verified (prior session blocker).
-
----
-
-## Questions for ChatGPT
-
-1. Prefer explicit inventory `consume` API (chosen) vs shipping-side consume coupling?
-2. Any missing fields on DTOs before TH-102 (e.g. reason codes on failures)?
-3. Should OpenAPI be split per service file for TH-102..104?
+None blocking TH-102. Optional later: exact MVP charge amountMinor value (TH-103).
 
 ---
 
 ## Recommended next
 
-**TH-102** — Inventory service with real schema tables, idempotent reserve/release/consume, unit tests. Rationale: unblocks payment/shipping and Temporal activities on a frozen contract.
-
-Parallel optional: TH-021 / TH-022 literature.
+**TH-102** Inventory — Owner must set `NEXT_TASK` to `approved`.
