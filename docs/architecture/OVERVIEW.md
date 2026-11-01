@@ -31,7 +31,7 @@ Client / harness
 | Artifact | Path |
 | --- | --- |
 | Java DTOs + transition guards | module `:contracts` |
-| OpenAPI | [`docs/contracts/openapi.yaml`](../contracts/openapi.yaml) |
+| OpenAPI | [`docs/contracts/README.md`](../contracts/README.md) (per-service specs + shared components) |
 | State diagrams | [`docs/contracts/STATE_MODELS.md`](../contracts/STATE_MODELS.md) |
 | Invariants / oracle | [`docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md`](../protocol/BUSINESS_INVARIANTS_AND_ORACLE.md) |
 

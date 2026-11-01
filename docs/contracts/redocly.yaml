@@ -1,0 +1,19 @@
+# Lint config for local thesis OpenAPI (no auth, localhost servers).
+extends:
+  - recommended
+
+apis:
+  inventory:
+    root: openapi-inventory.yaml
+  payment:
+    root: openapi-payment.yaml
+  shipping:
+    root: openapi-shipping.yaml
+
+rules:
+  security-defined: off
+  info-license: off
+  no-server-example.com: off
+  tag-description: off
+  no-unused-components: off
+  no-empty-servers: off

@@ -1,0 +1,143 @@
+openapi: 3.0.3
+info:
+  title: Inventory service API
+  version: 0.1.1
+  description: |
+    Inventory contracts (TH-101 / TH-101.1). Implementation in TH-102.
+    Consume is invoked by orchestration only after confirmed Shipping arrange (Owner C-101-1).
+servers:
+  - url: http://localhost:8081
+    description: Inventory local stub
+security: []
+tags:
+  - name: inventory
+    description: Reservation and stock APIs
+
+paths:
+  /api/v1/reservations:
+    post:
+      tags: [inventory]
+      operationId: reserve
+      summary: Reserve stock (idempotent)
+      parameters:
+        - $ref: "./components.yaml#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./components.yaml#/components/schemas/ReserveRequest"
+      responses:
+        "200":
+          description: Held (or prior hold returned for same key+payload)
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ReserveResponse"
+        "409":
+          description: INSUFFICIENT_STOCK or IDEMPOTENCY_KEY_CONFLICT
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"
+
+  /api/v1/reservations/{reservationId}/release:
+    post:
+      tags: [inventory]
+      operationId: releaseReservation
+      summary: Release hold (HELD → RELEASED); idempotent; never from CONSUMED
+      parameters:
+        - $ref: "./components.yaml#/components/parameters/ReservationId"
+        - $ref: "./components.yaml#/components/parameters/IdempotencyKeyHeader"
+      responses:
+        "200":
+          description: Released
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ReleaseResponse"
+        "404":
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"
+        "409":
+          description: INVALID_STATE_TRANSITION or IDEMPOTENCY_KEY_CONFLICT
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"
+
+  /api/v1/reservations/{reservationId}/consume:
+    post:
+      tags: [inventory]
+      operationId: consumeReservation
+      summary: HELD → CONSUMED once; held and onHand updated atomically
+      description: |
+        Orchestration calls this only after Shipping arrange succeeded (C-101-1).
+        Replay with the same Idempotency-Key must not decrement stock again.
+      parameters:
+        - $ref: "./components.yaml#/components/parameters/ReservationId"
+        - $ref: "./components.yaml#/components/parameters/IdempotencyKeyHeader"
+      responses:
+        "200":
+          description: Consumed
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ConsumeResponse"
+        "404":
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"
+        "409":
+          description: INVALID_STATE_TRANSITION or IDEMPOTENCY_KEY_CONFLICT
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"
+
+  /api/v1/reservations/{reservationId}:
+    get:
+      tags: [inventory]
+      operationId: getReservation
+      summary: Get reservation snapshot
+      parameters:
+        - $ref: "./components.yaml#/components/parameters/ReservationId"
+      responses:
+        "200":
+          description: Snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ReservationSnapshot"
+        "404":
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"
+
+  /api/v1/stock/{sku}:
+    get:
+      tags: [inventory]
+      operationId: getStock
+      summary: Get SKU stock snapshot
+      parameters:
+        - $ref: "./components.yaml#/components/parameters/Sku"
+      responses:
+        "200":
+          description: Stock snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/StockSnapshot"
+        "404":
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"

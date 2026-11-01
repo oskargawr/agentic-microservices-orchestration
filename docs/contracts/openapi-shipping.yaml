@@ -1,0 +1,91 @@
+openapi: 3.0.3
+info:
+  title: Shipping service API
+  version: 0.1.1
+  description: |
+    Shipping contracts (TH-101 / TH-101.1). Implementation in TH-104.
+    After confirmed arrange, orchestration calls Inventory consume (C-101-1).
+servers:
+  - url: http://localhost:8083
+    description: Shipping local stub
+security: []
+tags:
+  - name: shipping
+    description: Arrange and cancel shipment APIs
+
+paths:
+  /api/v1/shipments/arrange:
+    post:
+      tags: [shipping]
+      operationId: arrangeShipment
+      summary: Arrange shipment (NONE → ARRANGED); idempotent
+      parameters:
+        - $ref: "./components.yaml#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./components.yaml#/components/schemas/ArrangeRequest"
+      responses:
+        "200":
+          description: Arranged
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ArrangeResponse"
+        "409":
+          description: INVALID_STATE_TRANSITION or IDEMPOTENCY_KEY_CONFLICT
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"
+
+  /api/v1/shipments/{shipmentId}/cancel:
+    post:
+      tags: [shipping]
+      operationId: cancelShipment
+      summary: Cancel arranged shipment; first compensation step
+      parameters:
+        - $ref: "./components.yaml#/components/parameters/ShipmentId"
+        - $ref: "./components.yaml#/components/parameters/IdempotencyKeyHeader"
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/CancelShipmentResponse"
+        "404":
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"
+        "409":
+          description: INVALID_STATE_TRANSITION or IDEMPOTENCY_KEY_CONFLICT
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"
+
+  /api/v1/shipments/{shipmentId}:
+    get:
+      tags: [shipping]
+      operationId: getShipment
+      summary: Get shipment snapshot
+      parameters:
+        - $ref: "./components.yaml#/components/parameters/ShipmentId"
+      responses:
+        "200":
+          description: Snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ShipmentSnapshot"
+        "404":
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"

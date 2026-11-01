@@ -1,0 +1,129 @@
+openapi: 3.0.3
+info:
+  title: Payment service API
+  version: 0.1.1
+  description: |
+    Payment contracts (TH-101 / TH-101.1). Implementation in TH-103.
+    Timeout / missing info → UNKNOWN or keep PENDING — never invent FAILED.
+    Refund only when CAPTURED.
+servers:
+  - url: http://localhost:8082
+    description: Payment local stub
+security: []
+tags:
+  - name: payment
+    description: Charge, refund, and resolve APIs
+
+paths:
+  /api/v1/payments/charge:
+    post:
+      tags: [payment]
+      operationId: charge
+      summary: Charge order; may return CAPTURED, FAILED, PENDING, or UNKNOWN
+      parameters:
+        - $ref: "./components.yaml#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./components.yaml#/components/schemas/ChargeRequest"
+      responses:
+        "200":
+          description: Charge outcome (UNKNOWN means ambiguous — not failure)
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ChargeResponse"
+        "400":
+          description: VALIDATION_ERROR (e.g. non-positive amount)
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"
+        "409":
+          description: IDEMPOTENCY_KEY_CONFLICT
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"
+
+  /api/v1/payments/{paymentId}/refund:
+    post:
+      tags: [payment]
+      operationId: refund
+      summary: Refund only when CAPTURED; idempotent
+      parameters:
+        - $ref: "./components.yaml#/components/parameters/PaymentId"
+        - $ref: "./components.yaml#/components/parameters/IdempotencyKeyHeader"
+      responses:
+        "200":
+          description: Refunded
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/RefundResponse"
+        "404":
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"
+        "409":
+          description: REFUND_NOT_ALLOWED, INVALID_STATE_TRANSITION, or IDEMPOTENCY_KEY_CONFLICT
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"
+
+  /api/v1/payments/{paymentId}/resolve:
+    post:
+      tags: [payment]
+      operationId: resolvePayment
+      summary: Probe UNKNOWN/PENDING; inconclusive leaves state unchanged
+      description: |
+        CAPTURED requires confirmed capture. FAILED requires authoritative confirmation
+        that capture did not occur. Inconclusive probes preserve UNKNOWN or PENDING.
+        Serialize per paymentId; do not invent failure from timeout.
+      parameters:
+        - $ref: "./components.yaml#/components/parameters/PaymentId"
+      responses:
+        "200":
+          description: Current payment snapshot after probe
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/PaymentSnapshot"
+        "404":
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"
+        "409":
+          description: INVALID_STATE_TRANSITION (contradictory confirmed outcomes)
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"
+
+  /api/v1/payments/{paymentId}:
+    get:
+      tags: [payment]
+      operationId: getPayment
+      summary: Get payment snapshot
+      parameters:
+        - $ref: "./components.yaml#/components/parameters/PaymentId"
+      responses:
+        "200":
+          description: Snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/PaymentSnapshot"
+        "404":
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/ApiError"

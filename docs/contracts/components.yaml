@@ -1,0 +1,209 @@
+# Shared OpenAPI components for Inventory / Payment / Shipping (TH-101.1).
+# Referenced by openapi-inventory.yaml, openapi-payment.yaml, openapi-shipping.yaml.
+
+openapi: 3.0.3
+info:
+  title: Shared thesis contract components
+  version: 0.1.1
+  description: Not a deployable API — schemas and parameters only.
+servers:
+  - url: http://localhost
+    description: Placeholder — components are referenced by service specs
+paths: {}
+
+components:
+  parameters:
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+      description: |
+        Canonical idempotency transport (TH-101.1). Not duplicated in JSON bodies.
+        Same key + same logical payload → replay original result.
+        Same key + different payload → 409 IDEMPOTENCY_KEY_CONFLICT.
+        Recommended values: see Java IdempotencyKeys (orderId:reserve, orderId:charge, …).
+    ReservationId:
+      name: reservationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PaymentId:
+      name: paymentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ShipmentId:
+      name: shipmentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Sku:
+      name: sku
+      in: path
+      required: true
+      schema: { type: string, example: SKU-MVP-1 }
+
+  schemas:
+    Money:
+      type: object
+      required: [amountMinor, currency]
+      properties:
+        amountMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Integer minor units (Owner C-101-2). Charge requires > 0.
+        currency:
+          type: string
+          minLength: 1
+          example: PLN
+
+    ErrorCode:
+      type: string
+      enum:
+        - INSUFFICIENT_STOCK
+        - INVALID_STATE_TRANSITION
+        - IDEMPOTENCY_KEY_CONFLICT
+        - NOT_FOUND
+        - VALIDATION_ERROR
+        - REFUND_NOT_ALLOWED
+
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code: { $ref: "#/components/schemas/ErrorCode" }
+        message: { type: string }
+        idempotencyKey:
+          type: string
+          description: Echo of Idempotency-Key header when applicable
+          nullable: true
+
+    ReservationState:
+      type: string
+      enum: [HELD, RELEASED, CONSUMED]
+
+    PaymentState:
+      type: string
+      enum: [PENDING, CAPTURED, FAILED, UNKNOWN, REFUNDED]
+
+    ShipmentState:
+      type: string
+      enum: [NONE, ARRANGED, CANCELLED]
+
+    ReserveRequest:
+      type: object
+      required: [orderId, sku, qty]
+      properties:
+        orderId: { type: string, format: uuid }
+        sku: { type: string, example: SKU-MVP-1 }
+        qty: { type: integer, minimum: 1 }
+
+    ReserveResponse:
+      type: object
+      required: [reservationId, orderId, sku, qty, state]
+      properties:
+        reservationId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        sku: { type: string }
+        qty: { type: integer }
+        state: { $ref: "#/components/schemas/ReservationState" }
+
+    ReleaseResponse:
+      type: object
+      required: [reservationId, state]
+      properties:
+        reservationId: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/ReservationState" }
+
+    ConsumeResponse:
+      type: object
+      required: [reservationId, state]
+      properties:
+        reservationId: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/ReservationState" }
+
+    ReservationSnapshot:
+      type: object
+      required: [reservationId, orderId, sku, qty, state]
+      properties:
+        reservationId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        sku: { type: string }
+        qty: { type: integer }
+        state: { $ref: "#/components/schemas/ReservationState" }
+
+    StockSnapshot:
+      type: object
+      required: [sku, onHand, held]
+      properties:
+        sku: { type: string }
+        onHand: { type: integer, minimum: 0 }
+        held: { type: integer, minimum: 0 }
+
+    ChargeRequest:
+      type: object
+      required: [orderId, amount]
+      properties:
+        orderId: { type: string, format: uuid }
+        amount:
+          allOf:
+            - $ref: "#/components/schemas/Money"
+          description: amountMinor must be > 0
+
+    ChargeResponse:
+      type: object
+      required: [paymentId, orderId, amount, state]
+      properties:
+        paymentId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        amount: { $ref: "#/components/schemas/Money" }
+        state: { $ref: "#/components/schemas/PaymentState" }
+
+    RefundResponse:
+      type: object
+      required: [paymentId, state]
+      properties:
+        paymentId: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/PaymentState" }
+
+    PaymentSnapshot:
+      type: object
+      required: [paymentId, orderId, amount, state]
+      properties:
+        paymentId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        amount: { $ref: "#/components/schemas/Money" }
+        state: { $ref: "#/components/schemas/PaymentState" }
+
+    ArrangeRequest:
+      type: object
+      required: [orderId]
+      properties:
+        orderId: { type: string, format: uuid }
+
+    ArrangeResponse:
+      type: object
+      required: [shipmentId, orderId, state]
+      properties:
+        shipmentId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/ShipmentState" }
+
+    CancelShipmentResponse:
+      type: object
+      required: [shipmentId, state]
+      properties:
+        shipmentId: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/ShipmentState" }
+
+    ShipmentSnapshot:
+      type: object
+      required: [shipmentId, orderId, state]
+      properties:
+        shipmentId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/ShipmentState" }

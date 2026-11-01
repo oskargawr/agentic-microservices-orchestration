@@ -127,7 +127,7 @@ Basic CI does **not** require Temporal or Postgres — only `./gradlew build`.
 ## Documentation
 
 - Architecture: [`docs/architecture/OVERVIEW.md`](docs/architecture/OVERVIEW.md)
-- Contracts / state models: [`docs/contracts/STATE_MODELS.md`](docs/contracts/STATE_MODELS.md) · [`docs/contracts/openapi.yaml`](docs/contracts/openapi.yaml)
+- Contracts / state models: [`docs/contracts/README.md`](docs/contracts/README.md) · [`docs/contracts/STATE_MODELS.md`](docs/contracts/STATE_MODELS.md)
 - Business invariants & oracle: [`docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md`](docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md)
 - Experimental protocol v0: [`docs/protocol/EXPERIMENTAL_PROTOCOL_V0.md`](docs/protocol/EXPERIMENTAL_PROTOCOL_V0.md)
 - Git workflow: [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md)

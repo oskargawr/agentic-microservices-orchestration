@@ -1,24 +1,51 @@
-# Domain state models (TH-101)
+# Domain state models (TH-101 / TH-101.1)
 
 Normative source: [`docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md`](../protocol/BUSINESS_INVARIANTS_AND_ORACLE.md)  
-Java DTOs / transition guards: module `:contracts`  
-OpenAPI: [`openapi.yaml`](openapi.yaml)
+Java: module `:contracts`  
+OpenAPI layout: [`README.md`](README.md)
 
-## Reservation
+## Owner-confirmed contract decisions (TH-101.1)
+
+| ID | Decision |
+| --- | --- |
+| **C-101-1** | Orchestration calls Inventory `consume` after Shipping `arrange` is confirmed successful |
+| **C-101-2** | Money = `amountMinor` (integer) + `currency` |
+| **C-101-3** | HTTP prefix `/api/v1` |
+
+---
+
+## Idempotency (TH-101.1)
+
+| Rule | Behavior |
+| --- | --- |
+| Transport | HTTP header **`Idempotency-Key` only** (not in JSON body) |
+| Same key + same logical payload | Return original operation result; **no** duplicate stock / capture / refund / shipment effects |
+| Same key + different logical payload | **`409`** with `ErrorCode.IDEMPOTENCY_KEY_CONFLICT` |
+| MVP scope | Single SKU per order; recommended header values in `IdempotencyKeys` |
+
+Java: `IdempotencyRules`, `IdempotencyKeys`, `IdempotencyConflictException`.
+
+---
+
+## Reservation + consume
 
 ```mermaid
 stateDiagram-v2
-  [*] --> HELD: reserve(orderId,sku,qty) [idempotent]
+  [*] --> HELD: reserve [idempotent]
   HELD --> RELEASED: release
   HELD --> CONSUMED: consume after arrange success
   RELEASED --> [*]
   CONSUMED --> [*]
 ```
 
-- Success: **HELD → CONSUMED** (decrement `held` and `onHand` once — no double decrement).
-- Compensation: **HELD → RELEASED** only (never release `CONSUMED`).
+- **Terminal for MVP:** `RELEASED`, `CONSUMED` (no return to `HELD` for the same reservation).
+- **`consume` (C-101-1):** orchestration only, after confirmed successful `arrange`.
+- **`HELD → CONSUMED`:** single transition; `held` and `onHand` updated **atomically and exactly once**.
+- Replay of the same consume key must **not** decrement stock again.
 
-## Payment
+---
+
+## Payment + resolve
 
 ```mermaid
 stateDiagram-v2
@@ -26,49 +53,49 @@ stateDiagram-v2
   PENDING --> CAPTURED: confirm capture
   PENDING --> FAILED: confirm decline
   PENDING --> UNKNOWN: timeout / lost response / F3
-  UNKNOWN --> CAPTURED: resolve probe
-  UNKNOWN --> FAILED: resolve probe
+  UNKNOWN --> CAPTURED: resolve CAPTURE_CONFIRMED
+  UNKNOWN --> FAILED: resolve CAPTURE_DID_NOT_OCCUR
   CAPTURED --> REFUNDED: refund
   FAILED --> [*]
   REFUNDED --> [*]
 ```
 
-- Timeout ≠ failure → typically **UNKNOWN**.
-- **Do not refund** unless state is **CAPTURED** (contract guard in `PaymentTransitions.assertRefundAllowed`).
-- UNKNOWN remains distinguishable from FAILED for the oracle (`AMBIGUOUS` if unresolved at TERMINAL).
+| Probe outcome | Resulting state |
+| --- | --- |
+| `CAPTURE_CONFIRMED` | `CAPTURED` |
+| `CAPTURE_DID_NOT_OCCUR` | `FAILED` |
+| `INCONCLUSIVE` | keep `UNKNOWN` or `PENDING` |
+
+- Timeout / missing information → **not** confirmed failure.
+- Concurrent/repeated resolve: serialize per `paymentId`; same confirmed outcome is idempotent; contradictory confirmed outcomes → `INVALID_STATE_TRANSITION`.
+- **No refund** unless `CAPTURED` (`PaymentTransitions.assertRefundAllowed` / `REFUND_NOT_ALLOWED`).
+
+Java: `PaymentResolveRules`, `ResolveProbeOutcome`.
+
+---
 
 ## Shipment
 
 ```mermaid
 stateDiagram-v2
   [*] --> NONE
-  NONE --> ARRANGED: arrange(orderId)
+  NONE --> ARRANGED: arrange
   ARRANGED --> CANCELLED: cancel
   CANCELLED --> [*]
 ```
 
 ## Compensation order
 
-1. Cancel shipment (if `ARRANGED`)
-2. Refund payment (if `CAPTURED`)
+1. Cancel shipment (if `ARRANGED`)  
+2. Refund payment (if `CAPTURED`)  
 3. Release inventory (if `HELD`)
 
-Encoded as `CompensationOrder` enum in `:contracts`.
-
-## Orchestration aggregate (non-oracle)
-
-`OrderProcessState` is an orchestration-view helper only. Oracle outcomes use `BusinessOutcome` + entity snapshots.
-
-## Happy path (shared A and C)
+## Happy path (A and C)
 
 ```text
 reserve → charge(CAPTURED) → arrange → consume(HELD→CONSUMED)
 ```
 
-## Design assumptions recorded for Owner (not new research approvals)
+## Stable error codes
 
-| ID | Topic | Choice in TH-101 | Needs Owner? |
-| --- | --- | --- | --- |
-| C-101-1 | Who calls `consume`? | Orchestration calls inventory `consume` after successful `arrange` (services decoupled) | Confirm if preferred otherwise |
-| C-101-2 | Money representation | `amountMinor` + ISO currency (`Money`) | Confirm PLN minor units OK for MVP |
-| C-101-3 | HTTP prefix | `/api/v1/...` | Cosmetic — OK to change in TH-102..104 if needed |
+`INSUFFICIENT_STOCK` · `INVALID_STATE_TRANSITION` · `IDEMPOTENCY_KEY_CONFLICT` · `NOT_FOUND` · `VALIDATION_ERROR` · `REFUND_NOT_ALLOWED`
