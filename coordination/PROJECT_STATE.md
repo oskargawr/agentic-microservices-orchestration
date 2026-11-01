@@ -39,8 +39,25 @@
 | Local re-verify | shipping 7/7, payment 13/13, 0 skipped |
 | Merge | PR #3 **MERGED** (`45849ab`) |
 
+## Explore gaps vs TH-200 (follow-up)
+
+Pre-coding explore checklist largely **superseded** by implemented `:orchestration:variant-a` + PR #4:
+
+| Gap | Resolution |
+| --- | --- |
+| G0 TH-104 merge | Done (`45849ab`) |
+| G1 NEXT_TASK approve | Owner brief → TH-200 |
+| G2 module layout | Chose `variant-a` (not platform-only) |
+| G3 Temporal SDK | Pinned `1.40.0` (test env); Compose server still `1.25.2` |
+| G4–G6 worker/tests | TestWorkflowEnvironment + service bootJars; no CI Temporal server yet |
+| G7 amount | Assumption `Money.plnMinor(2599)` documented |
+| G8 consume-after-arrange fail | Deferred to TH-201 |
+| G9 oracle | Independent HTTP GET + stock SQL in IT (not Temporal COMPLETED alone) |
+
+**Still open (non-blocking TH-200 merge):** align Compose Temporal server with Java SDK before a real worker against `:7233`; optional later move of shared activities into `platform` for Variant C surface parity; protocol-v0 mermaid still says “consume on arrange success” vs C-101-1 four-step wording.
+
 ## Next three actions
 
-1. Merge TH-200 PR when CI green
+1. Merge TH-200 PR #4 (CI already green)
 2. Propose TH-201 Saga compensations A
 3. Parallel lit. TH-021 / TH-022
