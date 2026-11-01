@@ -7,7 +7,10 @@ import java.util.Set;
 import pl.edu.pw.thesis.contracts.inventory.ReservationState;
 
 /**
- * Allowed reservation transitions (TH-011 §3.1). Terminal: RELEASED, CONSUMED.
+ * Allowed reservation transitions (TH-011 §3.1 / TH-101.1).
+ * Terminal for MVP: {@link ReservationState#RELEASED}, {@link ReservationState#CONSUMED}.
+ * {@code consume}: single {@code HELD → CONSUMED}; orchestration calls only after confirmed arrange (C-101-1);
+ * stock {@code held}/{@code onHand} updated atomically once — replay must not decrement again.
  */
 public final class ReservationTransitions {
 

@@ -5,17 +5,18 @@ import java.util.UUID;
 
 /**
  * Marks a hold as fulfilled: {@code HELD → CONSUMED}.
- * Called by orchestration after successful arrange (services stay decoupled).
+ * <p><strong>Owner C-101-1:</strong> called by orchestration only after Shipping {@code arrange}
+ * has been confirmed successful. Updates {@code held} and {@code onHand} atomically once;
+ * replay must not decrement again.
  */
 public record ConsumeRequest(
-        UUID reservationId,
-        String idempotencyKey
+        UUID reservationId
 ) {
     public ConsumeRequest {
         Objects.requireNonNull(reservationId, "reservationId");
-        Objects.requireNonNull(idempotencyKey, "idempotencyKey");
-        if (idempotencyKey.isBlank()) {
-            throw new IllegalArgumentException("idempotencyKey must not be blank");
-        }
+    }
+
+    public String idempotencyFingerprint() {
+        return reservationId.toString();
     }
 }

@@ -10,12 +10,12 @@ class DtoValidationTest {
     @Test
     void reserveRejectsNonPositiveQty() {
         assertThrows(IllegalArgumentException.class, () ->
-                new ReserveRequest(UUID.randomUUID(), "SKU-MVP-1", 0, "key"));
+                new ReserveRequest(UUID.randomUUID(), "SKU-MVP-1", 0));
     }
 
     @Test
-    void reserveRejectsBlankIdempotencyKey() {
+    void reserveRejectsBlankSku() {
         assertThrows(IllegalArgumentException.class, () ->
-                new ReserveRequest(UUID.randomUUID(), "SKU-MVP-1", 1, " "));
+                new ReserveRequest(UUID.randomUUID(), " ", 1));
     }
 }

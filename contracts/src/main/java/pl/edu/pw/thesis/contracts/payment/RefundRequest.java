@@ -3,15 +3,15 @@ package pl.edu.pw.thesis.contracts.payment;
 import java.util.Objects;
 import java.util.UUID;
 
+/** Logical refund intent. Idempotency via {@code Idempotency-Key} header only. */
 public record RefundRequest(
-        UUID paymentId,
-        String idempotencyKey
+        UUID paymentId
 ) {
     public RefundRequest {
         Objects.requireNonNull(paymentId, "paymentId");
-        Objects.requireNonNull(idempotencyKey, "idempotencyKey");
-        if (idempotencyKey.isBlank()) {
-            throw new IllegalArgumentException("idempotencyKey must not be blank");
-        }
+    }
+
+    public String idempotencyFingerprint() {
+        return paymentId.toString();
     }
 }

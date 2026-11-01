@@ -4,7 +4,10 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Mandatory idempotency key helpers (TH-011 §5 / I7).
+ * Recommended {@code Idempotency-Key} <em>header values</em> (TH-011 §5 / TH-101.1).
+ * Keys are not placed in JSON bodies.
+ *
+ * <p>MVP: one SKU per order; {@code reserve}/{@code charge}/{@code arrange} are scoped by {@code orderId}.
  */
 public final class IdempotencyKeys {
 
@@ -20,19 +23,19 @@ public final class IdempotencyKeys {
     }
 
     public static String arrange(UUID orderId) {
-        return requireOrder(orderId).toString();
+        return requireOrder(orderId) + ":arrange";
     }
 
     public static String release(UUID reservationId) {
-        return requireId(reservationId, "reservationId").toString();
+        return requireId(reservationId, "reservationId") + ":release";
     }
 
     public static String refund(UUID paymentId) {
-        return requireId(paymentId, "paymentId").toString();
+        return requireId(paymentId, "paymentId") + ":refund";
     }
 
     public static String cancelShipment(UUID shipmentId) {
-        return requireId(shipmentId, "shipmentId").toString();
+        return requireId(shipmentId, "shipmentId") + ":cancel";
     }
 
     public static String consume(UUID reservationId) {
