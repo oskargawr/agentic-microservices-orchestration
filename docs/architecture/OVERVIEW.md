@@ -1,7 +1,7 @@
-# Architecture overview (placeholder)
+# Architecture overview
 
-**Status:** placeholder — no implementation yet.  
-**Scope decision:** Owner-approved MVP **A vs C** (D-009). Supervisor supported the overall topic/idea; detailed methodology remains labeled as research design until further confirmation.
+**Status:** contracts defined (TH-101); service domain logic not implemented (TH-102..104).  
+**Scope decision:** Owner-approved MVP **A vs C** (D-009).
 
 ## Intended comparison
 
@@ -22,19 +22,26 @@ Client / harness
         │ Shared business APIs   │
         │ Inventory · Payment ·  │
         │ Shipping               │
+        │ (identical contracts)  │
         └────────────────────────┘
 ```
 
-## Non-goals for this document
+## Shared contracts (TH-101)
 
-- No concrete class diagrams yet (TH-101+).
-- No claim that the diagram matches running code (none yet).
-- End-state success must be verified independently of LLM text (see TH-011).
+| Artifact | Path |
+| --- | --- |
+| Java DTOs + transition guards | module `:contracts` |
+| OpenAPI | [`docs/contracts/openapi.yaml`](../contracts/openapi.yaml) |
+| State diagrams | [`docs/contracts/STATE_MODELS.md`](../contracts/STATE_MODELS.md) |
+| Invariants / oracle | [`docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md`](../protocol/BUSINESS_INVARIANTS_AND_ORACLE.md) |
+
+## Non-goals (this document / TH-101)
+
+- No Temporal workflows, LLM, or experiment runner.
+- No claim that HTTP endpoints are implemented (stubs only expose Actuator until TH-102..104).
+- End-state success must be verified independently of LLM text (TH-011).
 
 ## Related
 
 - GitHub: https://github.com/oskargawr/agentic-microservices-orchestration
-- Protocol: [`docs/protocol/`](../protocol/)
-- Coordination: [`coordination/DECISION_LOG.md`](../../coordination/DECISION_LOG.md) (D-009)
-- Local Obsidian vault (not in Git): Scope and Non-Goals, Research Questions, Experimental Protocol
-
+- Coordination: [`coordination/DECISION_LOG.md`](../../coordination/DECISION_LOG.md) (D-009, D-011, D-012)

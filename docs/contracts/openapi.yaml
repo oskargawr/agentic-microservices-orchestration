@@ -1,0 +1,425 @@
+openapi: 3.0.3
+info:
+  title: Thesis shared business APIs (A vs C)
+  version: 0.1.0
+  description: |
+    Contract surface for Inventory, Payment and Shipping (TH-101).
+    Normative rules: docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md and protocol-v0.
+    Implementations land in TH-102..104. No Temporal / LLM endpoints here.
+servers:
+  - url: http://localhost:8081
+    description: Inventory stub
+  - url: http://localhost:8082
+    description: Payment stub
+  - url: http://localhost:8083
+    description: Shipping stub
+
+tags:
+  - name: inventory
+  - name: payment
+  - name: shipping
+
+paths:
+  /api/v1/reservations:
+    post:
+      tags: [inventory]
+      operationId: reserve
+      summary: Reserve stock (idempotent by orderId:reserve)
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReserveRequest"
+      responses:
+        "200":
+          description: Held (or prior hold returned)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReserveResponse"
+        "409":
+          description: Conflict / insufficient stock
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/reservations/{reservationId}/release:
+    post:
+      tags: [inventory]
+      operationId: releaseReservation
+      summary: Release hold (HELD → RELEASED); idempotent
+      parameters:
+        - $ref: "#/components/parameters/ReservationId"
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      responses:
+        "200":
+          description: Released
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseResponse"
+        "409":
+          description: Illegal transition (e.g. already CONSUMED)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/reservations/{reservationId}/consume:
+    post:
+      tags: [inventory]
+      operationId: consumeReservation
+      summary: Fulfill hold (HELD → CONSUMED); decrements held and onHand once
+      parameters:
+        - $ref: "#/components/parameters/ReservationId"
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      responses:
+        "200":
+          description: Consumed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsumeResponse"
+        "409":
+          description: Illegal transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/reservations/{reservationId}:
+    get:
+      tags: [inventory]
+      operationId: getReservation
+      parameters:
+        - $ref: "#/components/parameters/ReservationId"
+      responses:
+        "200":
+          description: Snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservationSnapshot"
+
+  /api/v1/stock/{sku}:
+    get:
+      tags: [inventory]
+      operationId: getStock
+      parameters:
+        - name: sku
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Stock snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockSnapshot"
+
+  /api/v1/payments/charge:
+    post:
+      tags: [payment]
+      operationId: charge
+      summary: Charge order; may return CAPTURED, FAILED, PENDING, or UNKNOWN
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChargeRequest"
+      responses:
+        "200":
+          description: Charge outcome (UNKNOWN means ambiguous — not failure)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChargeResponse"
+
+  /api/v1/payments/{paymentId}/refund:
+    post:
+      tags: [payment]
+      operationId: refund
+      summary: Refund only when CAPTURED (confirmed); idempotent
+      parameters:
+        - $ref: "#/components/parameters/PaymentId"
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      responses:
+        "200":
+          description: Refunded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefundResponse"
+        "409":
+          description: Refund refused (e.g. UNKNOWN / PENDING / FAILED)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/payments/{paymentId}/resolve:
+    post:
+      tags: [payment]
+      operationId: resolvePayment
+      summary: Probe UNKNOWN/PENDING toward CAPTURED or FAILED
+      parameters:
+        - $ref: "#/components/parameters/PaymentId"
+      responses:
+        "200":
+          description: Current payment snapshot after probe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentSnapshot"
+
+  /api/v1/payments/{paymentId}:
+    get:
+      tags: [payment]
+      operationId: getPayment
+      parameters:
+        - $ref: "#/components/parameters/PaymentId"
+      responses:
+        "200":
+          description: Snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentSnapshot"
+
+  /api/v1/shipments/arrange:
+    post:
+      tags: [shipping]
+      operationId: arrangeShipment
+      summary: Arrange shipment (NONE → ARRANGED); idempotent by orderId
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArrangeRequest"
+      responses:
+        "200":
+          description: Arranged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArrangeResponse"
+
+  /api/v1/shipments/{shipmentId}/cancel:
+    post:
+      tags: [shipping]
+      operationId: cancelShipment
+      summary: Cancel arranged shipment; first compensation step
+      parameters:
+        - $ref: "#/components/parameters/ShipmentId"
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancelShipmentResponse"
+
+  /api/v1/shipments/{shipmentId}:
+    get:
+      tags: [shipping]
+      operationId: getShipment
+      parameters:
+        - $ref: "#/components/parameters/ShipmentId"
+      responses:
+        "200":
+          description: Snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShipmentSnapshot"
+
+components:
+  parameters:
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+      description: See contracts IdempotencyKeys (orderId:reserve, orderId:charge, …)
+    ReservationId:
+      name: reservationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PaymentId:
+      name: paymentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ShipmentId:
+      name: shipmentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Money:
+      type: object
+      required: [amountMinor, currency]
+      properties:
+        amountMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          type: string
+          example: PLN
+
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        idempotencyKey: { type: string }
+
+    ReservationState:
+      type: string
+      enum: [HELD, RELEASED, CONSUMED]
+
+    PaymentState:
+      type: string
+      enum: [PENDING, CAPTURED, FAILED, UNKNOWN, REFUNDED]
+
+    ShipmentState:
+      type: string
+      enum: [NONE, ARRANGED, CANCELLED]
+
+    ReserveRequest:
+      type: object
+      required: [orderId, sku, qty, idempotencyKey]
+      properties:
+        orderId: { type: string, format: uuid }
+        sku: { type: string, example: SKU-MVP-1 }
+        qty: { type: integer, minimum: 1 }
+        idempotencyKey: { type: string }
+
+    ReserveResponse:
+      type: object
+      required: [reservationId, orderId, sku, qty, state]
+      properties:
+        reservationId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        sku: { type: string }
+        qty: { type: integer }
+        state: { $ref: "#/components/schemas/ReservationState" }
+
+    ReleaseResponse:
+      type: object
+      required: [reservationId, state]
+      properties:
+        reservationId: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/ReservationState" }
+
+    ConsumeResponse:
+      type: object
+      required: [reservationId, state]
+      properties:
+        reservationId: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/ReservationState" }
+
+    ReservationSnapshot:
+      type: object
+      required: [reservationId, orderId, sku, qty, state]
+      properties:
+        reservationId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        sku: { type: string }
+        qty: { type: integer }
+        state: { $ref: "#/components/schemas/ReservationState" }
+
+    StockSnapshot:
+      type: object
+      required: [sku, onHand, held]
+      properties:
+        sku: { type: string }
+        onHand: { type: integer, minimum: 0 }
+        held: { type: integer, minimum: 0 }
+
+    ChargeRequest:
+      type: object
+      required: [orderId, amount, idempotencyKey]
+      properties:
+        orderId: { type: string, format: uuid }
+        amount: { $ref: "#/components/schemas/Money" }
+        idempotencyKey: { type: string }
+
+    ChargeResponse:
+      type: object
+      required: [paymentId, orderId, amount, state]
+      properties:
+        paymentId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        amount: { $ref: "#/components/schemas/Money" }
+        state: { $ref: "#/components/schemas/PaymentState" }
+
+    RefundResponse:
+      type: object
+      required: [paymentId, state]
+      properties:
+        paymentId: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/PaymentState" }
+
+    PaymentSnapshot:
+      type: object
+      required: [paymentId, orderId, amount, state]
+      properties:
+        paymentId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        amount: { $ref: "#/components/schemas/Money" }
+        state: { $ref: "#/components/schemas/PaymentState" }
+
+    ArrangeRequest:
+      type: object
+      required: [orderId, idempotencyKey]
+      properties:
+        orderId: { type: string, format: uuid }
+        idempotencyKey: { type: string }
+
+    ArrangeResponse:
+      type: object
+      required: [shipmentId, orderId, state]
+      properties:
+        shipmentId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/ShipmentState" }
+
+    CancelShipmentResponse:
+      type: object
+      required: [shipmentId, state]
+      properties:
+        shipmentId: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/ShipmentState" }
+
+    ShipmentSnapshot:
+      type: object
+      required: [shipmentId, orderId, state]
+      properties:
+        shipmentId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/ShipmentState" }

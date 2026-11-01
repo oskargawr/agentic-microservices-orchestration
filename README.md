@@ -34,7 +34,8 @@ End-state success is verified by an independent oracle against business invarian
 | Spring Boot service stubs + Actuator health | Done |
 | Business invariants & oracle spec (TH-011) | Spec done |
 | Experimental protocol v0 (TH-012) | Spec done |
-| Domain APIs / state model (TH-101+) | Planned |
+| Domain contracts / state models (TH-101) | Done (OpenAPI + `:contracts`; HTTP impl → TH-102..104) |
+| Domain service implementations (TH-102..104) | Planned |
 | Temporal workflows (A / C) | Planned |
 | Fault injection + experiment runner | Planned |
 | Confirmatory experiment runs | **Not started** |
@@ -52,9 +53,11 @@ Do not treat this repository as containing completed experimental results.
 ## Repository structure
 
 ```text
-services/{inventory,payment,shipping}/   Spring Boot stubs
+contracts/                               Shared DTOs, enums, transition guards (TH-101)
+services/{inventory,payment,shipping}/   Spring Boot stubs (domain APIs → TH-102..104)
 orchestration/platform/                  Future Temporal workers (no workflows yet)
 infra/                                   Compose: Postgres + Temporal
+docs/contracts/                          OpenAPI + state diagrams
 docs/architecture/                       Architecture notes
 docs/protocol/                           Invariants, oracle, protocol-v0
 docs/DEVELOPMENT_WORKFLOW.md             Branching & Conventional Commits
@@ -124,6 +127,7 @@ Basic CI does **not** require Temporal or Postgres — only `./gradlew build`.
 ## Documentation
 
 - Architecture: [`docs/architecture/OVERVIEW.md`](docs/architecture/OVERVIEW.md)
+- Contracts / state models: [`docs/contracts/STATE_MODELS.md`](docs/contracts/STATE_MODELS.md) · [`docs/contracts/openapi.yaml`](docs/contracts/openapi.yaml)
 - Business invariants & oracle: [`docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md`](docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md)
 - Experimental protocol v0: [`docs/protocol/EXPERIMENTAL_PROTOCOL_V0.md`](docs/protocol/EXPERIMENTAL_PROTOCOL_V0.md)
 - Git workflow: [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md)
