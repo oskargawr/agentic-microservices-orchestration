@@ -55,7 +55,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build and test
-        run: ./gradlew build --no-daemon
+        # Serialize test workers: multiple modules boot services + share Postgres schemas
+        run: ./gradlew build --no-daemon --max-workers=1
 
       - name: Stop infra
         if: always()

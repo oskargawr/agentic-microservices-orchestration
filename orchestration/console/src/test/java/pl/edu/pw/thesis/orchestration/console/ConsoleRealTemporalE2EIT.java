@@ -47,9 +47,10 @@ import pl.edu.pw.thesis.orchestration.varianta.runtime.VariantAWorkers;
         "server.address=127.0.0.1",
         "thesis.temporal.target=${TEMPORAL_TARGET:localhost:7233}",
         "thesis.temporal.namespace=default",
-        "thesis.services.inventory-base-url=http://127.0.0.1:18081",
-        "thesis.services.payment-base-url=http://127.0.0.1:18082",
-        "thesis.services.shipping-base-url=http://127.0.0.1:18083"
+        // Ports distinct from variant-a HappyPathIT (18081-3) to avoid parallel collisions
+        "thesis.services.inventory-base-url=http://127.0.0.1:19081",
+        "thesis.services.payment-base-url=http://127.0.0.1:19082",
+        "thesis.services.shipping-base-url=http://127.0.0.1:19083"
 })
 @AutoConfigureMockMvc
 @EnabledIf("stackAvailable")
@@ -62,9 +63,9 @@ class ConsoleRealTemporalE2EIT {
     static final String TEMPORAL_TARGET =
             System.getenv().getOrDefault("TEMPORAL_TARGET", "localhost:7233");
 
-    static final int INV_PORT = 18081;
-    static final int PAY_PORT = 18082;
-    static final int SHIP_PORT = 18083;
+    static final int INV_PORT = 19081;
+    static final int PAY_PORT = 19082;
+    static final int SHIP_PORT = 19083;
 
     static final List<Process> PROCESSES = new ArrayList<>();
     static WorkerFactory workerFactory;
