@@ -84,7 +84,7 @@ Also re-ran payment: **13/13**, 0 skipped.
 ## Commits / next
 
 | **Branch** | `feature/th-104-shipping-service` |
-| **HEAD** | *(set after commit)* |
+| **HEAD** | fdd727fcc6fbcfb4e555e9fb92545615154484e5 |
 | **PR / merge** | Open PR → merge when CI green (do not force-push) |
 
 **Next proposed:** TH-200 Variant A happy path (or parallel lit. TH-021/022).
