@@ -68,7 +68,7 @@ cd console-ui && npm install && npm run dev
 
 ## Commits / PR
 
-| **HEAD** | 46aca570f02bb302a53b447504fb95763b825eef |
-| **PR** | *(after open)* |
+| **HEAD** | *(see branch tip)* |
+| **PR** | https://github.com/oskargawr/agentic-microservices-orchestration/pull/5 |
 
 **Next:** TH-201 Saga compensations A (not started).

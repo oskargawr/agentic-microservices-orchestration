@@ -26,6 +26,7 @@
 | --- | --- |
 | **Branch** | `feature/th-205-experiment-console` |
 | **Base** | `main` @ `9e4beff` |
+| **PR** | https://github.com/oskargawr/agentic-microservices-orchestration/pull/5 |
 
 ## Next three actions
 
