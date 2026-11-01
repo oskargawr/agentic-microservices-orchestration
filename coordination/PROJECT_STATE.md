@@ -26,6 +26,7 @@
 | **Branch** | `feature/th-200-variant-a-happy-path` |
 | **Base** | `main` @ `45849ab` |
 | **Variant A tests** | workflow order 1/1; happy-path IT 1/1 (Postgres + bootJar processes), 0 skipped |
+| **PR** | https://github.com/oskargawr/agentic-microservices-orchestration/pull/4 |
 
 ## TH-104 CI closure evidence (PR #3 run `41324579450`)
 

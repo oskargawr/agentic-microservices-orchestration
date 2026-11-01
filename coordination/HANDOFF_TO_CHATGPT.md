@@ -59,6 +59,6 @@ Sequence: **reserve → charge → arrange → consume** (C-101-1).
 ## Commits / PR
 
 | **HEAD** | 951305b96ff5e9845bf40bea11abb15c8ef52f74 |
-| **PR** | *(set after open)* |
+| **PR** | https://github.com/oskargawr/agentic-microservices-orchestration/pull/4 (open) |
 
 **Next proposed:** TH-201 Saga compensations A.
