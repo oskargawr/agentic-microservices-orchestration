@@ -1,35 +1,38 @@
 # PROJECT_STATE
 
-**Last updated:** 2026-11-01  
-**Updated by:** Cursor Agent (TH-205 Experiment Console)
+**Last updated:** 2026-11-02  
+**Updated by:** Cursor Agent (TH-201 implementation — PR pending)
 
 ## Current thesis scope (MVP)
 
 | | |
 | --- | --- |
 | **Mandatory** | A vs C (D-009) |
-| **Protocol** | `protocol-v0` |
+| **Protocol** | `protocol-v0` (unchanged) |
 | **Services** | Inventory / Payment / Shipping **Done** |
-| **Orchestration** | Variant A happy path **Done** (TH-200 on `main`) |
-| **Console** | TH-205 Experiment Console **in progress** |
+| **Orchestration** | TH-200 Done · **TH-201 implemented on feature branch** (PR open, not merged) |
+| **Console** | TH-205 **Done / Closed** |
 | **OPTIONAL** | B, MCP, RQ4 |
 
 ## Phase / milestone
 
-- **Done:** TH-102…TH-104, **TH-200** (`main` @ `9e4beff`)
-- **In progress:** TH-205 Experiment Console
-- **Open:** OWN-1 *n*; OWN-2 model; Temporal Compose vs SDK alignment note (non-blocking)
+| Ticket | Status |
+| --- | --- |
+| TH-205 | Done / Closed @ `1137fd1` |
+| TH-201 | **Implementation complete on branch** — awaiting Owner PR review/merge |
+| TH-206 | **Proposed** (unapproved) |
 
 ## Engineering
 
 | | |
 | --- | --- |
-| **Branch** | `feature/th-205-experiment-console` |
-| **Base** | `main` @ `9e4beff` |
-| **PR** | https://github.com/oskargawr/agentic-microservices-orchestration/pull/5 |
+| **Branch** | `feature/th-201-variant-a-saga-compensation` @ `f052768` |
+| **Base** | `main` @ `1137fd1` |
+| **PR** | https://github.com/oskargawr/agentic-microservices-orchestration/pull/6 |
+| **D-201** | approved |
 
 ## Next three actions
 
-1. Merge TH-205 PR when CI green
-2. Propose TH-201 Saga compensations A
-3. Lit. TH-021 / TH-022
+1. Owner review/merge TH-201 PR  
+2. Keep TH-206 Proposed  
+3. TH-202 / lit. as prioritized

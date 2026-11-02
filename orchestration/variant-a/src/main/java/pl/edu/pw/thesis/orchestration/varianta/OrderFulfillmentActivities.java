@@ -5,11 +5,14 @@ import io.temporal.activity.ActivityMethod;
 import java.util.UUID;
 import pl.edu.pw.thesis.contracts.common.Money;
 import pl.edu.pw.thesis.contracts.inventory.ConsumeResponse;
+import pl.edu.pw.thesis.contracts.inventory.ReleaseResponse;
 import pl.edu.pw.thesis.contracts.inventory.ReservationSnapshot;
 import pl.edu.pw.thesis.contracts.inventory.ReserveResponse;
 import pl.edu.pw.thesis.contracts.payment.ChargeResponse;
 import pl.edu.pw.thesis.contracts.payment.PaymentSnapshot;
+import pl.edu.pw.thesis.contracts.payment.RefundResponse;
 import pl.edu.pw.thesis.contracts.shipping.ArrangeResponse;
+import pl.edu.pw.thesis.contracts.shipping.CancelShipmentResponse;
 import pl.edu.pw.thesis.contracts.shipping.ShipmentSnapshot;
 
 /** HTTP I/O to shared services. All network calls live here (not in the workflow). */
@@ -19,14 +22,28 @@ public interface OrderFulfillmentActivities {
     @ActivityMethod
     ReserveResponse reserve(UUID orderId, String sku, int qty);
 
+    /** {@code faultHint} maps to {@code X-Thesis-Fault} when non-null/blank; otherwise omitted. */
     @ActivityMethod
-    ChargeResponse charge(UUID orderId, Money amount);
+    ChargeResponse charge(UUID orderId, Money amount, String faultHint);
 
     @ActivityMethod
     ArrangeResponse arrange(UUID orderId);
 
     @ActivityMethod
     ConsumeResponse consume(UUID reservationId);
+
+    @ActivityMethod
+    ReleaseResponse release(UUID reservationId);
+
+    @ActivityMethod
+    RefundResponse refund(UUID paymentId);
+
+    @ActivityMethod
+    CancelShipmentResponse cancelShipment(UUID shipmentId);
+
+    /** {@code faultHint} optional resolve probe control ({@code X-Thesis-Fault}). */
+    @ActivityMethod
+    PaymentSnapshot resolvePayment(UUID paymentId, String faultHint);
 
     @ActivityMethod
     ReservationSnapshot getReservation(UUID reservationId);

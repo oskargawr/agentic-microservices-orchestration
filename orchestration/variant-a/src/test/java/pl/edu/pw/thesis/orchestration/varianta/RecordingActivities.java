@@ -1,19 +1,24 @@
 package pl.edu.pw.thesis.orchestration.varianta;
 
+import io.temporal.failure.ApplicationFailure;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Supplier;
 import pl.edu.pw.thesis.contracts.common.Money;
 import pl.edu.pw.thesis.contracts.inventory.ConsumeResponse;
+import pl.edu.pw.thesis.contracts.inventory.ReleaseResponse;
 import pl.edu.pw.thesis.contracts.inventory.ReservationSnapshot;
 import pl.edu.pw.thesis.contracts.inventory.ReservationState;
 import pl.edu.pw.thesis.contracts.inventory.ReserveResponse;
 import pl.edu.pw.thesis.contracts.payment.ChargeResponse;
 import pl.edu.pw.thesis.contracts.payment.PaymentSnapshot;
 import pl.edu.pw.thesis.contracts.payment.PaymentState;
+import pl.edu.pw.thesis.contracts.payment.RefundResponse;
 import pl.edu.pw.thesis.contracts.shipping.ArrangeResponse;
+import pl.edu.pw.thesis.contracts.shipping.CancelShipmentResponse;
 import pl.edu.pw.thesis.contracts.shipping.ShipmentSnapshot;
 import pl.edu.pw.thesis.contracts.shipping.ShipmentState;
 
@@ -22,6 +27,20 @@ final class RecordingActivities implements OrderFulfillmentActivities {
 
     private final List<String> operations = new CopyOnWriteArrayList<>();
     private final OrderFulfillmentActivities delegate;
+
+    private PaymentState forcedChargeState;
+    private Supplier<ArrangeResponse> arrangeOverride;
+    private Supplier<ConsumeResponse> consumeOverride;
+    private Supplier<RefundResponse> refundOverride;
+    private Supplier<PaymentSnapshot> resolveOverride;
+    private int resolveCalls;
+
+    private UUID lastReservationId;
+    private UUID lastPaymentId;
+    private UUID lastShipmentId;
+    private PaymentState paymentState = PaymentState.CAPTURED;
+    private ReservationState reservationState = ReservationState.HELD;
+    private ShipmentState shipmentState = ShipmentState.ARRANGED;
 
     RecordingActivities() {
         this(null);
@@ -35,67 +54,188 @@ final class RecordingActivities implements OrderFulfillmentActivities {
         return Collections.unmodifiableList(new ArrayList<>(operations));
     }
 
+    void failArrangeWithBusiness(String message) {
+        arrangeOverride = () -> {
+            throw ApplicationFailure.newNonRetryableFailure(message, ActivityPolicies.BUSINESS_FAILURE_TYPE);
+        };
+    }
+
+    void failConsumeWithBusiness(String message) {
+        consumeOverride = () -> {
+            throw ApplicationFailure.newNonRetryableFailure(message, ActivityPolicies.BUSINESS_FAILURE_TYPE);
+        };
+    }
+
+    void failRefundWithBusiness(String message) {
+        refundOverride = () -> {
+            throw ApplicationFailure.newNonRetryableFailure(message, ActivityPolicies.BUSINESS_FAILURE_TYPE);
+        };
+    }
+
+    void chargeReturns(PaymentState state) {
+        this.forcedChargeState = state;
+    }
+
+    void resolveSequence(PaymentState... states) {
+        resolveCalls = 0;
+        PaymentState[] copy = states.clone();
+        resolveOverride = () -> {
+            PaymentState next = copy[Math.min(resolveCalls, copy.length - 1)];
+            resolveCalls++;
+            paymentState = next;
+            return new PaymentSnapshot(lastPaymentId, UUID.randomUUID(), Money.plnMinor(2599), next);
+        };
+    }
+
     @Override
     public ReserveResponse reserve(UUID orderId, String sku, int qty) {
         operations.add("reserve");
         if (delegate != null) {
-            return delegate.reserve(orderId, sku, qty);
+            ReserveResponse r = delegate.reserve(orderId, sku, qty);
+            lastReservationId = r.reservationId();
+            reservationState = r.state();
+            return r;
         }
-        UUID reservationId = UUID.randomUUID();
-        return new ReserveResponse(reservationId, orderId, sku, qty, ReservationState.HELD);
+        lastReservationId = UUID.randomUUID();
+        reservationState = ReservationState.HELD;
+        return new ReserveResponse(lastReservationId, orderId, sku, qty, ReservationState.HELD);
     }
 
     @Override
-    public ChargeResponse charge(UUID orderId, Money amount) {
+    public ChargeResponse charge(UUID orderId, Money amount, String faultHint) {
         operations.add("charge");
-        if (delegate != null) {
-            return delegate.charge(orderId, amount);
+        if (forcedChargeState != null) {
+            lastPaymentId = UUID.randomUUID();
+            paymentState = forcedChargeState;
+            return new ChargeResponse(lastPaymentId, orderId, amount, forcedChargeState);
         }
-        return new ChargeResponse(UUID.randomUUID(), orderId, amount, PaymentState.CAPTURED);
+        if (delegate != null) {
+            ChargeResponse r = delegate.charge(orderId, amount, faultHint);
+            lastPaymentId = r.paymentId();
+            paymentState = r.state();
+            return r;
+        }
+        lastPaymentId = UUID.randomUUID();
+        paymentState = PaymentState.CAPTURED;
+        return new ChargeResponse(lastPaymentId, orderId, amount, PaymentState.CAPTURED);
     }
 
     @Override
     public ArrangeResponse arrange(UUID orderId) {
         operations.add("arrange");
-        if (delegate != null) {
-            return delegate.arrange(orderId);
+        if (arrangeOverride != null) {
+            return arrangeOverride.get();
         }
-        return new ArrangeResponse(UUID.randomUUID(), orderId, ShipmentState.ARRANGED);
+        if (delegate != null) {
+            ArrangeResponse r = delegate.arrange(orderId);
+            lastShipmentId = r.shipmentId();
+            shipmentState = r.state();
+            return r;
+        }
+        lastShipmentId = UUID.randomUUID();
+        shipmentState = ShipmentState.ARRANGED;
+        return new ArrangeResponse(lastShipmentId, orderId, ShipmentState.ARRANGED);
     }
 
     @Override
     public ConsumeResponse consume(UUID reservationId) {
         operations.add("consume");
-        if (delegate != null) {
-            return delegate.consume(reservationId);
+        if (consumeOverride != null) {
+            return consumeOverride.get();
         }
+        if (delegate != null) {
+            ConsumeResponse r = delegate.consume(reservationId);
+            reservationState = r.state();
+            return r;
+        }
+        reservationState = ReservationState.CONSUMED;
         return new ConsumeResponse(reservationId, ReservationState.CONSUMED);
+    }
+
+    @Override
+    public ReleaseResponse release(UUID reservationId) {
+        operations.add("release");
+        if (delegate != null) {
+            ReleaseResponse r = delegate.release(reservationId);
+            reservationState = r.state();
+            return r;
+        }
+        reservationState = ReservationState.RELEASED;
+        return new ReleaseResponse(reservationId, ReservationState.RELEASED);
+    }
+
+    @Override
+    public RefundResponse refund(UUID paymentId) {
+        operations.add("refund");
+        if (refundOverride != null) {
+            return refundOverride.get();
+        }
+        if (delegate != null) {
+            RefundResponse r = delegate.refund(paymentId);
+            paymentState = r.state();
+            return r;
+        }
+        paymentState = PaymentState.REFUNDED;
+        return new RefundResponse(paymentId, PaymentState.REFUNDED);
+    }
+
+    @Override
+    public CancelShipmentResponse cancelShipment(UUID shipmentId) {
+        operations.add("cancel");
+        if (delegate != null) {
+            CancelShipmentResponse r = delegate.cancelShipment(shipmentId);
+            shipmentState = r.state();
+            return r;
+        }
+        shipmentState = ShipmentState.CANCELLED;
+        return new CancelShipmentResponse(shipmentId, ShipmentState.CANCELLED);
+    }
+
+    @Override
+    public PaymentSnapshot resolvePayment(UUID paymentId, String faultHint) {
+        operations.add("resolve");
+        if (resolveOverride != null) {
+            return resolveOverride.get();
+        }
+        if (delegate != null) {
+            PaymentSnapshot r = delegate.resolvePayment(paymentId, faultHint);
+            paymentState = r.state();
+            return r;
+        }
+        return new PaymentSnapshot(paymentId, UUID.randomUUID(), Money.plnMinor(2599), paymentState);
     }
 
     @Override
     public ReservationSnapshot getReservation(UUID reservationId) {
         operations.add("getReservation");
         if (delegate != null) {
-            return delegate.getReservation(reservationId);
+            ReservationSnapshot r = delegate.getReservation(reservationId);
+            reservationState = r.state();
+            return r;
         }
-        return new ReservationSnapshot(reservationId, UUID.randomUUID(), "SKU-MVP-1", 1, ReservationState.CONSUMED);
+        return new ReservationSnapshot(
+                reservationId, UUID.randomUUID(), "SKU-MVP-1", 1, reservationState);
     }
 
     @Override
     public PaymentSnapshot getPayment(UUID paymentId) {
         operations.add("getPayment");
         if (delegate != null) {
-            return delegate.getPayment(paymentId);
+            PaymentSnapshot r = delegate.getPayment(paymentId);
+            paymentState = r.state();
+            return r;
         }
-        return new PaymentSnapshot(paymentId, UUID.randomUUID(), Money.plnMinor(2599), PaymentState.CAPTURED);
+        return new PaymentSnapshot(paymentId, UUID.randomUUID(), Money.plnMinor(2599), paymentState);
     }
 
     @Override
     public ShipmentSnapshot getShipment(UUID shipmentId) {
         operations.add("getShipment");
         if (delegate != null) {
-            return delegate.getShipment(shipmentId);
+            ShipmentSnapshot r = delegate.getShipment(shipmentId);
+            shipmentState = r.state();
+            return r;
         }
-        return new ShipmentSnapshot(shipmentId, UUID.randomUUID(), ShipmentState.ARRANGED);
+        return new ShipmentSnapshot(shipmentId, UUID.randomUUID(), shipmentState);
     }
 }

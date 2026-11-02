@@ -8,6 +8,42 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-201 — Variant A saga compensation policy pack (TH-201)
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-01 (proposed) · **2026-11-02 (Owner approved)** |
+| **Status** | **approved** |
+| **Decision-maker** | Project Owner |
+| **Context** | TH-201 saga compensation; Owner approved U-201-1…U-201-5 with clarifications |
+| **Decision** | Adopt the approved pack below for Variant A compensation implementation |
+| **Evidence** | Owner instruction 2026-11-02 (“Owner decision: APPROVED”); prior brief 2026-11-01; TH-011 §6; `CompensationOrder`; `TH-201_IMPLEMENTATION_PLAN.md` |
+| **Consequences** | `NEXT_TASK` TH-201 = `approved`; implementation may proceed after coordination handoff review; TH-206 remains Proposed |
+| **Related** | TH-201; TH-011; TH-400 (fault profiles); protocol-v0 unchanged |
+
+### Approved pack (U-201-1…U-201-5 preserved)
+
+| ID | Decision |
+| --- | --- |
+| **U-201-1** | After consume failure: full compensation cancel → refund CAPTURED → release HELD |
+| **U-201-2** | Bounded payment resolve; if still UNKNOWN: no arrange, no refund, release HELD if safe, business outcome AMBIGUOUS; never treat UNKNOWN as FAILED |
+| **U-201-3** | One deterministic Temporal workflow; saga try/catch; separate compensation activities; compensation executable if main cancellation scope is cancelled |
+| **U-201-4** | Service-level fault tests in TH-201; full F0–F3 profiles remain TH-400 |
+| **U-201-5** | Structured outcomes SUCCESS / COMPENSATED_FAILURE / AMBIGUOUS; unhandled technical errors or incomplete compensation must not be reported as COMPENSATED_FAILURE |
+
+### Owner clarifications (2026-11-02, approved with D-201)
+
+- Unresolved UNKNOWN payment remains **AMBIGUOUS** even if the HELD inventory reservation is safely released.
+- Releasing inventory does **not** establish that payment was not captured.
+- Never refund unless **CAPTURED** is confirmed.
+- Never report **COMPENSATED_FAILURE** if any required compensation activity failed or remained unresolved.
+- Unhandled technical errors and incomplete compensation must remain **distinguishable** from business-level compensated failure.
+- Tests must verify **`operation_log` ordering** in addition to final database states.
+
+**Explicit non-decisions:** no new invariants; oracle unchanged; `amountMinor=2599` not a protocol constant; TH-205 unmodified; TH-206 remains Proposed/unapproved.
+
+---
+
 ## D-COORD-001 — Three-party file-based coordination
 
 | Field | Value |
