@@ -41,7 +41,10 @@ import pl.edu.pw.thesis.orchestration.varianta.runtime.VariantAWorkers;
 
 /**
  * TH-205 acceptance: real Temporal server + real HTTP services + console BFF.
- * Skips only when Temporal or Postgres is unreachable (local/CI without full stack).
+ *
+ * <p>Local non-CI: skips when Temporal or Postgres is unreachable.
+ * CI ({@code CI=true} or {@code THESIS_REQUIRE_TEMPORAL_E2E=true}): fail-hard — never silent skip
+ * (TH-206).
  */
 @SpringBootTest(properties = {
         "server.address=127.0.0.1",
@@ -72,7 +75,10 @@ class ConsoleRealTemporalE2EIT {
     static WorkflowServiceStubs workerStubs;
 
     static boolean stackAvailable() {
-        return postgresAvailable() && temporalAvailable();
+        boolean require = ConsoleTemporalE2EGate.requireTemporalE2E(
+                System.getenv("CI"), System.getenv("THESIS_REQUIRE_TEMPORAL_E2E"));
+        return ConsoleTemporalE2EGate.shouldEnable(
+                require, postgresAvailable(), temporalAvailable());
     }
 
     static boolean postgresAvailable() {
