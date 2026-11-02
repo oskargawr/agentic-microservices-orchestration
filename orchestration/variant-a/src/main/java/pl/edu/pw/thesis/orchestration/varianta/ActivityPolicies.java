@@ -5,7 +5,8 @@ import io.temporal.common.RetryOptions;
 import java.time.Duration;
 
 /**
- * Shared activity options for Variant A. See {@code docs/architecture/VARIANT_A_HAPPY_PATH.md}.
+ * Shared activity options for Variant A (D-202-1 engineering defaults).
+ * See {@code docs/architecture/VARIANT_A_RETRIES_TIMEOUTS.md}.
  */
 public final class ActivityPolicies {
 

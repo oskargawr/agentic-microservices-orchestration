@@ -34,7 +34,12 @@ final class RecordingActivities implements OrderFulfillmentActivities {
     private Supplier<RefundResponse> refundOverride;
     private Supplier<PaymentSnapshot> resolveOverride;
     private int resolveCalls;
+    /** Remaining retryable charge failures before a normal success (TH-202). */
+    private int chargeRetryableFailuresRemaining;
+    private int arrangeInvocations;
+    private int chargeInvocations;
 
+    private UUID lastOrderId;
     private UUID lastReservationId;
     private UUID lastPaymentId;
     private UUID lastShipmentId;
@@ -60,6 +65,28 @@ final class RecordingActivities implements OrderFulfillmentActivities {
         };
     }
 
+    /** Fail arrange with retryable {@code HTTP_503} until Temporal exhausts retries (TH-202-4). */
+    void failArrangeAlwaysRetryable(String message) {
+        arrangeOverride = () -> {
+            throw ApplicationFailure.newFailure(message, "HTTP_503");
+        };
+    }
+
+    /**
+     * Fail arrange with retryable {@code HTTP_503} for the first {@code failuresBeforeSuccess}
+     * invocations, then succeed (TH-202-2).
+     */
+    void failArrangeRetryableThenSucceed(int failuresBeforeSuccess, String message) {
+        arrangeOverride = () -> {
+            if (arrangeInvocations <= failuresBeforeSuccess) {
+                throw ApplicationFailure.newFailure(message, "HTTP_503");
+            }
+            lastShipmentId = UUID.randomUUID();
+            shipmentState = ShipmentState.ARRANGED;
+            return new ArrangeResponse(lastShipmentId, lastOrderId, ShipmentState.ARRANGED);
+        };
+    }
+
     void failConsumeWithBusiness(String message) {
         consumeOverride = () -> {
             throw ApplicationFailure.newNonRetryableFailure(message, ActivityPolicies.BUSINESS_FAILURE_TYPE);
@@ -76,6 +103,23 @@ final class RecordingActivities implements OrderFulfillmentActivities {
         this.forcedChargeState = state;
     }
 
+    /** Throw retryable charge failures this many times, then succeed (TH-202-2). */
+    void failChargeRetryableTimes(int times) {
+        this.chargeRetryableFailuresRemaining = times;
+    }
+
+    int arrangeInvocations() {
+        return arrangeInvocations;
+    }
+
+    int chargeInvocations() {
+        return chargeInvocations;
+    }
+
+    int resolveInvocations() {
+        return (int) operations.stream().filter("resolve"::equals).count();
+    }
+
     void resolveSequence(PaymentState... states) {
         resolveCalls = 0;
         PaymentState[] copy = states.clone();
@@ -90,6 +134,7 @@ final class RecordingActivities implements OrderFulfillmentActivities {
     @Override
     public ReserveResponse reserve(UUID orderId, String sku, int qty) {
         operations.add("reserve");
+        lastOrderId = orderId;
         if (delegate != null) {
             ReserveResponse r = delegate.reserve(orderId, sku, qty);
             lastReservationId = r.reservationId();
@@ -104,6 +149,11 @@ final class RecordingActivities implements OrderFulfillmentActivities {
     @Override
     public ChargeResponse charge(UUID orderId, Money amount, String faultHint) {
         operations.add("charge");
+        chargeInvocations++;
+        if (chargeRetryableFailuresRemaining > 0) {
+            chargeRetryableFailuresRemaining--;
+            throw ApplicationFailure.newFailure("transient charge", "HTTP_503");
+        }
         if (forcedChargeState != null) {
             lastPaymentId = UUID.randomUUID();
             paymentState = forcedChargeState;
@@ -123,6 +173,8 @@ final class RecordingActivities implements OrderFulfillmentActivities {
     @Override
     public ArrangeResponse arrange(UUID orderId) {
         operations.add("arrange");
+        lastOrderId = orderId;
+        arrangeInvocations++;
         if (arrangeOverride != null) {
             return arrangeOverride.get();
         }

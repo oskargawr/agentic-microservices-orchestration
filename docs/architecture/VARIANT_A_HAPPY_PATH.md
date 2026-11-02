@@ -72,6 +72,9 @@ Forward work runs in a cancellable scope. Compensation runs in `Workflow.newDeta
 
 ## Activity options
 
+Engineering defaults (D-202-1) — details, limitations, and protocol `T_*` distinction:
+[`VARIANT_A_RETRIES_TIMEOUTS.md`](VARIANT_A_RETRIES_TIMEOUTS.md).
+
 | Setting | Forward | Compensation |
 | --- | --- | --- |
 | Start-to-close | 10s | 10s |
@@ -81,7 +84,7 @@ Forward work runs in a cancellable scope. Compensation runs in `Workflow.newDeta
 
 ## Idempotency
 
-All mutating calls use existing `Idempotency-Key` helpers (`IdempotencyKeys`). Activity retries must not double-apply business effects.
+All mutating calls use existing `Idempotency-Key` helpers (`IdempotencyKeys`). Activity retries must not double-apply business effects. See also [`VARIANT_A_RETRIES_TIMEOUTS.md`](VARIANT_A_RETRIES_TIMEOUTS.md) §5.
 
 ## State reconciliation
 
@@ -97,3 +100,4 @@ Tests use `Money.plnMinor(2599)` as an **explicit local test input** — not an 
 - Full F0–F3 experiment fault profiles remain TH-400.
 - Exact numeric resolve bound may be tuned later without changing AMBIGUOUS semantics.
 - **Coverage follow-up:** no dedicated integration test that cancels the main workflow scope and asserts detached compensation still runs (unit/IT cover compensation paths without an explicit cancel-signal scenario). Does not reopen TH-201.
+- Lost-response-after-commit-without-returned-ID deferred (D-202-3); see [`VARIANT_A_RETRIES_TIMEOUTS.md`](VARIANT_A_RETRIES_TIMEOUTS.md) §8.
