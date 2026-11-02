@@ -53,5 +53,5 @@ Documented in `OracleJdbcIT` class javadoc.
 
 Classification / Option C / protocol unchanged. No Temporal/LLM. TH-401-B not started.
 
-**Commit SHA:** *(after push)*  
-Await Owner review; **do not merge** without Owner.
+**Commit SHA:** `1cef2701b695fa1894461ebbd74418381f1e3042`  
+Await Owner review / CI; **do not merge** without Owner.
