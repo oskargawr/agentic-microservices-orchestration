@@ -111,7 +111,7 @@ Normative §4.3–4.4:
 
 ## Authorization
 
-**D-AUTH-S2 granted** (Owner „zatwierdzam”, 2026-11-02). Implementation on `feature/th-400-s2-f2` (local). Push/PR still needs separate Owner auth.
+**D-AUTH-S2 granted** (Owner „zatwierdzam”, 2026-11-02). **Merged** via PR #13 → `main` @ `b4ab3fa` (D-406). S3 not authorized.
 
 ---
 

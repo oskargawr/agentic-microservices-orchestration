@@ -8,16 +8,34 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-406 — TH-400 S2 (F2) merged to main (status)
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-02 |
+| **Status** | **recorded** (factual merge status — not a new design decision) |
+| **Decision-maker** | Project Owner (merge authorization) |
+| **Context** | D-AUTH-S2 granted; PR #13 merged after audit PASS WITH LIMITATIONS |
+| **Evidence** | PR [#13](https://github.com/oskargawr/agentic-microservices-orchestration/pull/13) · tip `17a3f79` · merge `b4ab3fa` |
+| **Related** | D-AUTH-S2 · D-404 · OQ-F2-1 · TH-400 · Taiga #35 |
+| **Does NOT** | Complete TH-400 · mark #35/#37 Done · authorize S3–S4 · change classifier / protocol |
+
+### Limitations carried forward
+
+Broad `noRollbackFor` on arrange · no injection-off IT · no live Temporal F2 E2E · preflight probe residue / forge-URL class · CLI no `CONFIRMED_FAILURE` exit gate.
+
+---
+
 ## D-AUTH-S2 — TH-400 S2 (F2 shipping) implementation authorization
 
 | Field | Value |
 | --- | --- |
 | **Date** | 2026-11-02 |
-| **Status** | **approved** (Owner: „zatwierdzam”) |
+| **Status** | **approved** (Owner: „zatwierdzam”); **completed via merge** (see D-406) |
 | **Decision-maker** | Project Owner |
 | **Context** | TH-400 · Taiga #35 · S2 F2 after S1 merge `c732558` · proposal + feasibility review |
-| **Evidence** | Owner utterance authorizing D-AUTH-S2; impl on `feature/th-400-s2-f2` (local; no push/PR yet) |
-| **Related** | D-404 · OQ-F2-1 · D-405 · TH-400 · `TH_400_S2_PROPOSAL.md` · `TH_400_S2_FEASIBILITY_REVIEW.md` |
+| **Evidence** | Owner D-AUTH-S2; push/PR auth; merge auth → PR #13 @ `b4ab3fa` |
+| **Related** | D-404 · OQ-F2-1 · D-405 · D-406 · TH-400 · `TH_400_S2_PROPOSAL.md` · `TH_400_S2_FEASIBILITY_REVIEW.md` |
 | **SP** | **5** (narrow allowlist) |
 
 ### Authorized
