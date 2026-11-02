@@ -22,6 +22,8 @@
 | | |
 | --- | --- |
 | Branch | `feature/th-401-independent-oracle` |
+| Commit | `aeb33b2` |
+| PR | https://github.com/oskargawr/agentic-microservices-orchestration/pull/10 |
 | Moduł | `experiment/oracle` |
 | Taiga | #36 **In progress** |
 
@@ -64,6 +66,6 @@ Read-only: `setReadOnly(true)` + `SET TRANSACTION READ ONLY` + `REPEATABLE READ`
 
 ## 5. Review
 
-- PR: (link po `gh pr create`)
+- PR: https://github.com/oskargawr/agentic-microservices-orchestration/pull/10
 - Nie startować TH-401-B bez Ownera
 - `stash@{0}` nienaruszony
