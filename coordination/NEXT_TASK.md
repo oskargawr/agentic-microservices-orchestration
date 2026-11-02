@@ -2,12 +2,12 @@
 
 **Status:** `awaiting_owner`  
 **Last updated:** 2026-11-02  
-**Awaiting:** Owner review of **TH-400 S2 local completion** (push / PR / merge auth); S3 not started
+**Awaiting:** Owner **merge** authorization for PR #13; S3 not started
 
 ## Important
 
-- **D-AUTH-S2 was granted** (Owner „zatwierdzam”) and **S2 F2 implemented locally** on `feature/th-400-s2-f2` (base `c732558`).  
-- **This file is NOT `approved` for push/PR/merge or S3.**  
+- **D-AUTH-S2 granted**; S2 implemented; **push + PR #13 authorized** (Owner).  
+- **Merge is NOT authorized** until separate Owner consent.  
 - **Do not** mark Taiga #35 / #37 Done.  
 - **Do not start S3–S4 / Variant C** until separate D-AUTH.
 
@@ -30,7 +30,7 @@
 
 | Candidate | Notes |
 | --- | --- |
-| Push + PR for S2 | Needs Owner auth (same pattern as S1) |
+| **Merge PR #13** | Needs separate Owner merge auth |
 | S3 F3 profiles | Separate D-AUTH after S2 lands |
 | Live F2 E2E (optional) | Lab verification |
 
@@ -47,3 +47,4 @@ Push/PR/merge · S3/S4 · Variant C · TH-303 · protocol / rev. 3.1 rewrites ·
 | 2026-11-02 | D-AUTH-S1; S1 impl + PR #12 **merged** | Owner / Cursor |
 | 2026-11-02 | Post-merge sync; S2 proposal; `awaiting_owner` | Cursor |
 | 2026-11-02 | D-AUTH-S2; S2 impl local; `awaiting_owner` (push/PR) | Owner / Cursor |
+| 2026-11-02 | Push + PR #13; `awaiting_owner` (**merge**) | Owner / Cursor |

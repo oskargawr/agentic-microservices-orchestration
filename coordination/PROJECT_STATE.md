@@ -11,9 +11,9 @@
 | **Runner** | TH-402 phase-1 + phase-1.1 on `main` (PR #11) + **S2 F2 local** on branch |
 | **TH-400 S0** | **Owner-ratified (D-404)** — on `main` via PR #12 lineage |
 | **TH-400 S1 (F1-P)** | **Merged** — PR [#12](https://github.com/oskargawr/agentic-microservices-orchestration/pull/12) · merge `c732558` · head `4ed5d57` |
-| **TH-400 S2 (F2)** | **Implemented locally** under **D-AUTH-S2** — branch `feature/th-400-s2-f2` · **not** on `main` · **no** push/PR |
+| **TH-400 S2 (F2)** | **PR [#13](https://github.com/oskargawr/agentic-microservices-orchestration/pull/13)** open — branch `feature/th-400-s2-f2` @ `70c4f85` · **not merged** |
 | **TH-402 overall** | Phase-1 complete on main · ticket **NOT Done** |
-| **Not authorized** | Push/PR/merge S2 · S3–S4 · Variant C · Taiga #35/#37 Done |
+| **Not authorized** | Merge S2 · S3–S4 · Variant C · Taiga #35/#37 Done |
 
 ## Engineering
 
@@ -42,6 +42,6 @@
 
 ## Next three actions
 
-1. Owner: authorize **push + PR** for S2 (or request audit first)  
+1. Owner: authorize **merge** of PR #13 (or request further review)  
 2. After merge: separate **D-AUTH-S3** before F3  
 3. Do **not** mark Taiga #35 / #37 Done  

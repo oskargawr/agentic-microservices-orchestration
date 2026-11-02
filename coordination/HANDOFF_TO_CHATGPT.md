@@ -2,10 +2,10 @@
 
 **Data:** 2026-11-02  
 **Od:** Cursor Agent  
-**Tryb:** IMPLEMENTATION (D-AUTH-S2)  
-**Task:** TH-400 S2 F2 shipping fault injection — local complete  
+**Tryb:** PUSH + PR (D-AUTH-S2; merge NOT authorized)  
+**Task:** TH-400 S2 F2 — PR opened  
 **Base `origin/main`:** `c73255842d771126153dba94d6bcf1031b1d072b`  
-**Branch:** `feature/th-400-s2-f2` (local commits; **no push/PR**)
+**Branch / HEAD:** `feature/th-400-s2-f2` @ `70c4f85`
 
 ---
 
@@ -13,30 +13,17 @@
 
 | | |
 | --- | --- |
-| D-AUTH-S2 | **GRANTED** — Owner „zatwierdzam” |
-| Push / PR / merge | **NOT** authorized |
+| D-AUTH-S2 | GRANTED |
+| Push + PR | **AUTHORIZED** (Owner) → [PR #13](https://github.com/oskargawr/agentic-microservices-orchestration/pull/13) |
+| Merge | **NOT** authorized |
 | TH-400 / #35 Done | **NOT** marked |
 
-## What shipped (local)
+## Audit
 
-| Area | Change |
-| --- | --- |
-| Contracts | `ErrorCode.ARRANGE_REJECTED` |
-| Shipping | Header injection; failure idempotency before injection; `noRollbackFor` commit of 409 failure; IT cases |
-| Orchestration A | `arrangeFaultHint` on input/activities/HTTP/workflow + recovery; CompIT `t400_s2_*`; recovery hint unit test |
-| Runner | `F2FaultController` + shipping preflight + CLI `--shipping-base-url` + adapter mapping; F0/F1-P preserved |
+**PASS WITH LIMITATIONS** (independent read-only audit). Non-blocking: broad `noRollbackFor`, no injection-off IT, no live Temporal F2 E2E, preflight probe/forge-URL class.
 
-## Tests
+## Ask
 
-Mandatory modules (contracts, runner, shipping, variant-a): **133 / 0 / 0 / 0**.  
-Also: payment `confirmedFailure` PASS; console compiles.
-
-## Explicit non-goals (honored)
-
-Oracle classifier · F3 · Variant C · Payment production · S0 rewrites · Taiga Done · remote push
-
-## Ask for ChatGPT / Owner
-
-1. Review S2 local commit(s) / optional audit before push.  
-2. If OK: authorize push + PR (no merge until review).  
-3. S3 remains blocked without separate D-AUTH.
+1. Review PR #13 / CI.  
+2. Separate Owner instruction required to **merge**.  
+3. S3 remains blocked without D-AUTH-S3.
