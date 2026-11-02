@@ -10,4 +10,5 @@ include(
     "orchestration:worker",
     "orchestration:console",
     "experiment:oracle",
+    "experiment:runner",
 )

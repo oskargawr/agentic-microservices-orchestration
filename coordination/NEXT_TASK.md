@@ -1,29 +1,26 @@
 # NEXT_TASK
 
-**Status:** `done` (TH-401-A closed; awaiting Owner next approval)  
+**Status:** `awaiting_owner`  
 **Last updated:** 2026-11-02  
-**Closed by:** Cursor Agent after Owner merge authorization + post-merge verification
+**Awaiting:** Independent read-only re-audit of D-AUTH-1.1 follow-up persist fix; then Owner review
 
-## Closed task
+## Completed under D-AUTH-1.1 (+ limited follow-up)
 
-**TH-401-A** — Independent Oracle Core (Option C) — **Done / Closed**
+- Phase-1.1 remediation A/B/C/E/F + merge-gate tests  
+- **Follow-up:** JSON SoT vs CSV derived — durable COMPLETED cannot be downgraded by CSV failure  
+- Strengthened G1 / G8 / malformed JSON CSV rebuild  
 
-| Field | Value |
-| --- | --- |
-| Merge | PR #10 → `main` @ `ab82fceac6f0448eca03d4d854e6dcf94e63e1d0` |
-| Reviewed HEAD | `df25bbd7c348ad6befd3bf49a1734ec1edf4ed45` (impl review base `1cef270`) |
-| Decision | Option C · D-011/D-012 preserved |
-| Taiga | #36 Done |
+**Branch:** `feature/th-402-phase1-1-remediation` @ `3ea8d8e`  
+**Do not claim merge-ready** until re-audit PASS.
 
-## Next
+## Out of scope / deferred
 
-No approved next task. Do **not** start TH-401-B, TH-400, Experiment Runner, Variant C, or dashboard work until Owner sets a new `approved` NEXT_TASK.
+G5 live Temporal (pre-pilot) · push/PR/merge · Taiga #37 Done · TH-400 · design rewrite · OWN-P* changes
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-02 | analysis TH-401 / .1 / .2 | Cursor |
-| 2026-11-02 | **implementation approved** (TH-401-A) | Project Owner |
-| 2026-11-02 | implementation + CI fixes on feature branch | Cursor |
-| 2026-11-02 | **done / closed** | Cursor (post-merge verify) |
+| 2026-11-02 | D-AUTH-1.1 approved; remediation implemented | Owner / Cursor |
+| 2026-11-02 | Independent audit → NEEDS FIXES (JSON/CSV) | Auditor |
+| 2026-11-02 | Follow-up fix committed (`3ea8d8e`); awaiting re-audit | Cursor |
