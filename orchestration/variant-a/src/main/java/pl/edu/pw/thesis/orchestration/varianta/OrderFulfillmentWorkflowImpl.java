@@ -103,7 +103,7 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
                 "charge expected CAPTURED, got " + state.paymentState);
 
         state.arrangeAttempted = true;
-        ArrangeResponse arranged = activities.arrange(input.orderId());
+        ArrangeResponse arranged = activities.arrange(input.orderId(), input.arrangeFaultHint());
         require(arranged.state() == ShipmentState.ARRANGED,
                 "arrange expected ARRANGED, got " + arranged.state());
         state.shipmentId = arranged.shipmentId();
@@ -134,7 +134,7 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
 
         if (state.paymentState == PaymentState.CAPTURED) {
             state.arrangeAttempted = true;
-            ArrangeResponse arranged = activities.arrange(input.orderId());
+            ArrangeResponse arranged = activities.arrange(input.orderId(), input.arrangeFaultHint());
             require(arranged.state() == ShipmentState.ARRANGED,
                     "arrange expected ARRANGED, got " + arranged.state());
             state.shipmentId = arranged.shipmentId();
@@ -269,7 +269,9 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
         }
         if (state.arrangeAttempted && state.shipmentId == null) {
             try {
-                ArrangeResponse arranged = recoveryActivities.arrange(state.orderId);
+                // Same IdempotencyKeys + arrange payload + fault hint as the forward attempt.
+                ArrangeResponse arranged =
+                        recoveryActivities.arrange(state.orderId, state.arrangeFaultHint);
                 state.shipmentId = arranged.shipmentId();
                 state.shipmentState = arranged.state();
                 log.add("recover-arrange");
@@ -419,6 +421,7 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
         final int qty;
         final Money amount;
         final String chargeFaultHint;
+        final String arrangeFaultHint;
 
         boolean reserveAttempted;
         boolean chargeAttempted;
@@ -440,6 +443,7 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
             this.qty = input.qty();
             this.amount = input.amount();
             this.chargeFaultHint = input.chargeFaultHint();
+            this.arrangeFaultHint = input.arrangeFaultHint();
         }
 
         OrderFulfillmentResult successResult() {

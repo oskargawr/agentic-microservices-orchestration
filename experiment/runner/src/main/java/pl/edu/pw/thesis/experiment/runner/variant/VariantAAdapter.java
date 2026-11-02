@@ -55,6 +55,7 @@ public final class VariantAAdapter implements VariantAdapter {
             throw new IllegalArgumentException("VariantAAdapter only supports variant A");
         }
         String chargeFaultHint = resolveChargeFaultHint(armed);
+        String arrangeFaultHint = resolveArrangeFaultHint(armed);
         OrderFulfillmentInput input = new OrderFulfillmentInput(
                 trial.orderId(),
                 trial.businessInputs().sku(),
@@ -62,6 +63,7 @@ public final class VariantAAdapter implements VariantAdapter {
                 new Money(trial.businessInputs().amountMinor(), trial.businessInputs().currency()),
                 chargeFaultHint,
                 null,
+                arrangeFaultHint,
                 null);
 
         OrderFulfillmentWorkflow stub = workflowClient.newWorkflowStub(
@@ -134,14 +136,13 @@ public final class VariantAAdapter implements VariantAdapter {
     }
 
     /**
-     * F0 / missing / NONE → null hints. F1-P HEADER + CHARGE_FAIL → {@code CHARGE_FAIL}.
-     * No other profiles in S1.
+     * F0 / missing / NONE / F2 → null charge hint. F1-P HEADER + CHARGE_FAIL → {@code CHARGE_FAIL}.
      */
     static String resolveChargeFaultHint(ArmedFaultRecord armed) {
         if (armed == null || "NONE".equals(armed.mechanism())) {
             return null;
         }
-        if ("F0".equals(armed.faultProfileId())) {
+        if ("F0".equals(armed.faultProfileId()) || "F2".equals(armed.faultProfileId())) {
             return null;
         }
         if ("F1-P".equals(armed.faultProfileId())) {
@@ -156,7 +157,35 @@ public final class VariantAAdapter implements VariantAdapter {
             return "CHARGE_FAIL";
         }
         throw new IllegalArgumentException(
-                "VariantAAdapter unsupported armed fault profile: " + armed.faultProfileId());
+                "VariantAAdapter unsupported armed fault profile for charge hint: "
+                        + armed.faultProfileId());
+    }
+
+    /**
+     * F0 / missing / NONE / F1-P → null arrange hint. F2 HEADER + ARRANGE_REJECTED →
+     * {@code ARRANGE_REJECTED}.
+     */
+    static String resolveArrangeFaultHint(ArmedFaultRecord armed) {
+        if (armed == null || "NONE".equals(armed.mechanism())) {
+            return null;
+        }
+        if ("F0".equals(armed.faultProfileId()) || "F1-P".equals(armed.faultProfileId())) {
+            return null;
+        }
+        if ("F2".equals(armed.faultProfileId())) {
+            if (!"HEADER".equals(armed.mechanism())) {
+                throw new IllegalArgumentException("F2 armed mechanism must be HEADER");
+            }
+            String code = armed.effectiveConfig() == null ? null : armed.effectiveConfig().get("code");
+            if (!"ARRANGE_REJECTED".equals(code)) {
+                throw new IllegalArgumentException(
+                        "F2 effectiveConfig.code must be ARRANGE_REJECTED, got " + code);
+            }
+            return "ARRANGE_REJECTED";
+        }
+        throw new IllegalArgumentException(
+                "VariantAAdapter unsupported armed fault profile for arrange hint: "
+                        + armed.faultProfileId());
     }
 
     private static boolean isTerminal(WorkflowExecutionStatus status) {

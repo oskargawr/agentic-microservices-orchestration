@@ -26,6 +26,7 @@ import pl.edu.pw.thesis.contracts.shipping.ShipmentState;
 final class RecordingActivities implements OrderFulfillmentActivities {
 
     private final List<String> operations = new CopyOnWriteArrayList<>();
+    private final List<String> arrangeFaultHints = new CopyOnWriteArrayList<>();
     private final OrderFulfillmentActivities delegate;
 
     private PaymentState forcedChargeState;
@@ -71,6 +72,10 @@ final class RecordingActivities implements OrderFulfillmentActivities {
 
     List<String> operations() {
         return Collections.unmodifiableList(new ArrayList<>(operations));
+    }
+
+    List<String> arrangeFaultHints() {
+        return Collections.unmodifiableList(new ArrayList<>(arrangeFaultHints));
     }
 
     void failArrangeWithBusiness(String message) {
@@ -263,8 +268,9 @@ final class RecordingActivities implements OrderFulfillmentActivities {
     }
 
     @Override
-    public ArrangeResponse arrange(UUID orderId) {
+    public ArrangeResponse arrange(UUID orderId, String faultHint) {
         operations.add("arrange");
+        arrangeFaultHints.add(faultHint);
         lastOrderId = orderId;
         arrangeInvocations++;
         if (arrangeLostBodyFailuresRemaining >= 0) {
@@ -286,7 +292,7 @@ final class RecordingActivities implements OrderFulfillmentActivities {
             return arrangeOverride.get();
         }
         if (delegate != null) {
-            ArrangeResponse r = delegate.arrange(orderId);
+            ArrangeResponse r = delegate.arrange(orderId, faultHint);
             lastShipmentId = r.shipmentId();
             shipmentState = r.state();
             return r;

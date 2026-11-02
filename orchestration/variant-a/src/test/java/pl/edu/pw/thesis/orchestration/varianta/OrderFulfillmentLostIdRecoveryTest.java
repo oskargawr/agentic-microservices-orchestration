@@ -148,6 +148,27 @@ class OrderFulfillmentLostIdRecoveryTest {
     }
 
     @Test
+    void t400_s2_arrangeLostId_recoveryPassesArrangeFaultHint() {
+        activities.arrangeCommitThenLoseBody(5);
+
+        OrderFulfillmentResult result = stub().fulfill(new OrderFulfillmentInput(
+                UUID.randomUUID(),
+                "SKU-MVP-1",
+                1,
+                Money.plnMinor(2599),
+                null,
+                null,
+                "ARRANGE_REJECTED",
+                null));
+
+        assertThat(result.compensationLog()).contains("recover-arrange");
+        assertThat(activities.arrangeFaultHints())
+                .isNotEmpty()
+                .allMatch("ARRANGE_REJECTED"::equals);
+        assertThat(activities.arrangeFaultHints().size()).isGreaterThanOrEqualTo(2);
+    }
+
+    @Test
     void t208_8_f3StyleUnknownWithIdUnchanged_ambiguousPath() {
         activities.chargeReturns(PaymentState.UNKNOWN);
         activities.resolveSequence(PaymentState.UNKNOWN, PaymentState.UNKNOWN, PaymentState.UNKNOWN);

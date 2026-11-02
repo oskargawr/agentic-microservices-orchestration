@@ -14,6 +14,7 @@ import pl.edu.pw.thesis.contracts.shipping.ArrangeRequest;
 import pl.edu.pw.thesis.contracts.shipping.ArrangeResponse;
 import pl.edu.pw.thesis.contracts.shipping.CancelShipmentResponse;
 import pl.edu.pw.thesis.contracts.shipping.ShipmentSnapshot;
+import pl.edu.pw.thesis.shipping.fault.ShippingFault;
 import pl.edu.pw.thesis.shipping.service.ShippingService;
 
 @RestController
@@ -29,8 +30,9 @@ public class ShippingController {
     @PostMapping("/shipments/arrange")
     public ArrangeResponse arrange(
             @RequestHeader(IdempotencyRules.HEADER) String idempotencyKey,
+            @RequestHeader(value = ShippingFault.HEADER, required = false) String fault,
             @Valid @RequestBody ArrangeRequest request) {
-        return service.arrange(idempotencyKey, request);
+        return service.arrange(idempotencyKey, request, fault);
     }
 
     @PostMapping("/shipments/{shipmentId}/cancel")

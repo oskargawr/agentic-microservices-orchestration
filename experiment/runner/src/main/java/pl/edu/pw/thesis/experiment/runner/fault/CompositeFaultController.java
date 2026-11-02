@@ -6,7 +6,7 @@ import java.util.Objects;
 import pl.edu.pw.thesis.experiment.runner.model.TrialSpec;
 import pl.edu.pw.thesis.experiment.runner.time.RunnerClock;
 
-/** Routes arm/verify/disarm/describe by canonical fault profile id (F0, F1-P, …). */
+/** Routes arm/verify/disarm/describe by canonical fault profile id (F0, F1-P, F2, …). */
 public final class CompositeFaultController implements FaultController {
 
     private final Map<String, FaultController> byProfile;
@@ -28,7 +28,16 @@ public final class CompositeFaultController implements FaultController {
         return new CompositeFaultController(map);
     }
 
-    /** F0-only (phase-1 / tests that never arm F1-P). */
+    /** F0 + F2 (requires live shipping injection confirmation). */
+    public static CompositeFaultController f0AndF2(
+            RunnerClock clock, ShippingFaultInjectionVerifier f2InjectionVerifier) {
+        Map<String, FaultController> map = new LinkedHashMap<>();
+        map.put(F0FaultController.PROFILE_F0, new F0FaultController(clock));
+        map.put(F2FaultController.PROFILE_F2, new F2FaultController(clock, f2InjectionVerifier));
+        return new CompositeFaultController(map);
+    }
+
+    /** F0-only (phase-1 / tests that never arm F1-P / F2). */
     public static CompositeFaultController f0Only(RunnerClock clock) {
         return new CompositeFaultController(
                 Map.of(F0FaultController.PROFILE_F0, new F0FaultController(clock)));
