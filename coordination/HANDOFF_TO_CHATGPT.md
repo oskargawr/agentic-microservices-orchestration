@@ -2,60 +2,52 @@
 
 **Data:** 2026-11-02  
 **Od:** Cursor Agent  
-**Tryb:** IMPLEMENTATION (TH-401-A Owner review follow-up)  
+**Tryb:** IMPLEMENTATION (TH-401-A — OracleJdbcIT CI fix)  
 **PR:** https://github.com/oskargawr/agentic-microservices-orchestration/pull/10  
-**HEAD:** `df245baf88552efc9fa6c47cbeda18da1bb5ab5b`  
 **Nie zmergowano.** TH-401-B nie rozpoczęte.
 
 ---
 
-## Findings addressed
+## 1. Root cause (evidenced)
 
-### 1. Blocking — missing stock → never CONFIRMED_SUCCESS
-
-| Decyzja z protokołu | Uzasadnienie |
+| | |
 | --- | --- |
-| Brak wiersza `stock` przy CONSUMED+CAPTURED+ARRANGED → **`AMBIGUOUS`** + `pattern=NONE` + reason **`MISSING_STOCK_EVIDENCE`** | TH-011 §2.1 wymaga stock w success snapshot; I1 Fail dotyczy ujemnych/mismatch liczb, nie braku wiersza → brak dowodu ≠ udowodnione naruszenie → nie `INVALID`, nie `CONFIRMED_SUCCESS` |
-| `isConfirmedSuccess` wymaga obecnego stock + spójności I1 (`onHand≥held≥0`, `held==sum(HELD)`) | |
-| Absolute „onHand reduced by qty” | **Nie weryfikowane** bez baseline przed runem; na SUCCESS dodawany warning `STOCK_ONHAND_DECREMENT_NOT_VERIFIED_WITHOUT_BASELINE` |
+| CI run | [41432385608](https://github.com/oskargawr/agentic-microservices-orchestration/actions/runs/41432385608) |
+| Failures | `OracleJdbcIT.jdbc_successSnapshot_roundTrip` @ L84 (INSERT); `jdbc_f0_emptyOrder_readOnlyEvaluate` @ L71 (`evaluate`) |
+| Infra init | `infra/postgres/init/01-init-databases.sh` creates DB `business` + **empty** schemas `inventory`/`payment`/`shipping` — **no tables** |
+| Tables | Created only by Flyway when **service** apps/tests start (`services/*/db/migration/V1__*.sql`) |
+| Gradle order | `:experiment:oracle:test` runs **before** service modules (CI log: oracle FAILED after 12 tasks; services never migrated) |
+| Local pass | Long-lived Postgres already had tables from prior service ITs |
 
-### 2. I7 audit
+**Expected PostgreSQL error:** `ERROR: relation "inventory.reservations" does not exist` (SQLState **`42P01`**) — same class for missing `inventory.stock` / etc. on evaluate. CI console truncated the message to `PSQLException at OracleJdbcIT.java:…`; local wipe of schemas reproduced the missing-relation failure mode before the fix.
 
-Dokument: `experiment/oracle/docs/I7_ENFORCEMENT.md`  
-Oracle nie twierdzi pełnego pokrycia I7 z terminalnego snapshotu; logi nie są autorytatywne. Unikalność payment/shipment = schemat + testy usług; multi-HELD / multi-reservation = INVALID w oracle.
-
----
-
-## Pliki zmienione (follow-up)
-
-- `experiment/oracle/.../OutcomeClassifier.java`
-- `experiment/oracle/.../OracleReasonCode.java` (`MISSING_STOCK_EVIDENCE`)
-- `experiment/oracle/.../ScenarioClassificationTest.java` (+ regresja missing stock)
-- `experiment/oracle/.../support/SnapshotFixtures.java`
-- `experiment/oracle/docs/I7_ENFORCEMENT.md` *(nowy)*
-- `coordination/HANDOFF_TO_CHATGPT.md`
+**Hypothesis confirmed:** OracleJdbcIT depended on foreign module tests / persistent local schema state.
 
 ---
 
-## Testy
+## 2. Fix
 
-| Command | Result |
+| Change | Rationale |
 | --- | --- |
-| `./gradlew --no-parallel :experiment:oracle:test` | SUCCESS — **28** tests, 0 skipped |
-| `./gradlew --no-parallel cleanTest test` | SUCCESS |
-| `./gradlew --no-parallel build` | SUCCESS |
-| Aggregate XML | **130** / 0 skipped / 0 fail / 0 err |
+| `experiment/oracle/build.gradle.kts` | Test Flyway deps; `processTestResources` copies **canonical** service SQL into `classpath:db/migration/{inventory,payment,shipping}` (no DDL fork) |
+| `OracleJdbcIT.beforeAll` | When DB reachable: Flyway.migrate each schema; then tests run. Skip **only** if Postgres unreachable |
+
+Oracle evaluate remains read-only + REPEATABLE READ. Classification unchanged.
 
 ---
 
-## Remaining limitations
+## 3. Fresh-DB verification
 
-- Absolute `onHand` Δ vs pre-run baseline nadal poza oracle (ostrzeżenie na SUCCESS).
-- I7 replay idempotency — service ITs, nie oracle.
-- TH-401-B out of scope.
+1. `DROP SCHEMA inventory/payment/shipping CASCADE` + recreate empty schemas on Compose Postgres.  
+2. `./gradlew --no-parallel :experiment:oracle:cleanTest :experiment:oracle:test` → **SUCCESS**; both Jdbc tests **executed** (not skipped); tables appeared via Flyway.  
+3. `./gradlew --no-parallel cleanTest test` → SUCCESS  
+4. `./gradlew --no-parallel build` → SUCCESS  
 
-## Decisions preserved
+Aggregate XML: **0 skipped / 0 failures / 0 errors** (full suite). Oracle module: 28 tests, Jdbc both RAN.
 
-Option C · 4 labels · patterns `{SUCCESS,F0,F1,F2,NONE}` · incomplete → AMBIGUOUS+NONE+COMPENSATION_INCOMPLETE · RO JDBC / REPEATABLE READ · no Temporal/LLM.
+---
 
-**Prośba:** kolejny review Ownera przed merge.
+## 4. Commit / review
+
+- Push follow-up commit on `feature/th-401-independent-oracle` (SHA after push).  
+- Await Owner re-review / CI green. **Do not merge** without Owner.

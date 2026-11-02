@@ -8,6 +8,7 @@ import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.UUID;
 import javax.sql.DataSource;
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,30 +17,53 @@ import org.postgresql.ds.PGSimpleDataSource;
 import pl.edu.pw.thesis.contracts.oracle.BusinessOutcome;
 
 /**
- * Optional JDBC integration against local Compose Postgres (:5433).
- * Skips cleanly when DB is unreachable so unit-only CI modules still pass offline.
+ * JDBC integration against Compose Postgres (:5433).
+ *
+ * <p>Does <strong>not</strong> depend on other modules' tests having run first. Canonical
+ * Flyway scripts from each service {@code db/migration} folder are applied in
+ * {@code beforeAll} into empty schemas (as CI does after {@code docker compose up}).
+ *
+ * <p>Skips only when Postgres is unreachable (offline unit-only runs). When DB is up,
+ * migrations must succeed and both tests must execute.
  */
 class OracleJdbcIT {
 
     private static final String JDBC = System.getenv()
             .getOrDefault(
                     "VARIANT_A_TEST_JDBC_URL", "jdbc:postgresql://localhost:5433/business");
-    private static final String USER = "thesis";
-    private static final String PASS = "thesis";
+    private static final String USER = System.getenv().getOrDefault("VARIANT_A_TEST_USER", "thesis");
+    private static final String PASS =
+            System.getenv().getOrDefault("VARIANT_A_TEST_PASSWORD", "thesis");
     private static final String SKU = "SKU-MVP-1";
 
     private static boolean dbUp;
     private UUID orderId;
 
     @BeforeAll
-    static void checkDb() {
+    static void beforeAll() {
         try (Connection c = DriverManager.getConnection(JDBC, USER, PASS);
                 Statement st = c.createStatement()) {
             st.execute("SELECT 1");
             dbUp = true;
         } catch (Exception e) {
             dbUp = false;
+            return;
         }
+        // Deterministic schema for a fresh CI Postgres (schemas exist; tables may not).
+        migrateSchema("inventory", "classpath:db/migration/inventory");
+        migrateSchema("payment", "classpath:db/migration/payment");
+        migrateSchema("shipping", "classpath:db/migration/shipping");
+    }
+
+    private static void migrateSchema(String schema, String location) {
+        Flyway.configure()
+                .dataSource(JDBC, USER, PASS)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations(location)
+                .baselineOnMigrate(true)
+                .load()
+                .migrate();
     }
 
     @BeforeEach
@@ -71,6 +95,7 @@ class OracleJdbcIT {
         OracleResult result = oracle.evaluate(orderId, SKU);
         assertThat(result.classification()).isEqualTo(BusinessOutcome.CONFIRMED_FAILURE);
         assertThat(result.pattern()).isEqualTo(OraclePattern.F0);
+        assertThat(result.snapshot().stock()).isPresent();
     }
 
     @Test
@@ -80,7 +105,6 @@ class OracleJdbcIT {
         UUID shipmentId = UUID.randomUUID();
         try (Connection c = DriverManager.getConnection(JDBC, USER, PASS);
                 Statement st = c.createStatement()) {
-            // Ensure stock exists (Flyway seed); adjust held temporarily then restore via cleanup of reservation
             st.execute(
                     """
                     INSERT INTO inventory.reservations
@@ -108,6 +132,10 @@ class OracleJdbcIT {
         OracleResult result = oracle.evaluate(OracleEvaluationRequest.of(orderId, SKU));
         assertThat(result.classification()).isEqualTo(BusinessOutcome.CONFIRMED_SUCCESS);
         assertThat(result.pattern()).isEqualTo(OraclePattern.SUCCESS);
+        assertThat(result.snapshot().stock()).isPresent();
+        assertThat(result.snapshot().payment()).isPresent();
+        assertThat(result.snapshot().shipment()).isPresent();
+        assertThat(result.snapshot().singleReservation()).isPresent();
     }
 
     private static DataSource dataSource() {
