@@ -1,28 +1,22 @@
 # NEXT_TASK
 
-**Status:** `done` (TH-202 closed; awaiting Owner next approval)  
+**Status:** `none` (no Owner-approved next implementation task)  
 **Last updated:** 2026-11-02  
-**Closed by:** Cursor Agent after Owner merge authorization + post-merge verification
 
-## Closed task
+## Closed recently
 
-**TH-202** — Retries and Timeouts — documented and tested — **Done / Closed**
-
-| Field | Value |
+| Ticket | Status |
 | --- | --- |
-| Merge | PR #8 → `main` @ `d33fc70afc44585668bcae1f43e4af6169a590cb` |
-| Impl HEAD (pre-merge) | `d45ad2edab538f42ce61e9b82e889fd8a95f5e3b` |
-| Decisions | D-202-1…D-202-5 preserved |
+| TH-202 | Done / Closed @ `d33fc70` (PR #8) |
+| TH-207 | Done / Closed — Taiga reconciliation (coordination-only); report `coordination/TH-207_TAIGA_RECONCILIATION.md` |
 
 ## Next
 
-No approved next task. Candidate: **TH-203** (fairness baseline) or Owner pick.
+**No approved next task.** Candidates (not approved): TH-203, TH-204, TH-300, TH-400, TH-208 (proposed / D-202-3).
 
-## Status history
+See Taiga project `agentic-orchestration-thesis` after TH-207 sync.
 
-| Date | Status | By |
-| --- | --- | --- |
-| 2026-11-02 | approved (investigation first) | Project Owner |
-| 2026-11-02 | investigation complete | Cursor |
-| 2026-11-02 | implementation approved (D-202-1…5) | Project Owner |
-| 2026-11-02 | **done / closed** | Cursor (post-merge verify) |
+## Notes
+
+- Do **not** treat TH-203 (or any candidate) as approved until Owner sets `Status: approved` here.
+- D-201 / D-202-1…5 unchanged.
