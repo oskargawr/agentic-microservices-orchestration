@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| **Status** | Investigation complete · **D-208 APPROVED** · TH-208 B+E implementation on feature branch |
+| **Status** | **Done / Closed** · D-208 approved · PR #9 merged (`efb8c5c`); Option C deferred |
 | **Date** | 2026-11-02 |
 | **Deferred by** | D-202-3 (closed by D-208) |
 | **Related** | D-201; D-015; D-208; protocol-v0 F3 / timeout≠failure; TH-400; TH-401 |

@@ -31,5 +31,13 @@ Tickets: local Taiga (optional) — not required to build this repo.
 4. Do not invent DOI/literature/results.
 5. After substantial work: update coordination + prepare handoff.
 
+## Language (Project Owner)
+
+- Communicate with the Project Owner **in Polish by default**.
+- All conversational responses, progress reports, handoffs, summaries, recommendations, and questions addressed to the Owner must be in **Polish**.
+- Technical identifiers, code, API names, commit messages, and conventional documentation terminology may remain in **English**.
+- Repository documentation may remain in English where that is the established project convention.
+- Switch to another language only when the Owner explicitly requests it.
+
 Cursor rule: [`.cursor/rules/thesis-agent.mdc`](.cursor/rules/thesis-agent.mdc)  
 Workflow: [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md)
