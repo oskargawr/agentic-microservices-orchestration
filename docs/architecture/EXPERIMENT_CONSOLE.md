@@ -50,6 +50,10 @@ Open http://127.0.0.1:3000
 Shutdown Java processes: `./scripts/dev-down.sh`  
 Infra: `cd infra && docker compose down`
 
+### CI (TH-206)
+
+GitHub Actions already starts Compose (Postgres + Temporal). `ConsoleRealTemporalE2EIT` is **required** in CI (`CI=true` / `THESIS_REQUIRE_TEMPORAL_E2E`): missing infra fails the job; silent skip is forbidden. Local non-CI runs may still skip when the stack is down. After tests, `scripts/ci-assert-console-temporal-e2e.sh` checks the JUnit report (`skipped=0`).
+
 ## Manual order
 
 1. Enter orderId, SKU (`SKU-MVP-1`), qty, **explicit** amountMinor + currency.
