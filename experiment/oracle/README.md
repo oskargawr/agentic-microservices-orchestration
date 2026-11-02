@@ -16,8 +16,13 @@ OracleResult result = oracle.evaluate(orderId, "SKU-MVP-1");
 Classification uses only durable Inventory / Payment / Shipping rows (Option C).  
 `workflowId` / `trialId` are optional metadata and never affect the label.
 
+## I7
+
+Honest enforcement map (not a protocol change): [`docs/I7_ENFORCEMENT.md`](docs/I7_ENFORCEMENT.md).
+
 ## Non-goals (TH-401-A)
 
 - HTTP API cross-check (TH-401-B)
 - Experiment runner / fault injection
 - Temporal or LLM dependencies
+- Verifying absolute `onHand` decrement without a pre-run baseline

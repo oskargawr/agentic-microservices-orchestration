@@ -26,6 +26,16 @@ public final class SnapshotFixtures {
             PaymentState paymentState,
             ShipmentState shipmentState,
             List<OperationLogEntry> logs) {
+        return snapshot(orderId, reservationState, paymentState, shipmentState, logs, true);
+    }
+
+    public static BusinessSnapshot snapshot(
+            UUID orderId,
+            ReservationState reservationState,
+            PaymentState paymentState,
+            ShipmentState shipmentState,
+            List<OperationLogEntry> logs,
+            boolean includeStock) {
         List<ReservationView> reservations = reservationState == null
                 ? List.of()
                 : List.of(new ReservationView(
@@ -40,10 +50,12 @@ public final class SnapshotFixtures {
 
         int held = reservationState == ReservationState.HELD ? 1 : 0;
         int onHand = reservationState == ReservationState.CONSUMED ? 99 : 100;
-        StockView stock = new StockView(SKU, onHand, held, held);
+        Optional<StockView> stock = includeStock
+                ? Optional.of(new StockView(SKU, onHand, held, held))
+                : Optional.empty();
 
         return new BusinessSnapshot(
-                orderId, SKU, reservations, payment, shipment, Optional.of(stock), logs);
+                orderId, SKU, reservations, payment, shipment, stock, logs);
     }
 
     public static BusinessSnapshot snapshot(

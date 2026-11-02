@@ -7,6 +7,8 @@ public enum OracleReasonCode {
     NONE,
     COMPENSATION_INCOMPLETE,
     PARTIAL_SUCCESS_PACKAGE,
+    /** TH-011 §2.1 stock evidence absent — cannot confirm SUCCESS (not an I1 numeric violation). */
+    MISSING_STOCK_EVIDENCE,
     UNKNOWN_PAYMENT,
     UNRESOLVED_PENDING_PAYMENT,
     MULTIPLE_RESERVATIONS,

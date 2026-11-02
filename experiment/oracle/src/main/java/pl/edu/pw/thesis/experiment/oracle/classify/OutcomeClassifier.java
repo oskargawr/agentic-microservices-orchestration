@@ -37,7 +37,21 @@ public final class OutcomeClassifier {
                     warnings);
         }
 
+        // TH-011 §2.1 requires stock in the success snapshot. Missing stock is insufficient
+        // evidence (AMBIGUOUS), not a proven I1 numeric violation (INVALID).
+        if (isSuccessEntityPackage(snapshot) && snapshot.stock().isEmpty()) {
+            return new ClassificationDecision(
+                    BusinessOutcome.AMBIGUOUS,
+                    OraclePattern.NONE,
+                    OracleReasonCode.MISSING_STOCK_EVIDENCE,
+                    List.of(),
+                    warnings);
+        }
+
         if (isConfirmedSuccess(snapshot)) {
+            // Terminal snapshot can check I1 consistency; absolute onHand Δ vs pre-run baseline
+            // is not available here — do not claim §2.1 "onHand reduced by qty" is proven.
+            warnings.add("STOCK_ONHAND_DECREMENT_NOT_VERIFIED_WITHOUT_BASELINE");
             return new ClassificationDecision(
                     BusinessOutcome.CONFIRMED_SUCCESS,
                     OraclePattern.SUCCESS,
@@ -183,11 +197,12 @@ public final class OutcomeClassifier {
             }
         }
 
-        // I7: duplicate CAPTURED amounts / duplicate ARRANGED — uniqueness of payment/shipment
-        // per order is enforced by schema; flag duplicate HELD already via I2.
+        // I7: see docs/I7_ENFORCEMENT.md — Oracle does not re-prove idempotent replays from logs.
+        // Observable terminal duplicates: multiple reservation rows / multiple HELD (above).
     }
 
-    private static boolean isConfirmedSuccess(BusinessSnapshot snapshot) {
+    /** Entity package for success without stock (TH-011 §2.1 still requires stock separately). */
+    private static boolean isSuccessEntityPackage(BusinessSnapshot snapshot) {
         Optional<ReservationView> res = snapshot.singleReservation();
         Optional<PaymentView> pay = snapshot.payment();
         Optional<ShipmentView> ship = snapshot.shipment();
@@ -197,6 +212,22 @@ public final class OutcomeClassifier {
                 && pay.get().state() == PaymentState.CAPTURED
                 && ship.isPresent()
                 && ship.get().state() == ShipmentState.ARRANGED;
+    }
+
+    private static boolean isConfirmedSuccess(BusinessSnapshot snapshot) {
+        if (!isSuccessEntityPackage(snapshot)) {
+            return false;
+        }
+        Optional<StockView> stock = snapshot.stock();
+        if (stock.isEmpty()) {
+            return false;
+        }
+        StockView s = stock.get();
+        // I1 must hold; §2.1 "held no longer includes this order’s qty" for CONSUMED
+        // is covered when held == sum(HELD) and this reservation is not HELD.
+        return s.onHand() >= s.held()
+                && s.held() >= 0
+                && s.held() == s.heldSumFromHeldReservations();
     }
 
     private static boolean isF0(BusinessSnapshot snapshot) {

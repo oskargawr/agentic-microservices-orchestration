@@ -2,70 +2,60 @@
 
 **Data:** 2026-11-02  
 **Od:** Cursor Agent  
-**Tryb:** IMPLEMENTATION (TH-401-A)  
-**Status:** implementacja ukończona lokalnie; **PR do review** (nie Done do merge + verify)
+**Tryb:** IMPLEMENTATION (TH-401-A Owner review follow-up)  
+**PR:** https://github.com/oskargawr/agentic-microservices-orchestration/pull/10  
+**HEAD:** *(po push — poniżej)*  
+**Nie zmergowano.** TH-401-B nie rozpoczęte.
 
 ---
 
-## 1. Decyzje Ownera (zachowane)
+## Findings addressed
 
-- Option C · 4 etykiety oracle · pattern ∈ {SUCCESS,F0,F1,F2,NONE}
-- Incomplete → `AMBIGUOUS` + `pattern=NONE` + reason `COMPENSATION_INCOMPLETE`
-- Audyt: `OPTION_C_COMPATIBLE_WITH_FROZEN_PROTOCOL`
-- TH-011 / D-011 / D-012 / D-201 / D-208 **bez zmian**
-- TH-401-B poza zakresem
+### 1. Blocking — missing stock → never CONFIRMED_SUCCESS
 
----
-
-## 2. Branch / zakres
-
-| | |
+| Decyzja z protokołu | Uzasadnienie |
 | --- | --- |
-| Branch | `feature/th-401-independent-oracle` |
-| Commit | `aeb33b2` |
-| PR | https://github.com/oskargawr/agentic-microservices-orchestration/pull/10 |
-| Moduł | `experiment/oracle` |
-| Taiga | #36 **In progress** |
+| Brak wiersza `stock` przy CONSUMED+CAPTURED+ARRANGED → **`AMBIGUOUS`** + `pattern=NONE` + reason **`MISSING_STOCK_EVIDENCE`** | TH-011 §2.1 wymaga stock w success snapshot; I1 Fail dotyczy ujemnych/mismatch liczb, nie braku wiersza → brak dowodu ≠ udowodnione naruszenie → nie `INVALID`, nie `CONFIRMED_SUCCESS` |
+| `isConfirmedSuccess` wymaga obecnego stock + spójności I1 (`onHand≥held≥0`, `held==sum(HELD)`) | |
+| Absolute „onHand reduced by qty” | **Nie weryfikowane** bez baseline przed runem; na SUCCESS dodawany warning `STOCK_ONHAND_DECREMENT_NOT_VERIFIED_WITHOUT_BASELINE` |
 
-### Struktura
+### 2. I7 audit
 
-```text
-experiment/oracle/
-  IndependentOracle
-  OracleResult / OracleEvaluationRequest / OraclePattern / OracleReasonCode
-  classify/OutcomeClassifier          # Option C, pure
-  jdbc/OracleSnapshotRepository       # READ ONLY + REPEATABLE READ
-  tests: ScenarioClassificationTest (S1–S14+), IndependenceTest (IND-1…6),
-         OracleModuleConstraintsTest, OracleJdbcIT
-```
+Dokument: `experiment/oracle/docs/I7_ENFORCEMENT.md`  
+Oracle nie twierdzi pełnego pokrycia I7 z terminalnego snapshotu; logi nie są autorytatywne. Unikalność payment/shipment = schemat + testy usług; multi-HELD / multi-reservation = INVALID w oracle.
 
 ---
 
-## 3. Testy
+## Pliki zmienione (follow-up)
 
-| Suite | Wynik |
+- `experiment/oracle/.../OutcomeClassifier.java`
+- `experiment/oracle/.../OracleReasonCode.java` (`MISSING_STOCK_EVIDENCE`)
+- `experiment/oracle/.../ScenarioClassificationTest.java` (+ regresja missing stock)
+- `experiment/oracle/.../support/SnapshotFixtures.java`
+- `experiment/oracle/docs/I7_ENFORCEMENT.md` *(nowy)*
+- `coordination/HANDOFF_TO_CHATGPT.md`
+
+---
+
+## Testy
+
+| Command | Result |
 | --- | --- |
-| `:experiment:oracle:test` | 27 tests, 0 skipped, 0 fail (JDBC IT against :5433) |
-| `./gradlew --no-parallel cleanTest test` | **SUCCESS** |
-| `./gradlew --no-parallel build` | **SUCCESS** |
-| Całość XML | **129** tests, **0** skipped, **0** failures, **0** errors |
-
-Dowody niezależności: `IndependenceTest` + `OracleModuleConstraintsTest` (brak `io.temporal` / spring-ai w sources i build).  
-Read-only: `setReadOnly(true)` + `SET TRANSACTION READ ONLY` + `REPEATABLE READ` w jednej transakcji.
+| `./gradlew --no-parallel :experiment:oracle:test` | SUCCESS — **28** tests, 0 skipped |
+| `./gradlew --no-parallel cleanTest test` | SUCCESS |
+| `./gradlew --no-parallel build` | SUCCESS |
+| Aggregate XML | **130** / 0 skipped / 0 fail / 0 err |
 
 ---
 
-## 4. Ograniczenia
+## Remaining limitations
 
-- Brak HTTP cross-check (TH-401-B)
-- Brak runnera / TH-400
-- `pattern` nie rozszerzony — reason codes osobno
-- JDBC IT skipuje, gdy Postgres niedostępny (`assumeTrue`)
+- Absolute `onHand` Δ vs pre-run baseline nadal poza oracle (ostrzeżenie na SUCCESS).
+- I7 replay idempotency — service ITs, nie oracle.
+- TH-401-B out of scope.
 
----
+## Decisions preserved
 
-## 5. Review
+Option C · 4 labels · patterns `{SUCCESS,F0,F1,F2,NONE}` · incomplete → AMBIGUOUS+NONE+COMPENSATION_INCOMPLETE · RO JDBC / REPEATABLE READ · no Temporal/LLM.
 
-- PR: https://github.com/oskargawr/agentic-microservices-orchestration/pull/10
-- Nie startować TH-401-B bez Ownera
-- `stash@{0}` nienaruszony
+**Prośba:** kolejny review Ownera przed merge.

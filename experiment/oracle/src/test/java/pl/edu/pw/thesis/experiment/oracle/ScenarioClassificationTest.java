@@ -29,6 +29,27 @@ class ScenarioClassificationTest {
                 null);
         assertThat(r.classification()).isEqualTo(BusinessOutcome.CONFIRMED_SUCCESS);
         assertThat(r.pattern()).isEqualTo(OraclePattern.SUCCESS);
+        assertThat(r.warnings())
+                .contains("STOCK_ONHAND_DECREMENT_NOT_VERIFIED_WITHOUT_BASELINE");
+    }
+
+    @Test
+    void missingStock_withSuccessEntities_neverConfirmedSuccess() {
+        UUID orderId = UUID.randomUUID();
+        OracleResult r = oracle.evaluateSnapshot(
+                SnapshotFixtures.snapshot(
+                        orderId,
+                        ReservationState.CONSUMED,
+                        PaymentState.CAPTURED,
+                        ShipmentState.ARRANGED,
+                        List.of(),
+                        false),
+                null,
+                null);
+        assertThat(r.classification()).isNotEqualTo(BusinessOutcome.CONFIRMED_SUCCESS);
+        assertThat(r.classification()).isEqualTo(BusinessOutcome.AMBIGUOUS);
+        assertThat(r.pattern()).isEqualTo(OraclePattern.NONE);
+        assertThat(r.reasonCode()).isEqualTo(OracleReasonCode.MISSING_STOCK_EVIDENCE);
     }
 
     @Test
