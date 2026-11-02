@@ -1,10 +1,12 @@
 package pl.edu.pw.thesis.experiment.oracle;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.UUID;
 import javax.sql.DataSource;
@@ -15,16 +17,21 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
 import pl.edu.pw.thesis.contracts.oracle.BusinessOutcome;
+import pl.edu.pw.thesis.experiment.oracle.support.PostgresConnectivity;
 
 /**
  * JDBC integration against Compose Postgres (:5433).
  *
  * <p>Does <strong>not</strong> depend on other modules' tests having run first. Canonical
  * Flyway scripts from each service {@code db/migration} folder are applied in
- * {@code beforeAll} into empty schemas (as CI does after {@code docker compose up}).
+ * {@code beforeAll} into schemas (fresh CI Compose or already-migrated local DB).
  *
- * <p>Skips only when Postgres is unreachable (offline unit-only runs). When DB is up,
- * migrations must succeed and both tests must execute.
+ * <p>Skips only when PostgreSQL is genuinely unreachable (SQLState {@code 08*} / network
+ * cause). Auth and configuration errors fail the suite. Flyway failures are never skipped.
+ *
+ * <p>Flyway {@code baselineOnMigrate} is <strong>not</strong> enabled: empty schemas migrate
+ * from scratch; already-migrated schemas are idempotent via history; non-empty schemas
+ * without history must fail loudly rather than baseline and skip V1.
  */
 class OracleJdbcIT {
 
@@ -40,16 +47,19 @@ class OracleJdbcIT {
     private UUID orderId;
 
     @BeforeAll
-    static void beforeAll() {
+    static void beforeAll() throws Exception {
         try (Connection c = DriverManager.getConnection(JDBC, USER, PASS);
                 Statement st = c.createStatement()) {
             st.execute("SELECT 1");
             dbUp = true;
-        } catch (Exception e) {
-            dbUp = false;
-            return;
+        } catch (SQLException e) {
+            if (PostgresConnectivity.isUnreachable(e)) {
+                dbUp = false;
+                return;
+            }
+            throw e;
         }
-        // Deterministic schema for a fresh CI Postgres (schemas exist; tables may not).
+        // Must not be skipped: migrate failures propagate.
         migrateSchema("inventory", "classpath:db/migration/inventory");
         migrateSchema("payment", "classpath:db/migration/payment");
         migrateSchema("shipping", "classpath:db/migration/shipping");
@@ -61,14 +71,13 @@ class OracleJdbcIT {
                 .schemas(schema)
                 .defaultSchema(schema)
                 .locations(location)
-                .baselineOnMigrate(true)
                 .load()
                 .migrate();
     }
 
     @BeforeEach
     void requireDb() {
-        assumeTrue(dbUp, "Postgres not available at " + JDBC);
+        assumeTrue(dbUp, "Postgres unreachable at " + JDBC);
         orderId = UUID.randomUUID();
     }
 
@@ -136,6 +145,24 @@ class OracleJdbcIT {
         assertThat(result.snapshot().payment()).isPresent();
         assertThat(result.snapshot().shipment()).isPresent();
         assertThat(result.snapshot().singleReservation()).isPresent();
+    }
+
+    /**
+     * When Postgres is reachable, bad credentials must surface as a failing SQLException
+     * (auth SQLState), not as an "unreachable" skip signal.
+     */
+    @Test
+    void invalidCredentials_areNotTreatedAsUnreachable() {
+        assumeTrue(dbUp, "requires reachable Postgres to contrast with auth failure");
+        assertThatThrownBy(() -> DriverManager.getConnection(JDBC, USER, "definitely-wrong-password"))
+                .isInstanceOf(SQLException.class)
+                .satisfies(ex -> {
+                    SQLException sql = (SQLException) ex;
+                    assertThat(PostgresConnectivity.isUnreachable(sql))
+                            .as("SQLState=%s", sql.getSQLState())
+                            .isFalse();
+                    assertThat(sql.getSQLState()).startsWith("28");
+                });
     }
 
     private static DataSource dataSource() {

@@ -2,52 +2,56 @@
 
 **Data:** 2026-11-02  
 **Od:** Cursor Agent  
-**Tryb:** IMPLEMENTATION (TH-401-A — OracleJdbcIT CI fix)  
+**Tryb:** IMPLEMENTATION (TH-401-A — OracleJdbcIT skip/baseline follow-up)  
 **PR:** https://github.com/oskargawr/agentic-microservices-orchestration/pull/10  
-**Nie zmergowano.** TH-401-B nie rozpoczęte.
+**Nie zmergowano.**
 
 ---
 
-## 1. Root cause (evidenced)
+## Findings addressed
 
-| | |
+### 1. Narrow skip condition
+
+- Extracted `PostgresConnectivity.isUnreachable(SQLException)` — SQLState class `08*` or network causes (`ConnectException`, etc.).
+- Auth `28*` / other SQL (e.g. `42P01`) → **not** unreachable → setup **fails**.
+- `beforeAll` catches only `SQLException`; Flyway errors still propagate (never skipped).
+- Unit tests: `PostgresConnectivityTest` (4).
+- Live contrast: `OracleJdbcIT.invalidCredentials_areNotTreatedAsUnreachable` (expects `28*`).
+- Probe: primary wrong password → suite fails (not skip).
+
+### 2. `baselineOnMigrate`
+
+**Removed.** Reason:
+- Fresh empty schemas: plain `migrate()` applies V1.
+- Already migrated: history → idempotent no-op.
+- Non-empty without history: Flyway must **fail loudly**; `baselineOnMigrate(true)` would baseline at v1 and **skip** required V1 DDL.
+
+Documented in `OracleJdbcIT` class javadoc.
+
+---
+
+## Files changed
+
+- `experiment/oracle/.../OracleJdbcIT.java`
+- `experiment/oracle/.../support/PostgresConnectivity.java` *(new)*
+- `experiment/oracle/.../support/PostgresConnectivityTest.java` *(new)*
+- `coordination/HANDOFF_TO_CHATGPT.md`
+
+---
+
+## Verification
+
+| Scenario | Result |
 | --- | --- |
-| CI run | [41432385608](https://github.com/oskargawr/agentic-microservices-orchestration/actions/runs/41432385608) |
-| Failures | `OracleJdbcIT.jdbc_successSnapshot_roundTrip` @ L84 (INSERT); `jdbc_f0_emptyOrder_readOnlyEvaluate` @ L71 (`evaluate`) |
-| Infra init | `infra/postgres/init/01-init-databases.sh` creates DB `business` + **empty** schemas `inventory`/`payment`/`shipping` — **no tables** |
-| Tables | Created only by Flyway when **service** apps/tests start (`services/*/db/migration/V1__*.sql`) |
-| Gradle order | `:experiment:oracle:test` runs **before** service modules (CI log: oracle FAILED after 12 tasks; services never migrated) |
-| Local pass | Long-lived Postgres already had tables from prior service ITs |
+| Fresh empty schemas | JdbcIT **RAN** (3 tests, 0 skip) |
+| Already migrated | JdbcIT **RAN** |
+| Unreachable (`127.0.0.1:1`) | JdbcIT **SKIP** (3); connectivity unit **RAN** |
+| Invalid primary credentials | Suite **FAIL** (not skip) |
+| `./gradlew --no-parallel :experiment:oracle:cleanTest :experiment:oracle:test` | SUCCESS |
+| `./gradlew --no-parallel cleanTest test` | SUCCESS · aggregate **135** / 0 skip / 0 fail / 0 err |
+| `./gradlew --no-parallel build` | SUCCESS |
 
-**Expected PostgreSQL error:** `ERROR: relation "inventory.reservations" does not exist` (SQLState **`42P01`**) — same class for missing `inventory.stock` / etc. on evaluate. CI console truncated the message to `PSQLException at OracleJdbcIT.java:…`; local wipe of schemas reproduced the missing-relation failure mode before the fix.
+Classification / Option C / protocol unchanged. No Temporal/LLM. TH-401-B not started.
 
-**Hypothesis confirmed:** OracleJdbcIT depended on foreign module tests / persistent local schema state.
-
----
-
-## 2. Fix
-
-| Change | Rationale |
-| --- | --- |
-| `experiment/oracle/build.gradle.kts` | Test Flyway deps; `processTestResources` copies **canonical** service SQL into `classpath:db/migration/{inventory,payment,shipping}` (no DDL fork) |
-| `OracleJdbcIT.beforeAll` | When DB reachable: Flyway.migrate each schema; then tests run. Skip **only** if Postgres unreachable |
-
-Oracle evaluate remains read-only + REPEATABLE READ. Classification unchanged.
-
----
-
-## 3. Fresh-DB verification
-
-1. `DROP SCHEMA inventory/payment/shipping CASCADE` + recreate empty schemas on Compose Postgres.  
-2. `./gradlew --no-parallel :experiment:oracle:cleanTest :experiment:oracle:test` → **SUCCESS**; both Jdbc tests **executed** (not skipped); tables appeared via Flyway.  
-3. `./gradlew --no-parallel cleanTest test` → SUCCESS  
-4. `./gradlew --no-parallel build` → SUCCESS  
-
-Aggregate XML: **0 skipped / 0 failures / 0 errors** (full suite). Oracle module: 28 tests, Jdbc both RAN.
-
----
-
-## 4. Commit / review
-
-- Commit: `5e2f16b847094557120c617af785e9c746023d92`  
-- Await Owner re-review / CI green. **Do not merge** without Owner.
+**Commit SHA:** *(after push)*  
+Await Owner review; **do not merge** without Owner.
