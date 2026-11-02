@@ -246,12 +246,21 @@ public final class TrialRunner {
     /**
      * OWN-P1: COMPLETED only after durable JSON; on failure keep oracle, write .partial,
      * durable EXCLUDED/PERSISTENCE_FAILURE — never re-run workflow/Oracle.
+     * Never downgrade an already durable COMPLETED (e.g. after CSV-only issues).
      */
     private TrialRecord persistCompletedOwnP1(TrialRecord completedCandidate) {
         try {
             resultStore.saveTrial(completedCandidate);
             return completedCandidate;
         } catch (IOException persistError) {
+            try {
+                TrialRecord durable = resultStore.readTrial(completedCandidate.trialId());
+                if (durable != null && durable.harnessStatus() == HarnessStatus.COMPLETED) {
+                    return durable;
+                }
+            } catch (IOException ignored) {
+                // fall through to OWN-P1 exclusion path
+            }
             try {
                 resultStore.saveOracleConfirmedPartial(completedCandidate);
             } catch (IOException ignored) {
@@ -261,7 +270,14 @@ public final class TrialRunner {
             try {
                 resultStore.saveTrial(excluded);
             } catch (IOException second) {
-                // Durable EXCLUDED also failed — still return in-memory excluded with oracle
+                try {
+                    TrialRecord durable = resultStore.readTrial(completedCandidate.trialId());
+                    if (durable != null && durable.harnessStatus() == HarnessStatus.COMPLETED) {
+                        return durable;
+                    }
+                } catch (IOException ignored) {
+                    // keep excluded in memory
+                }
                 return withPersistenceFailure(
                         completedCandidate,
                         new IOException(

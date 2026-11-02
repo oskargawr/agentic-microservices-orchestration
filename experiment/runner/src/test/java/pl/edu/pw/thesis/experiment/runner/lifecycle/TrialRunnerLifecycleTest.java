@@ -304,7 +304,74 @@ class TrialRunnerLifecycleTest {
         assertThat(record.oracle().classification()).isEqualTo("CONFIRMED_SUCCESS");
         assertThat(record.includeInRqRates()).isFalse();
         assertThat(Files.exists(failingStore.trialPartialPath("t-persist"))).isTrue();
+
+        String partial = Files.readString(failingStore.trialPartialPath("t-persist"));
+        assertThat(partial).contains("CONFIRMED_SUCCESS");
+        assertThat(partial).contains("t-persist");
+        assertThat(partial).contains(orderId.toString());
+        assertThat(partial).contains("\"harnessStatus\" : \"COMPLETED\"");
+
+        TrialRecord durableJson = failingStore.readTrial("t-persist");
+        assertThat(durableJson).isNotNull();
+        assertThat(durableJson.harnessStatus()).isEqualTo(HarnessStatus.EXCLUDED);
+        assertThat(durableJson.harnessStatus()).isNotEqualTo(HarnessStatus.COMPLETED);
+        assertThat(durableJson.oracle().classification()).isEqualTo("CONFIRMED_SUCCESS");
+
         assertThat(saveCalls.get()).isGreaterThanOrEqualTo(1);
+        verify(variantAdapter, times(1)).start(any(), any());
+        verify(oracle, times(1)).evaluate(any());
+    }
+
+    @Test
+    void g8_csvFailureAfterJsonCommitKeepsCompletedWithoutRerun() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        TrialSpec spec = TrialSpec.forVariantA(
+                experiment.experimentId(),
+                "t-csv-fail",
+                "F0",
+                0,
+                orderId,
+                experiment.businessDefaults());
+        ExecutionHandle handle = new ExecutionHandle(spec.workflowId(), "run-csv");
+        when(variantAdapter.start(any(), any())).thenReturn(handle);
+        when(variantAdapter.awaitStop(any(), any()))
+                .thenReturn(new WorkflowStopInfo(
+                        "COMPLETED", true, Instant.parse("2026-11-02T12:00:10Z"), "SUCCESS"));
+        when(oracle.evaluate(any())).thenReturn(oracleSuccess(orderId, "t-csv-fail"));
+
+        AtomicInteger rebuildAttempts = new AtomicInteger();
+        FileResultStore storeWithCsvFail = new FileResultStore(tmp, experiment) {
+            @Override
+            public void rebuildCsvFromJsonTrials() throws IOException {
+                if (rebuildAttempts.getAndIncrement() == 0) {
+                    throw new IOException("csv export failed");
+                }
+                super.rebuildCsvFromJsonTrials();
+            }
+        };
+        storeWithCsvFail.saveExperiment(experiment);
+        TrialRunner csvRunner = new TrialRunner(
+                experiment,
+                environment,
+                stateReset,
+                new F0FaultController(clock),
+                variantAdapter,
+                oracle,
+                storeWithCsvFail,
+                clock);
+
+        TrialRecord record = csvRunner.run(spec);
+
+        assertThat(record.harnessStatus()).isEqualTo(HarnessStatus.COMPLETED);
+        TrialRecord durable = storeWithCsvFail.readTrial("t-csv-fail");
+        assertThat(durable.harnessStatus()).isEqualTo(HarnessStatus.COMPLETED);
+        assertThat(durable.oracle().classification()).isEqualTo("CONFIRMED_SUCCESS");
+
+        storeWithCsvFail.rebuildCsvFromJsonTrials();
+        String csv = Files.readString(storeWithCsvFail.trialsCsvPath());
+        assertThat(csv.lines().filter(l -> l.contains("t-csv-fail")).count()).isEqualTo(1);
+        assertThat(csv).contains("COMPLETED");
+
         verify(variantAdapter, times(1)).start(any(), any());
         verify(oracle, times(1)).evaluate(any());
     }

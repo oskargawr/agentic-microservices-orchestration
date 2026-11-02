@@ -20,8 +20,10 @@ import pl.edu.pw.thesis.experiment.runner.model.HarnessStatus;
 import pl.edu.pw.thesis.experiment.runner.model.TrialRecord;
 
 /**
- * File-first ResultStore (D-R2). JSON is canonical SoT; CSV is rebuilt from JSON (OWN-P / F).
- * Atomic temp+rename. Persist-fail after Oracle: partial + EXCLUDED/PERSISTENCE_FAILURE (OWN-P1).
+ * File-first ResultStore (D-R2). JSON is canonical SoT; CSV is a derived rebuild (OWN-P / F).
+ *
+ * <p>Canonical JSON commit determines persistence success. CSV export failure must not fail
+ * {@link #saveTrial} or downgrade a durable {@code COMPLETED} trial.
  */
 public class FileResultStore {
 
@@ -57,6 +59,10 @@ public class FileResultStore {
         return experimentDir.resolve("trials").resolve(trialId + ".json.partial");
     }
 
+    public Path trialsCsvPath() {
+        return experimentDir.resolve("trials.csv");
+    }
+
     public void saveExperiment(ExperimentDefinition experiment) throws IOException {
         Files.createDirectories(experimentDir);
         atomicWriteJson(experimentDir.resolve("experiment.json"), experiment);
@@ -74,6 +80,15 @@ public class FileResultStore {
             return null;
         }
         return mapper.readValue(path.toFile(), ExperimentStatusRecord.class);
+    }
+
+    /** Loads durable trial JSON, or {@code null} if absent. */
+    public TrialRecord readTrial(String trialId) throws IOException {
+        Path target = trialJsonPath(trialId);
+        if (!Files.exists(target)) {
+            return null;
+        }
+        return mapper.readValue(target.toFile(), TrialRecord.class);
     }
 
     /**
@@ -95,9 +110,12 @@ public class FileResultStore {
     }
 
     /**
-     * Persists trial with retries. Does not re-execute the business trial.
-     * Refuses overwrite of an existing terminal artifact with a different execution.
-     * CSV is rebuilt from all durable trial JSON files (idempotent).
+     * Persists canonical trial JSON with retries. CSV rebuild is best-effort afterward:
+     * CSV failure does <strong>not</strong> fail this method once JSON is committed.
+     *
+     * <p>Refuses overwrite of terminal artifacts with a different execution, refuses
+     * downgrade of durable {@code COMPLETED}, and refuses rewriting terminal trials as
+     * {@code ABORTED_EXPERIMENT}.
      */
     public void saveTrial(TrialRecord record) throws IOException {
         Objects.requireNonNull(record, "record");
@@ -107,15 +125,30 @@ public class FileResultStore {
 
         if (Files.exists(target)) {
             TrialRecord existing = mapper.readValue(target.toFile(), TrialRecord.class);
-            if (existing.harnessStatus() == HarnessStatus.COMPLETED
-                    || existing.harnessStatus() == HarnessStatus.EXCLUDED) {
+            if (existing.harnessStatus() == HarnessStatus.COMPLETED) {
+                if (record.harnessStatus() != HarnessStatus.COMPLETED) {
+                    throw new IOException(
+                            "Refuse downgrade of durable COMPLETED trialId="
+                                    + record.trialId()
+                                    + " attemptedStatus="
+                                    + record.harnessStatus());
+                }
+                if (!Objects.equals(existing.orderId(), record.orderId())
+                        || !Objects.equals(existing.workflowId(), record.workflowId())) {
+                    throw new IOException(
+                            "Refuse overwrite of terminal COMPLETED trialId=" + record.trialId());
+                }
+                // Idempotent re-save of same COMPLETED — still refresh derived CSV best-effort
+                bestEffortRebuildCsv();
+                return;
+            }
+            if (existing.harnessStatus() == HarnessStatus.EXCLUDED) {
                 if (!Objects.equals(existing.orderId(), record.orderId())
                         || !Objects.equals(existing.workflowId(), record.workflowId())) {
                     throw new IOException(
                             "Refuse overwrite of terminal trial artifact trialId="
                                     + record.trialId());
                 }
-                // Never rewrite COMPLETED/EXCLUDED to ABORTED_EXPERIMENT via trial file
                 if (record.harnessStatus() == HarnessStatus.ABORTED_EXPERIMENT) {
                     throw new IOException(
                             "Refuse rewrite of terminal trial as ABORTED_EXPERIMENT trialId="
@@ -125,30 +158,45 @@ public class FileResultStore {
         }
 
         IOException last = null;
+        boolean jsonCommitted = false;
         for (int attempt = 1; attempt <= maxPersistAttempts; attempt++) {
             try {
                 atomicWriteJson(target, record);
-                rebuildCsvFromJsonTrials();
-                return;
+                jsonCommitted = true;
+                break;
             } catch (IOException e) {
                 last = e;
             }
         }
-        throw new IOException(
-                "PERSISTENCE_FAILURE after " + maxPersistAttempts + " attempts", last);
+        if (!jsonCommitted) {
+            throw new IOException(
+                    "PERSISTENCE_FAILURE after " + maxPersistAttempts + " attempts", last);
+        }
+
+        bestEffortRebuildCsv();
+    }
+
+    private void bestEffortRebuildCsv() {
+        try {
+            rebuildCsvFromJsonTrials();
+        } catch (IOException ignored) {
+            // Derived artifact only — recoverable via rebuildCsvFromJsonTrials().
+        }
     }
 
     public boolean hasTerminalArtifact(String trialId) throws IOException {
-        Path target = trialJsonPath(trialId);
-        if (!Files.exists(target)) {
+        TrialRecord existing = readTrial(trialId);
+        if (existing == null) {
             return false;
         }
-        TrialRecord existing = mapper.readValue(target.toFile(), TrialRecord.class);
         return existing.harnessStatus() == HarnessStatus.COMPLETED
                 || existing.harnessStatus() == HarnessStatus.EXCLUDED;
     }
 
-    /** Rebuilds {@code trials.csv} from durable {@code trials/*.json} only (JSON SoT). */
+    /**
+     * Rebuilds {@code trials.csv} from durable {@code trials/*.json} only (JSON SoT).
+     * Malformed JSON fails closed (does not skip the bad file).
+     */
     public void rebuildCsvFromJsonTrials() throws IOException {
         Path trialsDir = experimentDir.resolve("trials");
         Files.createDirectories(trialsDir);
@@ -156,15 +204,21 @@ public class FileResultStore {
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(trialsDir, "*.json")) {
             for (Path json : stream) {
                 String name = json.getFileName().toString();
-                if (name.endsWith(".partial")) {
+                if (name.endsWith(".partial") || name.endsWith(".writing")) {
                     continue;
                 }
-                records.add(mapper.readValue(json.toFile(), TrialRecord.class));
+                try {
+                    records.add(mapper.readValue(json.toFile(), TrialRecord.class));
+                } catch (IOException e) {
+                    throw new IOException(
+                            "Malformed canonical trial JSON (fail-closed CSV rebuild): " + json,
+                            e);
+                }
             }
         }
         records.sort(Comparator.comparing(TrialRecord::trialId));
 
-        Path csv = experimentDir.resolve("trials.csv");
+        Path csv = trialsCsvPath();
         Path partialCsv = experimentDir.resolve("trials.csv.partial");
         List<String> lines = new ArrayList<>();
         lines.add(String.join(
@@ -203,7 +257,6 @@ public class FileResultStore {
     private void atomicWriteJson(Path target, Object value) throws IOException {
         Path parent = target.getParent();
         Files.createDirectories(parent);
-        // Durable writes use *.writing; OWN-P1 candidate uses dedicated *.json.partial path.
         Path writing = parent.resolve(target.getFileName().toString() + ".writing");
         byte[] bytes = mapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(value);
         Files.write(
