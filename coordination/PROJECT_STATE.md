@@ -22,7 +22,9 @@
 | --- | --- |
 | **Branch** | `feature/th-402-phase1-runner-skeleton` (from `31256cd`) |
 | **Base HEAD** | `31256cdc288aa071fa9f873a454afc2a1d91c46a` |
+| **Commits** | `c862331` docs · `f2b0744` feat runner |
 | **Module** | `:experiment:runner` (new) |
+| **Tests** | `:experiment:runner:test` green |
 | **Taiga #37** | In Progress · 3 SP · phase-1 ≠ Done |
 
 ## Next three actions
