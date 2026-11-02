@@ -2,36 +2,40 @@
 
 **Status:** `awaiting_owner`  
 **Last updated:** 2026-11-02  
-**Awaiting:** Owner review of final S0 ratification diff; then **possible** separate authorization of **S1** (F1-P)
+**Awaiting:** Owner review of **S1 (F1-P)** local implementation; optional separate auth for push/PR
 
 ## Important
 
-- **S0 is Owner-ratified (D-404)** — documentation complete.  
-- **`NEXT_TASK` is NOT `approved`.**  
-- **Do not start S1 implementation** until Owner issues explicit **D-AUTH** and sets this file to `approved` for that slice.
+- **D-AUTH-S1 was GRANTED** and S1 was implemented on `feature/th-400-s1-f1p`.  
+- **Push / PR / merge remain unauthorized.**  
+- **Do not start S2–S4** until Owner issues a new D-AUTH.  
+- This file is **not** `approved` for further implementation slices.
 
-## Completed (documentation)
+## Completed (S1 local)
 
-- TH-400 S0 fault profile spec + technical verification  
-- D-404 directions + OQ-F2-1 / OQ-F3U-1 / OQ-F3U-2 **Owner-ratified**  
-- Oracle independence for F3-Unresolved documented  
+- F1-P FaultController + Composite routing  
+- Fail-closed Payment injection preflight (existing charge API; CHARGE_FAIL → FAILED)  
+- VariantAAdapter `chargeFaultHint` wiring  
+- CLI `--fault-profile=F1-P` + `--payment-base-url`  
+- Runner README + unit/lifecycle tests  
+- Mandatory regression commands (see handoff)
 
 ## Candidate next (not approved)
 
 | Candidate | Notes |
 | --- | --- |
-| **S1 — F1-P** | Arm `CHARGE_FAIL` after HELD via unified FaultController; payment already has code; A IT exists |
-| Docs push/PR | Only if Owner separately authorizes publication of `docs/th-400-s0-fault-profile-spec` |
+| Push/PR S1 branch | Only with separate Owner publication auth |
+| **S2 — F2 shipping** | Needs separate D-AUTH; `ARRANGE_REJECTED` etc. |
+| Docs push/PR for S0 | Separate from S1 |
 
 ## Out of scope until separate auth
 
-S2 F2 shipping · S3 F3 profiles · S4 unify · Variant C · phase-2 · Taiga Done marks
+S2 F2 · S3 F3 · S4 unify · Variant C · phase-2 · Taiga Done marks
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
 | 2026-11-02 | PR #11 merged | Owner / Cursor |
-| 2026-11-02 | TH-400 S0 drafts | Cursor |
-| 2026-11-02 | S0 OQ follow-up | Cursor |
-| 2026-11-02 | S0 **Owner-ratified**; awaiting_owner for S1 D-AUTH | Owner / Cursor |
+| 2026-11-02 | S0 Owner-ratified (D-404) | Owner / Cursor |
+| 2026-11-02 | D-AUTH-S1 granted; S1 implemented locally; awaiting_owner for publication / S2 | Owner / Cursor |

@@ -2,53 +2,50 @@
 
 **Data:** 2026-11-02  
 **Od:** Cursor Agent  
-**Tryb:** DOCUMENTATION (TH-400 S0 final ratification sync)  
-**Task:** Record formal Owner ratification of D-404 / OQ-F2-1 / OQ-F3U-1 / OQ-F3U-2  
-**Branch:** `docs/th-400-s0-fault-profile-spec`  
-**Primary checkout:** `feature/th-402-phase1-1-remediation` — dirty `AGENTS.md` **preserved / excluded**
+**Tryb:** IMPLEMENTATION (TH-400 S1 F1-P)  
+**Task:** Owner-authorized S1 implementation (D-AUTH-S1); local commits only  
+**Branch:** `feature/th-400-s1-f1p`  
+**Worktree:** `cursor_space/worktrees/agentic-orchestration-thesis-th400-s1`  
+**Base:** `34b6a74f298e2bf1c09b356621ce261a025bfea5` (S0 docs branch HEAD)  
+**Primary checkout:** untouched — dirty `AGENTS.md` preserved
 
 ---
 
-## Ratified decisions (binding design; not impl auth)
-
-| ID | Outcome |
-| --- | --- |
-| **OQ-F2-1** | `ARRANGE_REJECTED` · HTTP 409 · BUSINESS · atomic idempotent failure replay · key+diff-fp → `IDEMPOTENCY_KEY_CONFLICT` · no shipment row |
-| **OQ-F3U-1** | F3-Unresolved cell → Oracle **AMBIGUOUS**; identify cell via **independent trial/profile metadata** + DB; **not** workflow/HTTP/orchestrator claims; not a global dangling-CAPTURED rule |
-| **OQ-F3U-2** | HTTP **503** opacity via **header-presence** for the armed trial across **all** Temporal retries; no DB mutation; D-016 intact |
-
-Also ratified earlier: **OD-F2 / OD-F3 / OD-FC** (unified FaultController + headers; F3 split; F2 pre-insert reject).
-
-## Git state (at handoff authorship)
+## Authorization boundary
 
 | | |
 | --- | --- |
-| Docs branch | `docs/th-400-s0-fault-profile-spec` |
-| Worktree | `.worktrees/th400-s0` |
-| Base | `origin/main` @ `90af3a9` (PR #11) |
-| Push / PR / merge | **none** in this task |
+| D-AUTH-S1 | **GRANTED** (F1-P only) |
+| Push / PR / merge | **Not authorized** |
+| S2–S4 / Variant C | **Not authorized** |
+| Payment / orchestration prod / Oracle classifier | **Not modified** |
 
-## Files changed this ratification sync
+## Preflight mechanism (S1-ENV resolved in-scope)
 
-- `docs/architecture/TH_400_FAULT_PROFILE_SPEC.md`  
-- `coordination/DECISION_LOG.md` (D-404)  
-- `coordination/PROJECT_STATE.md`  
-- `coordination/NEXT_TASK.md`  
-- `coordination/HANDOFF_TO_CHATGPT.md`  
-- `coordination/TH_400_S0_PLAN.md`  
-- (prior commits also: `TH_400_S0_TECHNICAL_VERIFICATION.md`)
+Architecture had **no** actuator/`info` exposure of `thesis.payment.fault-injection-enabled`.  
+Reliable confirmation without Payment API changes:
 
-**Not changed:** Java/tests · protocol · rev. 3.1 · `AGENTS.md` · Taiga
+1. Runner POST existing `/api/v1/payments/charge` with `X-Thesis-Fault: CHARGE_FAIL`  
+2. Require response `state=FAILED`  
+3. `CAPTURED` ⇒ injection appears disabled → `FAULT_VERIFY_FAILED` (fail-closed)  
+4. HTTP 2xx alone is insufficient  
 
-## Limitations
+F0 never calls this probe.
 
-- Implementation of S1–S4 **not** authorized.  
-- `NEXT_TASK` remains `awaiting_owner` (not `approved`).  
-- Docs branch not published unless Owner separately authorizes.  
-- Obsidian/Taiga may still lag GitHub docs branch until a knowledge-sync task.
+## Implementation summary
+
+- `F1PFaultController` + `CompositeFaultController`  
+- `HttpPaymentFaultInjectionVerifier` / transport  
+- `VariantAAdapter.resolveChargeFaultHint`  
+- CLI `--fault-profile=` (default F0) + `--payment-base-url=` for F1-P  
+- Rejects canonical id `F1`  
+
+## Oracle
+
+Acceptance = classification **`CONFIRMED_FAILURE`**. Pattern may be **`F2`** for FAILED+RELEASED; classifier unchanged.
 
 ## Next Owner action
 
-1. Review final S0 diff / this handoff.  
-2. Optionally authorize push/PR of the docs branch.  
-3. If proceeding: issue **D-AUTH** for **S1 (F1-P)** only — arm `CHARGE_FAIL` after HELD via FaultController; do not start F2/F3 impl in the same auth unless explicitly expanded.
+1. Review S1 diff / tests / this handoff  
+2. Optionally authorize push/PR of `feature/th-400-s1-f1p`  
+3. Do not authorize S2 in the same breath unless intentional  

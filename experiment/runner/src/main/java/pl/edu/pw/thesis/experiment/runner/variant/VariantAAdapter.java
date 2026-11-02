@@ -54,12 +54,15 @@ public final class VariantAAdapter implements VariantAdapter {
         if (!"A".equals(trial.variant())) {
             throw new IllegalArgumentException("VariantAAdapter only supports variant A");
         }
-        // F0: armed mechanism NONE — no chargeFaultHint / compensation side effects from harness
+        String chargeFaultHint = resolveChargeFaultHint(armed);
         OrderFulfillmentInput input = new OrderFulfillmentInput(
                 trial.orderId(),
                 trial.businessInputs().sku(),
                 trial.businessInputs().qty(),
-                new Money(trial.businessInputs().amountMinor(), trial.businessInputs().currency()));
+                new Money(trial.businessInputs().amountMinor(), trial.businessInputs().currency()),
+                chargeFaultHint,
+                null,
+                null);
 
         OrderFulfillmentWorkflow stub = workflowClient.newWorkflowStub(
                 OrderFulfillmentWorkflow.class,
@@ -128,6 +131,32 @@ public final class VariantAAdapter implements VariantAdapter {
         } catch (Exception e) {
             return Optional.empty();
         }
+    }
+
+    /**
+     * F0 / missing / NONE → null hints. F1-P HEADER + CHARGE_FAIL → {@code CHARGE_FAIL}.
+     * No other profiles in S1.
+     */
+    static String resolveChargeFaultHint(ArmedFaultRecord armed) {
+        if (armed == null || "NONE".equals(armed.mechanism())) {
+            return null;
+        }
+        if ("F0".equals(armed.faultProfileId())) {
+            return null;
+        }
+        if ("F1-P".equals(armed.faultProfileId())) {
+            if (!"HEADER".equals(armed.mechanism())) {
+                throw new IllegalArgumentException("F1-P armed mechanism must be HEADER");
+            }
+            String code = armed.effectiveConfig() == null ? null : armed.effectiveConfig().get("code");
+            if (!"CHARGE_FAIL".equals(code)) {
+                throw new IllegalArgumentException(
+                        "F1-P effectiveConfig.code must be CHARGE_FAIL, got " + code);
+            }
+            return "CHARGE_FAIL";
+        }
+        throw new IllegalArgumentException(
+                "VariantAAdapter unsupported armed fault profile: " + armed.faultProfileId());
     }
 
     private static boolean isTerminal(WorkflowExecutionStatus status) {
