@@ -8,6 +8,39 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-202 — TH-202 retries/timeouts implementation decisions (Owner pack)
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-02 |
+| **Status** | **approved** |
+| **Decision-maker** | Project Owner |
+| **Context** | Owner reviewed `TH-202_INVESTIGATION.md` and locked implementation scope |
+| **Evidence** | Owner Decision — TH-202 Implementation Approved (2026-11-02) |
+| **Related** | TH-202; D-201; D-012 (`T_observe`/`T_run_max`); protocol-v0 unchanged |
+
+### D-202-1 — ActivityOptions
+
+Keep **all existing** numeric `ActivityPolicies` values unchanged (forward 10s/60s; compensation 10s/90s; max attempts 5; initial 200ms; max interval 2s; backoff 2.0; non-retryable `BUSINESS` + `COMPENSATION_INCOMPLETE`). These are **engineering defaults**, not values derived from experimental protocol constants.
+
+### D-202-2 — Transport failure classification
+
+Do **not** introduce transport-failure wrapping or change exception classification in TH-202. Document current behavior; distinguish verified facts from assumptions.
+
+### D-202-3 — Lost response without returned ID
+
+Defer lost-response-after-commit-without-returned-ID to a separate F3-related task. No orderId-based payment discovery, new lookup endpoints, or D-201 semantic changes in TH-202. Record as an explicit reliability limitation.
+
+### D-202-4 — Workflow execution timeout
+
+Do **not** add an explicit workflow execution timeout in TH-202. Keep `T_observe=30s` and `T_run_max=120s` as protocol/harness limits only — do not conflate with Temporal `ActivityOptions`.
+
+### D-202-5 — Documentation
+
+Create dedicated `docs/architecture/VARIANT_A_RETRIES_TIMEOUTS.md`; keep `VARIANT_A_HAPPY_PATH.md` as process overview with a short reference.
+
+---
+
 ## D-201 — Variant A saga compensation policy pack (TH-201)
 
 | Field | Value |

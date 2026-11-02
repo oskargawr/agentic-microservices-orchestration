@@ -2,98 +2,94 @@
 
 **Date:** 2026-11-02  
 **From:** Cursor Agent  
-**Task:** TH-202 Retries and Timeouts — **investigation complete**; awaiting Owner plan review  
-**Repo:** `main` @ `9385fdf`  
-**Full write-up:** `coordination/TH-202_INVESTIGATION.md`
+**Task:** TH-202 Retries and Timeouts — implementation complete; **PR pending merge** (not Done)
 
 ---
 
-## 1. Coordination status
+## 1. Branch / decisions
 
-| Item | Value |
+| Field | Value |
 | --- | --- |
-| `NEXT_TASK` | TH-202 **`approved`** (implementation **not** started) |
-| TH-201 / TH-206 | **Done / Closed** (preserved) |
-| D-201 / protocol / oracle | **unchanged** |
-| App code | **no modifications** this phase |
-| `stash@{0}` | preserved |
+| Branch | `feature/th-202-retries-timeouts-documented` |
+| Base | `main` @ `06a672b` |
+| Owner decisions | **D-202-1…D-202-5** recorded in `coordination/DECISION_LOG.md` |
+| App policy numerics | **unchanged** (D-202-1) |
+| Transport wrapping | **not** introduced (D-202-2) |
+| Lost-response-without-ID | **deferred** / documented limitation (D-202-3) |
+| Workflow execution timeout | **not** added (D-202-4) |
+| Stash | `stash@{0}` untouched |
+| TH-201 / TH-206 | remain Done / Closed |
 
 ---
 
-## 2. Current implementation findings (Source fact)
+## 2. Changed files
 
-`ActivityPolicies`:
-
-| | Forward | Compensation |
-| --- | --- | --- |
-| Start-to-close | 10s | 10s |
-| Schedule-to-close | 60s | 90s |
-| Max attempts | 5 | 5 |
-| Backoff | 200ms → 2s, coeff 2.0 | same |
-| Non-retryable | `BUSINESS`, `COMPENSATION_INCOMPLETE` | same |
-
-- HTTP 4xx → non-retryable `BUSINESS`; 5xx → retryable `HTTP_*` (`HttpOrderFulfillmentActivities.toFailure`).
-- UNKNOWN resolve bound = **3** workflow-level attempts (`OrderFulfillmentInput`), **separate** from Temporal retries.
-- Mutating calls use stable `IdempotencyKeys`; `resolvePayment` has **no** idempotency header (re-entrant by `paymentId` lock).
-- No workflow execution timeout in console/test starters.
-- RestClient: no explicit connect/read timeouts configured.
-
----
-
-## 3. Identified gaps
-
-1. **No tests** for retry/timeout policy behavior (values, retryable vs BUSINESS, timeout→compensation).
-2. Docs list options but **lack rationale** vs protocol `T_observe=30s` / `T_run_max=120s`.
-3. **Lost response without returned IDs:** if charge/reserve times out after commit, workflow may lack IDs → incomplete compensate-by-id; protocol F-PAY-AMB edge not covered by Variant A workflow tests.
-4. Transport errors outside `RestClientResponseException` not explicitly classified (**Assumption:** Temporal retries them).
-5. Cancel-signal + detached compensation IT still a known TH-201 follow-up (unchanged; not TH-202 core).
-
----
-
-## 4. Proposed implementation scope (minimal)
-
-**Default recommendation:** documentation + tests only; **keep** current numeric policies.
-
-| Include | Exclude |
+| File | Role |
 | --- | --- |
-| T-202-1…5 (unit) + policy docs expansion | F0–F3 harness / runner (TH-400) |
-| Clarify retry vs resolve-bound vs protocol T_* | Protocol / invariant / oracle edits |
-| Record lost-response-without-ID as **limitation** | D-201 behavior changes without Owner OK |
-| Estimate **2 SP** | Unrelated console / stash |
+| `coordination/DECISION_LOG.md` | D-202 pack |
+| `coordination/NEXT_TASK.md` / `PROJECT_STATE.md` / this handoff | status |
+| `docs/architecture/VARIANT_A_RETRIES_TIMEOUTS.md` | **new** dedicated doc (D-202-5) |
+| `docs/architecture/VARIANT_A_HAPPY_PATH.md` | short pointer + limitation note |
+| `ActivityPolicies.java` | javadoc pointer only |
+| `RecordingActivities.java` | retryable arrange/charge helpers + invocation counters |
+| `ActivityPoliciesTest.java` | T-202-1 |
+| `OrderFulfillmentRetryTimeoutTest.java` | T-202-2…5 |
+| `OrderFulfillmentIdempotencyKeyStabilityTest.java` | T-202-6 |
 
-Optional (needs Owner OK): wrap transport failures as typed retryable failures; set workflow timeout vs `T_run_max`; retune ActivityOptions numbers.
-
----
-
-## 5. Test plan (proposed)
-
-| ID | Intent |
-| --- | --- |
-| T-202-1 | Assert exact `ActivityPolicies` values / `doNotRetry` |
-| T-202-2 | Retryable failure then success → SUCCESS, attempts ≥ 2 |
-| T-202-3 | `BUSINESS` → single attempt + existing compensation semantics |
-| T-202-4 | Retry/timeout exhaustion → compensation; default `COMPENSATED_FAILURE` when no pending AMBIGUOUS |
-| T-202-5 | UNKNOWN path resolve call count ≤ bound; distinct from Temporal retries |
-| T-202-6 | Idempotency key stability for mutating activities (light) |
+**No** protocol / invariants / oracle / D-201 business semantic edits. **No** F0–F3 harness.
 
 ---
 
-## 6. Acceptance criteria (proposed)
+## 3. Test evidence (local)
 
-1. Exact retry/timeout config documented with code locations.  
-2. T-202-1…5 green in CI.  
-3. No protocol/oracle/D-201 semantic drift unless Owner-approved.  
-4. Deferred gaps listed explicitly (lost-response-without-ID).  
-5. TH-201/206 stay Closed; stash untouched.
+Variant A unit/IT (rerun):
+
+| Suite | tests | skipped | failures |
+| --- | ---: | ---: | ---: |
+| `ActivityPoliciesTest` | 2 | 0 | 0 |
+| `OrderFulfillmentRetryTimeoutTest` | 4 | 0 | 0 |
+| `OrderFulfillmentIdempotencyKeyStabilityTest` | 1 | 0 | 0 |
+| `OrderFulfillmentWorkflowOrderTest` | 7 | 0 | 0 |
+| `OrderFulfillmentCompensationIT` | 6 | 0 | 0 |
+| `OrderFulfillmentHappyPathIT` | 1 | 0 | 0 |
+
+Console (after clean rerun; first full `build` hit a transient dirty-stack E2E flake):
+
+| Suite | tests | skipped | failures |
+| --- | ---: | ---: | ---: |
+| `ConsoleTemporalE2EGateTest` | 5 | 0 | 0 |
+| `ConsoleRealTemporalE2EIT` | 1 | 0 | 0 |
+
+`./gradlew build` → **SUCCESS** after console retest.
+
+### Behavioral evidence
+
+- **T-202-2:** `failChargeRetryableTimes(2)` → `chargeInvocations=3`, outcome `SUCCESS`
+- **T-202-3:** BUSINESS arrange → `arrangeInvocations=1`, refund+release, `COMPENSATED_FAILURE`
+- **T-202-4:** retryable arrange exhausts **5** attempts; IDs known; refund CAPTURED→REFUNDED + release HELD; payment **not** FAILED; `COMPENSATED_FAILURE`
+- **T-202-5:** UNKNOWN resolve invocations **==** `resolveAttemptLimit` (3); outcome `AMBIGUOUS`
+- **T-202-6:** included — stable `IdempotencyKeys` patterns for mutating activities
 
 ---
 
-## 7. Open questions for Owner
+## 4. Documentation
 
-1. Keep current ActivityOptions numbers or retune vs `T_observe`/`T_run_max`?  
-2. Docs/tests only, or also transport-failure wrapping?  
-3. Lost-response-without-returned-ID: TH-202, later ticket, or TH-400?  
-4. Set workflow execution timeout capped by `T_run_max`, or harness-only?  
-5. Docs in `VARIANT_A_HAPPY_PATH.md` only vs dedicated retries note?
+`VARIANT_A_RETRIES_TIMEOUTS.md` covers options, forward vs compensation, retryable vs not, Temporal retries vs resolve loop, idempotency, timeout→compensation, `T_observe`/`T_run_max` distinction, and explicit limitations (lost ID, no workflow timeout, no RestClient timeouts, untyped transport errors).
 
-**Stop condition:** wait for Owner review of this plan before any application code changes.
+---
+
+## 5. Deviations from approved plan
+
+None material. T-202-2 uses **charge** retryable failures (then success) rather than arrange — still verifies real Temporal activity retries under `ActivityPolicies.defaultOptions()`. T-202-4 uses retry exhaustion (retryable `HTTP_503` ×5) with known reservation/payment IDs rather than wall-clock start-to-close sleep; still exercises Temporal retry budget exhaustion → compensation.
+
+---
+
+## 6. Remaining limitations
+
+As documented (D-202-3/4/2): lost-response-without-returned-ID deferred; no workflow execution timeout; RestClient timeouts unset; transport exceptions not wrapped.
+
+---
+
+## 7. Owner next
+
+Review/merge PR → request post-merge verification → only then mark TH-202 Done/Closed.

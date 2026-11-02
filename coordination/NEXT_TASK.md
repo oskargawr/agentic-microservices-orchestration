@@ -1,8 +1,8 @@
 # NEXT_TASK
 
-**Status:** `approved`  
+**Status:** `approved` (implementation in progress on feature branch)  
 **Last updated:** 2026-11-02  
-**Approved by:** Project Owner (explicit TH-202 approval)
+**Approved by:** Project Owner (TH-202 implementation decisions D-202-1…D-202-5)
 
 ## Task ID and title
 
@@ -10,36 +10,29 @@
 
 ## Objective
 
-Document and test Variant A Temporal activity retry/timeout policy; verify interaction with saga compensation, idempotency, and UNKNOWN payment resolution. **Do not** change D-201 semantics, protocol, invariants, or oracle without explicit Owner approval.
+Document and test Variant A Temporal activity retry/timeout policy per Owner-approved plan. Keep ActivityOptions numerics unchanged (D-202-1). No transport wrapping (D-202-2). Defer lost-response-without-ID (D-202-3). No workflow execution timeout (D-202-4). Dedicated retries doc (D-202-5).
 
-## Phase
+## Branch
 
-**Investigation complete** (this cycle). **Implementation deferred** until Owner reviews the proposed plan in `coordination/TH-202_INVESTIGATION.md` / `HANDOFF_TO_CHATGPT.md`.
+`feature/th-202-retries-timeouts-documented`
 
-## Scope (locked for investigation)
+## Locked constraints
 
-- Inspect `ActivityOptions` / retry policies / timeouts on `main`
-- Analyze retries vs business errors vs compensation vs UNKNOWN
-- Propose minimal impl + tests + docs + acceptance criteria
-- No application code changes in this phase
-- No F0–F3 fault-injection / experiment runner work (TH-400+)
-- Preserve `stash@{0}`; no unrelated console changes
+- No protocol / invariants / oracle / D-201 semantic changes
+- No F0–F3 harness
+- Preserve `stash@{0}`; TH-201 / TH-206 remain Done / Closed
+- **Not Done** until merge + post-merge verification
 
 ## Reference
 
 - `coordination/TH-202_INVESTIGATION.md`
-- `docs/architecture/VARIANT_A_HAPPY_PATH.md`
-- D-201 / D-012 / D-011 in `coordination/DECISION_LOG.md`
-
-## Out of scope
-
-- Reopening TH-201 / TH-206
-- Protocol / invariant / oracle edits
-- Arbitrary retune of retry numbers without rationale + Owner OK
+- `coordination/DECISION_LOG.md` (D-202)
+- `docs/architecture/VARIANT_A_RETRIES_TIMEOUTS.md`
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-02 | **approved** (investigation first) | Project Owner |
-| 2026-11-02 | investigation complete; awaiting Owner plan review | Cursor |
+| 2026-11-02 | approved (investigation first) | Project Owner |
+| 2026-11-02 | investigation complete | Cursor |
+| 2026-11-02 | **implementation approved** (D-202-1…5) | Project Owner |
