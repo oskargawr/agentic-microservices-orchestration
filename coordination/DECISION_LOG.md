@@ -8,6 +8,115 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-402 — Experiment Runner design contract (rev. 3.1)
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-02 |
+| **Status** | **approved** (design contract only) |
+| **Decision-maker** | Project Owner |
+| **Context** | TH-402 · Taiga #37 · `docs/architecture/EXPERIMENT_RUNNER_DESIGN.md` rev. 3.1 |
+| **Evidence** | Owner instruction — Record Owner Approval of Experiment Runner Design rev. 3.1 (2026-11-02) |
+| **Related** | TH-402; D-012; D-011; D-201; D-202-4; D-208; TH-401-A Option C |
+
+### Approved (R1 / R6 / R14)
+
+| ID | Decision |
+| --- | --- |
+| **R1** | Accept rev. 3.1 as the **approved design contract / baseline** for future TH-402 implementation. |
+| **R6** | When `T_run_max` is reached and the workflow is still RUNNING: use Temporal **workflow termination**. Do **not** use cancellation as a substitute. Termination is a **harness-control** action, **not** business compensation, and **does not** establish a business outcome. |
+| **R14** | After forced termination: establish required Temporal quiescence → wait **full** approved `T_observe = 30s` → then evaluate Independent Oracle. If quiescence cannot be established → `EXCLUDED` (e.g. `WORKFLOW_NOT_QUIESCED`); do not evaluate as a business outcome; block next trial. |
+
+### Approved clarifications (recorded in design §3.5 / §5.5)
+
+1. **Temporal quiescence ≠ service-side drain:** `workflowQuiesced=true` describes Temporal execution state only; it does **not** prove already-dispatched HTTP / service-side effects have drained. No new distributed drain protocol. Insufficient trust → technical exclusion + block next trial.
+2. **Forced-path sequence:** `T_run_max` → terminate → required quiescence → full `T_observe` (30s) → Oracle.
+3. **Persistence after Oracle:** if Oracle succeeds but persist fails → keep result in memory and retry persist; **do not** re-run the business trial; **do not** reuse the same `trialId` for a new execution; **do not** overwrite an existing artifact with a new execution; if durable persist cannot recover → technical harness failure (do not fabricate COMPLETED).
+
+### Explicit non-authorization
+
+**This approval does NOT authorize implementation** of the Runner, FaultController, persistence, CLI, lifecycle, TH-400, or Variant C. No change to Oracle/protocol semantics beyond recording the R14 observe sequence. Separate Owner `NEXT_TASK=approved` required before coding.
+
+**Follow-up:** Readiness RQ pack and sequence S1 were Owner-approved later the same day as **D-403** (still without implementation authorization / D-AUTH).
+
+---
+
+## D-403 — TH-402 readiness decision pack + sequence S1
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-02 |
+| **Status** | **approved** (readiness / sequencing only) |
+| **Decision-maker** | Project Owner |
+| **Context** | Owner ratification of recommendations in `docs/architecture/TH_402_IMPLEMENTATION_READINESS.md` |
+| **Evidence** | Owner instruction — Record Owner-Approved Readiness Decisions (2026-11-02) |
+| **Related** | D-402; TH-402; TH-400; TH-303; D-016; D-011; D-012 |
+| **Does NOT include** | Originally excluded D-AUTH; later granted as **D-AUTH** for phase-1 only (see below) |
+
+### Approved resolutions (D-R* / D-SEQ)
+
+| ID | Approved resolution |
+| --- | --- |
+| **D-R2** | File-first JSON + CSV for MVP. PostgreSQL results storage deferred. |
+| **D-R3** | Runner as reusable library + CLI. No Spring Boot HTTP service in MVP. |
+| **D-R4** | Service-header fault injection as the MVP mechanism family. Extend D-016. Toxiproxy deferred. |
+| **D-R5** | Canonical MVP F1 = charge failure after successful HELD reservation (**F1-P**). Explicitly **not** an inventory reserve failure. |
+| **D-R7** | Sequential trials only, protected by an exclusive environment lock. |
+| **D-R8** | `amountMinor` and currency are experiment configuration, not protocol constants. Pilot default: `2599` / `PLN`. |
+| **D-R9** | Allow TH-402 **phase-1** before TH-400 is Done — explicit Owner-approved staged-work exception to the prior Taiga #37 dependency narrative for phase-1 only. |
+| **D-R10** | Skip incomplete cells and continue the matrix, except when safety / env health / disarm / quiescence conditions require blocking. |
+| **D-R11** | TH-303 is a **soft** dependency for the A-only phase. Full A×C acceptance still requires Variant C and relevant TH-303 capabilities. |
+| **D-R12** | Fail-closed environment/database allowlist is **mandatory** from the first Runner implementation. Separate confirmatory DB is preferred and **required before confirmatory** execution. |
+| **D-R13** | Configurable quiescence wait; pilot default **5000 ms**. Not a protocol constant; does **not** change `T_observe` or `T_run_max`. |
+| **D-SEQ** | Adopt staged sequence **S1**. |
+
+### Approved sequence S1
+
+1. **TH-402 phase-1** — bounded F0 × Variant A Runner skeleton (lifecycle, file results, StateReset, allowlist, env lock, Variant A adapter, Oracle once, R6/R14, F0 FaultController). Optional F3 via D-016 is **not** mandatory phase-1 acceptance.  
+2. **TH-400** — service-header faults; canonical F1-P, F2, F3.  
+3. **TH-402 phase-2** — full F0–F3 matrix integration.  
+4. **Variant C + TH-303** — agent variant + fairness/tool instrumentation.  
+5. **Pilot A×C**, then confirmatory after separate confirmatory env + OWN-1.
+
+### Acceptance boundaries (mandatory)
+
+| Level | Meaning |
+| --- | --- |
+| **Phase-1 acceptance** | Bounded F0×A path works with allowlist, lock, reset, lifecycle, R6/R14, Oracle, durable persistence (+ approved persist-failure recovery), reproducible IT evidence. **≠** full TH-402 Done. |
+| **Full TH-402 acceptance** | Requires TH-400, F0–F3 matrix, design-required Runner functions, and Variant C / TH-303 for full A×C comparison acceptance. |
+
+### Preserved constraints (unchanged)
+
+D-402 / D-016 / D-011 / D-012 / D-201 / D-202 / D-208 meanings preserved: `T_observe=30s`, `T_run_max=120s`, R6 terminate, R14 quiesce→observe→Oracle, quiescence ≠ service drain, timeout ≠ failure, Oracle four labels, no Runner compensation APIs, no refund without CAPTURED, no release without HELD, no fabricated COMPLETED after persist failure.
+
+---
+
+## D-AUTH — TH-402 phase-1 implementation authorization
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-02 |
+| **Status** | **approved** (exclusive slice) |
+| **Decision-maker** | Project Owner |
+| **Authorized slice** | **TH-402 phase-1** — bounded F0 × Variant A Runner skeleton |
+| **Evidence** | Owner instruction — TH-402 phase-1 Owner Authorization & Implementation (2026-11-02) |
+| **Basis** | D-402 · D-403 · design contract rev. 3.1 · D-SEQ = S1 |
+| **Related** | TH-402 · Taiga #37 |
+
+### Scope (authorized)
+
+Library + CLI Runner; trial lifecycle statuses COMPLETED/EXCLUDED/ABORTED_EXPERIMENT; serial + env lock; file-first JSON+CSV ResultStore; StateReset + fail-closed DB allowlist; Variant A Temporal adapter; Independent Oracle once after R6/R14 sequence; FaultController with **F0 no-op**; quiesce wait default 5000 ms (configurable).
+
+### Explicitly NOT authorized by D-AUTH
+
+TH-400 (F1-P/F2/F3), mandatory F3, Variant C, TH-303, full F0–F3 matrix, Postgres results, Spring Boot HTTP Runner, Toxiproxy, confirmatory env/runs, OWN-1, dashboard, protocol/design-contract changes, saga/business-contract changes.
+
+### Acceptance note
+
+Phase-1 completion ≠ full TH-402 Done; do **not** mark Taiga #37 Done solely for phase-1.
+
+---
+
 ## D-208 — Lost-response-without-returned-ID recovery (B+E)
 
 | Field | Value |

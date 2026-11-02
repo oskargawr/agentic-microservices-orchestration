@@ -1,29 +1,44 @@
 # NEXT_TASK
 
-**Status:** `done` (TH-401-A closed; awaiting Owner next approval)  
+**Status:** `approved`  
 **Last updated:** 2026-11-02  
-**Closed by:** Cursor Agent after Owner merge authorization + post-merge verification
+**Approved by:** Project Owner (**D-AUTH** — phase-1 only)
 
-## Closed task
+## Active task
 
-**TH-401-A** — Independent Oracle Core (Option C) — **Done / Closed**
+**TH-402 phase-1** — bounded F0 × Variant A Runner skeleton
 
 | Field | Value |
 | --- | --- |
-| Merge | PR #10 → `main` @ `ab82fceac6f0448eca03d4d854e6dcf94e63e1d0` |
-| Reviewed HEAD | `df25bbd7c348ad6befd3bf49a1734ec1edf4ed45` (impl review base `1cef270`) |
-| Decision | Option C · D-011/D-012 preserved |
-| Taiga | #36 Done |
+| Ticket | TH-402 · Taiga **#37** (phase-1 ≠ full Done) |
+| Decisions | D-402 · D-403 · **D-AUTH approved (phase-1 exclusive)** |
+| Sequence | S1 step 1 |
 
-## Next
+### In scope
 
-No approved next task. Do **not** start TH-401-B, TH-400, Experiment Runner, Variant C, or dashboard work until Owner sets a new `approved` NEXT_TASK.
+- Library + CLI (no Spring Boot HTTP)
+- Lifecycle: `COMPLETED` \| `EXCLUDED` \| `ABORTED_EXPERIMENT` (`TECHNICAL_FAILURE` = exclusion category)
+- Serial trials + exclusive env lock
+- File-first JSON + CSV ResultStore; persist-fail retry (no re-run; no fabricate COMPLETED)
+- StateReset + fail-closed JDBC allowlist
+- Variant A Temporal adapter (existing workflow)
+- Independent Oracle exactly once after R6/R14 for eligible trials
+- R6 Temporal **terminate** (not cancel); R14 quiesce → full `T_observe=30s` → Oracle
+- Quiesce wait configurable (default 5000 ms)
+- FaultController + **F0 no-op**
+
+### Out of scope
+
+TH-400 / F1-P / F2 / mandatory F3 · Variant C · TH-303 · Postgres results · Toxiproxy · confirmatory · OWN-1 · dashboard · protocol/design changes
+
+### Phase-1 acceptance (summary)
+
+F0×A trial runs with allowlist, lock, reset, lifecycle, R6/R14, Oracle-once, durable results, tests. **≠** full TH-402 / #37 Done.
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-02 | analysis TH-401 / .1 / .2 | Cursor |
-| 2026-11-02 | **implementation approved** (TH-401-A) | Project Owner |
-| 2026-11-02 | implementation + CI fixes on feature branch | Cursor |
-| 2026-11-02 | **done / closed** | Cursor (post-merge verify) |
+| 2026-11-02 | D-403 approved; D-AUTH open | Owner |
+| 2026-11-02 | Accidental false D-AUTH corrected | Owner / Cursor |
+| 2026-11-02 | **D-AUTH APPROVED — TH-402 phase-1 only** | Project Owner |

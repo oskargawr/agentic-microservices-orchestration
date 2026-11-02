@@ -2,61 +2,78 @@
 
 **Data:** 2026-11-02  
 **Od:** Cursor Agent  
-**Tryb:** IMPLEMENTATION (TH-401-A closed)  
-**Task:** Independent Oracle Core — **Done / Closed**
+**Tryb:** IMPLEMENTATION  
+**Task:** TH-402 phase-1 — F0 × Variant A Runner skeleton  
+**Authorization:** **D-AUTH approved (phase-1 only)** · D-402 · D-403 · S1
 
 ---
 
-## 1. Merge
+## Branch / base
 
 | | |
 | --- | --- |
-| PR | https://github.com/oskargawr/agentic-microservices-orchestration/pull/10 **MERGED** |
-| Pre-merge HEAD | `df25bbd7c348ad6befd3bf49a1734ec1edf4ed45` |
-| Merge SHA | `ab82fceac6f0448eca03d4d854e6dcf94e63e1d0` |
-| Pre-merge CI | [41434870027](https://github.com/oskargawr/agentic-microservices-orchestration/actions/runs/41434870027) SUCCESS |
-| Post-merge CI | [41436855465](https://github.com/oskargawr/agentic-microservices-orchestration/actions/runs/41436855465) (main push) |
-| Taiga | #36 **Done** |
-| Stash | `stash@{0}` untouched |
+| Branch | `feature/th-402-phase1-runner-skeleton` |
+| Base HEAD | `31256cdc288aa071fa9f873a454afc2a1d91c46a` |
+| Module | `:experiment:runner` |
 
----
+## Implemented
 
-## 2. Post-merge verification (`main` @ `ab82fce`)
+- Library + CLI (`RunnerMain`) — no Boot HTTP
+- Lifecycle `COMPLETED`/`EXCLUDED`/`ABORTED_EXPERIMENT`
+- Serial + `ExperimentEnvLock`
+- Fail-closed `JdbcAllowlist` + `StateReset`
+- `FileResultStore` JSON+CSV, atomic write, overwrite refuse, persist retry
+- `VariantAAdapter` — Temporal start/describe/await/**terminate** (R6)
+- `TrialRunner` — R14 quiesce → full `T_observe` → Oracle once; F0 null `faultObservedAt`
+- `F0FaultController` no-op
+- Unit tests: allowlist, ResultStore, F0, lifecycle (happy / terminate / not-quiesced / wrong DB)
 
-| Command | Result |
-| --- | --- |
-| `./gradlew --no-parallel cleanTest test` | **SUCCESS** |
-| `./gradlew --no-parallel build` | **SUCCESS** |
+## Tests
 
-| Metric | Count |
-| --- | ---: |
-| tests | **135** |
-| skipped | **0** |
-| failures | **0** |
-| errors | **0** |
+```
+./gradlew :experiment:runner:test  → BUILD SUCCESSFUL (11 tests)
+```
 
-`OracleJdbcIT`: 3 tests **RAN** (0 skipped) — F0, success round-trip, invalid-credentials contrast.  
-Oracle main sources: no Temporal / Spring AI / `BusinessConsistencyCheck`.
+No full-repo CI run claimed in this handoff unless executed separately.
 
----
+## Acceptance mapping (phase-1)
 
-## 3. Delivered (summary)
+| # | Criterion | Status |
+| --- | --- | --- |
+| 1 | F0×A trial path | Implemented (CLI + library; IT against live stack = ops) |
+| 2 | Lifecycle statuses persisted | Yes |
+| 3 | Serial + env lock | Yes |
+| 4 | Allowlist fail-closed + tested | Yes |
+| 5 | Deterministic reset + gated | Yes |
+| 6 | Variant A Temporal | Yes |
+| 7 | Oracle once after observe | Yes (unit); live needs stack |
+| 8 | terminate not cancel | Yes |
+| 9 | No compensation on terminate | Yes (adapter does not call compensate APIs) |
+| 10 | Full 30s observe after quiesce | Yes (injectable clock in tests) |
+| 11 | F0 no-op | Yes |
+| 12 | JSON+CSV; no re-run on persist fail | Yes |
+| 13 | D-R10 skip incomplete / block on quiesce | Block on quiesce yes; matrix skip = CLI single-trial phase-1 |
+| 14 | Tests | Unit suite green |
+| 15 | Docs | README + coordination + this handoff |
 
-- Module `experiment/oracle`: DB-primary RO JDBC + REPEATABLE READ; Option C classifier.
-- Four outcomes; patterns `{SUCCESS,F0,F1,F2,NONE}`; incomplete → AMBIGUOUS + NONE + `COMPENSATION_INCOMPLETE`.
-- Fresh-CI Flyway init from canonical service migrations; connectivity-only skip.
+**Phase-1 ≠ full TH-402 Done.** Taiga #37 = **In Progress**, 3 SP, not Done.
 
----
+## Limitations / deferred
 
-## 4. Remaining limitations
+- No live Temporal E2E IT in-module yet (console pattern exists; phase-1 unit coverage)
+- F1/F2/F3 / TH-400 not implemented
+- Variant C / TH-303 deferred
+- Postgres results deferred
+- ATOMIC_MOVE may fall back behavior on some FS (standard Java caveat)
 
-- Absolute stock `onHand` Δ vs pre-run baseline **not** verified (warning on SUCCESS).
-- I7 replay idempotency: service ITs; Oracle does not fully re-prove from terminal snapshot (`docs/I7_ENFORCEMENT.md`).
-- **TH-401-B** (HTTP cross-check) deferred.
-- No Experiment Runner / TH-400 / Variant C started.
+## Taiga
 
----
+#37 → **In Progress**; description notes D-AUTH phase-1; SP=3; full-acceptance deps retained narratively.
 
-## 5. Owner next
+## Obsidian
 
-No approved NEXT_TASK. Await planning decision.
+Current Status / Implementation Plan / Decision Log / Weekly log updated for D-AUTH phase-1.
+
+## Next recommended task
+
+Owner review + merge phase-1; then separate auth for **TH-400** (S1 step 2).
