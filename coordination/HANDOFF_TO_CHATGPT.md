@@ -69,5 +69,6 @@ No changes to protocol, invariants, oracle, or app business behavior. Compose st
 
 ## 7. PR / Owner next
 
-PR URL: *(filled after create)*  
+PR URL: https://github.com/oskargawr/agentic-microservices-orchestration/pull/7  
+HEAD: `7e1a84c`  
 **Owner next:** review CI on PR → authorize merge → request post-merge closure.
