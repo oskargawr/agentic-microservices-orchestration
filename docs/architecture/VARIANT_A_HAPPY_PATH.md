@@ -100,4 +100,4 @@ Tests use `Money.plnMinor(2599)` as an **explicit local test input** — not an 
 - Full F0–F3 experiment fault profiles remain TH-400.
 - Exact numeric resolve bound may be tuned later without changing AMBIGUOUS semantics.
 - **Coverage follow-up:** no dedicated integration test that cancels the main workflow scope and asserts detached compensation still runs (unit/IT cover compensation paths without an explicit cancel-signal scenario). Does not reopen TH-201.
-- Lost-response-after-commit-without-returned-ID deferred (D-202-3); see [`VARIANT_A_RETRIES_TIMEOUTS.md`](VARIANT_A_RETRIES_TIMEOUTS.md) §8.
+- Lost-response-without-returned-ID: D-208 B+E recovery — see [`LOST_RESPONSE_WITHOUT_ID.md`](LOST_RESPONSE_WITHOUT_ID.md). GET-by-orderId (Option C) deferred.

@@ -2,13 +2,13 @@
 
 | Field | Value |
 | --- | --- |
-| **Status** | Architecture investigation complete — **implementation NOT approved** |
+| **Status** | Investigation complete · **D-208 APPROVED** · TH-208 B+E implementation on feature branch |
 | **Date** | 2026-11-02 |
-| **Deferred by** | D-202-3 |
-| **Related** | D-201; D-015; protocol-v0 F3 / timeout≠failure; TH-400; TH-401 |
-| **Labels** | Source fact · Synthesis · Design rationale · Hypothesis · Open question · PROPOSED |
+| **Deferred by** | D-202-3 (closed by D-208) |
+| **Related** | D-201; D-015; D-208; protocol-v0 F3 / timeout≠failure; TH-400; TH-401 |
+| **Labels** | Source fact · Synthesis · Design rationale · Hypothesis · Open question |
 
-This document does **not** change D-201, D-202, invariants, or the experimental protocol. No application code, endpoints, or schema changes were made in this investigation.
+Investigation text below is preserved. Implementation (B+E only; Option C deferred) lives in `OrderFulfillmentWorkflowImpl` (lost-id recovery stub with `maximumAttempts=1`).
 
 ---
 
