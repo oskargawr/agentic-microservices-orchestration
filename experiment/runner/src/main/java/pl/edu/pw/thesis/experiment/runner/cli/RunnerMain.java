@@ -17,8 +17,10 @@ import pl.edu.pw.thesis.experiment.runner.config.RunnerEnvironment;
 import pl.edu.pw.thesis.experiment.runner.fault.CompositeFaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.F0FaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.F1PFaultController;
+import pl.edu.pw.thesis.experiment.runner.fault.F2FaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.FaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.HttpPaymentFaultInjectionVerifier;
+import pl.edu.pw.thesis.experiment.runner.fault.HttpShippingFaultInjectionVerifier;
 import pl.edu.pw.thesis.experiment.runner.lifecycle.ExperimentAbort;
 import pl.edu.pw.thesis.experiment.runner.lifecycle.TrialRunner;
 import pl.edu.pw.thesis.experiment.runner.lock.ExperimentEnvLock;
@@ -49,7 +51,9 @@ import pl.edu.pw.thesis.orchestration.varianta.runtime.TemporalSettings;
  *   --experiment-id=exp-...
  *   --fault-profile=F0          (default)
  *   --fault-profile=F1-P        (explicit; requires payment base URL)
+ *   --fault-profile=F2          (explicit; requires shipping base URL)
  *   --payment-base-url=http://127.0.0.1:8082   (required for F1-P)
+ *   --shipping-base-url=http://127.0.0.1:8083  (required for F2)
  *   --quiesce-wait-ms=5000
  *   --t-observe-ms=30000 --t-run-max-ms=120000
  * </pre>
@@ -178,9 +182,18 @@ public final class RunnerMain {
             return CompositeFaultController.f0AndF1P(
                     clock, HttpPaymentFaultInjectionVerifier.forBaseUrl(a.paymentBaseUrl.trim()));
         }
+        if (F2FaultController.PROFILE_F2.equals(a.faultProfileId)) {
+            if (a.shippingBaseUrl == null || a.shippingBaseUrl.isBlank()) {
+                throw new IllegalArgumentException(
+                        "F2 requires --shipping-base-url=... (or THESIS_SHIPPING_BASE_URL) "
+                                + "for fail-closed injection preflight");
+            }
+            return CompositeFaultController.f0AndF2(
+                    clock, HttpShippingFaultInjectionVerifier.forBaseUrl(a.shippingBaseUrl.trim()));
+        }
         throw new IllegalArgumentException(
                 "unsupported --fault-profile=" + a.faultProfileId
-                        + " (supported: F0, F1-P; F1 is not a canonical id)");
+                        + " (supported: F0, F1-P, F2; F1 is not a canonical id)");
     }
 
     static final class Args {
@@ -197,6 +210,7 @@ public final class RunnerMain {
         String gitSha = env("GIT_SHA", "unknown");
         String faultProfileId = F0FaultController.PROFILE_F0;
         String paymentBaseUrl = env("THESIS_PAYMENT_BASE_URL", null);
+        String shippingBaseUrl = env("THESIS_SHIPPING_BASE_URL", null);
         long quiesceWaitMs = 5000;
         long tObserveMs = 30_000;
         long tRunMaxMs = 120_000;
@@ -234,6 +248,8 @@ public final class RunnerMain {
                     a.faultProfileId = arg.substring("--fault-profile=".length()).trim();
                 } else if (arg.startsWith("--payment-base-url=")) {
                     a.paymentBaseUrl = arg.substring("--payment-base-url=".length()).trim();
+                } else if (arg.startsWith("--shipping-base-url=")) {
+                    a.shippingBaseUrl = arg.substring("--shipping-base-url=".length()).trim();
                 } else if ("--help".equals(arg)) {
                     System.out.println("See RunnerMain javadoc for flags.");
                     System.exit(0);

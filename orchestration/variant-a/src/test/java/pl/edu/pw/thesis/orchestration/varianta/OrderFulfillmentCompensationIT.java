@@ -67,7 +67,7 @@ class OrderFulfillmentCompensationIT {
     static void startServices() throws Exception {
         PROCESSES.add(startService("inventory", INV_PORT, "inventory", false));
         PROCESSES.add(startService("payment", PAY_PORT, "payment", true));
-        PROCESSES.add(startService("shipping", SHIP_PORT, "shipping", false));
+        PROCESSES.add(startService("shipping", SHIP_PORT, "shipping", true));
         awaitHealthy(INV_PORT);
         awaitHealthy(PAY_PORT);
         awaitHealthy(SHIP_PORT);
@@ -123,6 +123,32 @@ class OrderFulfillmentCompensationIT {
             assertThat(queryOps("shipping")).isEmpty();
             assertThat(indexOf(queryOps("inventory"), "reserve"))
                     .isLessThan(indexOf(queryOps("inventory"), "release"));
+        }
+    }
+
+    @Test
+    void t400_s2_arrangeRejected_refundsAndReleases_noShipment() throws Exception {
+        HttpOrderFulfillmentActivities http = http();
+        try (TestWorkflowEnvironment testEnv = newEnv(http)) {
+            UUID orderId = UUID.randomUUID();
+            OrderFulfillmentResult result = stub(testEnv).fulfill(new OrderFulfillmentInput(
+                    orderId,
+                    "SKU-MVP-1",
+                    1,
+                    Money.plnMinor(2599),
+                    null,
+                    null,
+                    "ARRANGE_REJECTED",
+                    null));
+
+            assertThat(result.outcome()).isEqualTo(BusinessOutcome.COMPENSATED_FAILURE);
+            assertThat(http.getPayment(result.paymentId()).state()).isEqualTo(PaymentState.REFUNDED);
+            assertThat(http.getReservation(result.reservationId()).state())
+                    .isEqualTo(ReservationState.RELEASED);
+            assertThat(result.shipmentId()).isNull();
+            assertThat(countShipments(orderId)).isZero();
+            assertThat(queryOps("payment")).contains("refund");
+            assertThat(queryOps("inventory")).contains("release");
         }
     }
 
@@ -273,7 +299,7 @@ class OrderFulfillmentCompensationIT {
                         .build());
     }
 
-    private static Process startService(String name, int port, String schema, boolean paymentFaults)
+    private static Process startService(String name, int port, String schema, boolean enableFaultInjection)
             throws Exception {
         Path jar = bootJar(name);
         String url = schemaUrl(schema);
@@ -290,8 +316,11 @@ class OrderFulfillmentCompensationIT {
                 "--spring.datasource.hikari.maximum-pool-size=3",
                 "--spring.main.banner-mode=off",
                 "--logging.level.root=WARN"));
-        if (paymentFaults) {
+        if (enableFaultInjection && "payment".equals(name)) {
             cmd.add("--thesis.payment.fault-injection-enabled=true");
+        }
+        if (enableFaultInjection && "shipping".equals(name)) {
+            cmd.add("--thesis.shipping.fault-injection-enabled=true");
         }
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);
@@ -345,6 +374,17 @@ class OrderFulfillmentCompensationIT {
                 Statement st = c.createStatement()) {
             for (String s : sql) {
                 st.executeUpdate(s);
+            }
+        }
+    }
+
+    private static int countShipments(UUID orderId) throws Exception {
+        try (Connection c = DriverManager.getConnection(schemaUrl("shipping"), USER, PASS);
+                var ps = c.prepareStatement("SELECT COUNT(*) FROM shipments WHERE order_id = ?")) {
+            ps.setObject(1, orderId);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getInt(1);
             }
         }
     }

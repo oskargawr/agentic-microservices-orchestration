@@ -1,0 +1,3 @@
+thesis:
+  shipping:
+    fault-injection-enabled: true

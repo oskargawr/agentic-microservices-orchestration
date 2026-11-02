@@ -2,50 +2,28 @@
 
 **Data:** 2026-11-02  
 **Od:** Cursor Agent  
-**Tryb:** IMPLEMENTATION (TH-400 S1 F1-P)  
-**Task:** Owner-authorized S1 implementation (D-AUTH-S1); local commits only  
-**Branch:** `feature/th-400-s1-f1p`  
-**Worktree:** `cursor_space/worktrees/agentic-orchestration-thesis-th400-s1`  
-**Base:** `34b6a74f298e2bf1c09b356621ce261a025bfea5` (S0 docs branch HEAD)  
-**Primary checkout:** untouched — dirty `AGENTS.md` preserved
+**Tryb:** PUSH + PR (D-AUTH-S2; merge NOT authorized)  
+**Task:** TH-400 S2 F2 — PR opened  
+**Base `origin/main`:** `c73255842d771126153dba94d6bcf1031b1d072b`  
+**Branch / HEAD:** `feature/th-400-s2-f2` @ `70c4f85`
 
 ---
 
-## Authorization boundary
+## Authorization
 
 | | |
 | --- | --- |
-| D-AUTH-S1 | **GRANTED** (F1-P only) |
-| Push / PR / merge | **Not authorized** |
-| S2–S4 / Variant C | **Not authorized** |
-| Payment / orchestration prod / Oracle classifier | **Not modified** |
+| D-AUTH-S2 | GRANTED |
+| Push + PR | **AUTHORIZED** (Owner) → [PR #13](https://github.com/oskargawr/agentic-microservices-orchestration/pull/13) |
+| Merge | **NOT** authorized |
+| TH-400 / #35 Done | **NOT** marked |
 
-## Preflight mechanism (S1-ENV resolved in-scope)
+## Audit
 
-Architecture had **no** actuator/`info` exposure of `thesis.payment.fault-injection-enabled`.  
-Reliable confirmation without Payment API changes:
+**PASS WITH LIMITATIONS** (independent read-only audit). Non-blocking: broad `noRollbackFor`, no injection-off IT, no live Temporal F2 E2E, preflight probe/forge-URL class.
 
-1. Runner POST existing `/api/v1/payments/charge` with `X-Thesis-Fault: CHARGE_FAIL`  
-2. Require response `state=FAILED`  
-3. `CAPTURED` ⇒ injection appears disabled → `FAULT_VERIFY_FAILED` (fail-closed)  
-4. HTTP 2xx alone is insufficient  
+## Ask
 
-F0 never calls this probe.
-
-## Implementation summary
-
-- `F1PFaultController` + `CompositeFaultController`  
-- `HttpPaymentFaultInjectionVerifier` / transport  
-- `VariantAAdapter.resolveChargeFaultHint`  
-- CLI `--fault-profile=` (default F0) + `--payment-base-url=` for F1-P  
-- Rejects canonical id `F1`  
-
-## Oracle
-
-Acceptance = classification **`CONFIRMED_FAILURE`**. Pattern may be **`F2`** for FAILED+RELEASED; classifier unchanged.
-
-## Next Owner action
-
-1. Review S1 diff / tests / this handoff  
-2. Optionally authorize push/PR of `feature/th-400-s1-f1p`  
-3. Do not authorize S2 in the same breath unless intentional  
+1. Review PR #13 / CI.  
+2. Separate Owner instruction required to **merge**.  
+3. S3 remains blocked without D-AUTH-S3.

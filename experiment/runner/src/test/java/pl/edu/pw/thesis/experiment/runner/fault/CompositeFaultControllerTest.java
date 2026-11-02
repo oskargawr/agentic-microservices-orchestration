@@ -68,4 +68,23 @@ class CompositeFaultControllerTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("F1-P");
     }
+
+    @Test
+    void f2PathRequiresShippingVerifier() {
+        AtomicInteger checks = new AtomicInteger();
+        CompositeFaultController controller = CompositeFaultController.f0AndF2(
+                CLOCK,
+                () -> {
+                    checks.incrementAndGet();
+                    return PaymentInjectionCheckResult.enabled("ok");
+                });
+        UUID orderId = UUID.randomUUID();
+        TrialSpec trial = TrialSpec.forVariantA(
+                "exp", "t2", "F2", 0, orderId, BusinessInputs.protocolPilotDefaults());
+        ArmedFaultRecord armed = controller.arm(FaultArmRequest.from(trial));
+        assertThat(armed.faultProfileId()).isEqualTo("F2");
+        assertThat(controller.verify(armed, trial).ok()).isTrue();
+        assertThat(checks.get()).isEqualTo(1);
+        controller.disarm("t2");
+    }
 }

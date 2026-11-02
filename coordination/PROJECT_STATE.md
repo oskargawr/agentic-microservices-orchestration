@@ -1,38 +1,47 @@
 # PROJECT_STATE
 
 **Last updated:** 2026-11-02  
-**Updated by:** Cursor Agent (TH-400 S1 F1-P implementation — local only)  
+**Updated by:** Cursor Agent (TH-400 S2 F2 implementation under D-AUTH-S2)  
 **MODE this session:** IMPLEMENTATION
 
 ## Current thesis scope (MVP)
 
 | | |
 | --- | --- |
-| **Runner** | TH-402 phase-1 + phase-1.1 on `main` (PR #11 / `90af3a9`) |
-| **TH-400 S0** | **Owner-ratified (D-404)** — documentation complete |
-| **TH-400 S1** | **Implemented locally** on `feature/th-400-s1-f1p` (D-AUTH-S1) — **push/PR/merge unauthorized** |
-| **Not authorized** | S2–S4 · Variant C · phase-2 · Taiga #35/#37 Done · publication |
+| **Runner** | TH-402 phase-1 + phase-1.1 on `main` (PR #11) + **S2 F2 local** on branch |
+| **TH-400 S0** | **Owner-ratified (D-404)** — on `main` via PR #12 lineage |
+| **TH-400 S1 (F1-P)** | **Merged** — PR [#12](https://github.com/oskargawr/agentic-microservices-orchestration/pull/12) · merge `c732558` · head `4ed5d57` |
+| **TH-400 S2 (F2)** | **PR [#13](https://github.com/oskargawr/agentic-microservices-orchestration/pull/13)** open — branch `feature/th-400-s2-f2` @ `70c4f85` · **not merged** |
+| **TH-402 overall** | Phase-1 complete on main · ticket **NOT Done** |
+| **Not authorized** | Merge S2 · S3–S4 · Variant C · Taiga #35/#37 Done |
 
 ## Engineering
 
 | | |
 | --- | --- |
-| **S1 worktree** | `cursor_space/worktrees/agentic-orchestration-thesis-th400-s1` |
-| **S1 branch** | `feature/th-400-s1-f1p` |
-| **Base** | S0 `docs/th-400-s0-fault-profile-spec` @ `34b6a74` |
-| **S0 docs branch** | `docs/th-400-s0-fault-profile-spec` (unchanged by S1) |
-| **Primary checkout** | untouched (dirty `AGENTS.md` preserved) |
+| **`origin/main`** | `c73255842d771126153dba94d6bcf1031b1d072b` |
+| **S2 branch** | `feature/th-400-s2-f2` (base `c732558`) |
+| **Worktree** | `worktrees/agentic-orchestration-thesis-th400-s1` |
+| **Tests (mandatory modules)** | contracts + runner + shipping + variant-a: **133 passed · 0 failed · 0 skipped · 0 errors** |
+| **Payment smoke** | `PaymentIntegrationTest.confirmedFailure` PASS |
 
-## S1 summary
+## S2 on branch (summary)
 
-- Canonical profile **`F1-P`**; F0 remains default
-- `CompositeFaultController` + `F1PFaultController` arm `X-Thesis-Fault` / `CHARGE_FAIL`
-- Fail-closed payment injection preflight (behavioral: CHARGE_FAIL → FAILED)
-- `VariantAAdapter` maps F1-P → `chargeFaultHint=CHARGE_FAIL`; F0 → null
-- No Payment / Variant A workflow / Oracle classifier changes
+- `ErrorCode.ARRANGE_REJECTED`; ShippingFault + `thesis.shipping.fault-injection-enabled`
+- Arrange: idempotency-first; F2 failure row HTTP 409; `noRollbackFor(ShippingException)` so failure commits
+- Orchestration: `arrangeFaultHint` forward + recovery
+- Runner: `F2FaultController`, shipping preflight (409+code), adapter F2 → arrange hint; F0/F1-P unchanged
+- No Oracle classifier / Payment production / F3 / Variant C changes
+
+### Known limitations (S2)
+
+- Same preflight forge-URL class as S1 (endpoint identity not authenticated)
+- Probe arrange-reject rows remain until StateReset (no shipment on F2 success path)
+- No live Temporal + Shipping F2 E2E in this session
+- CLI does not exit non-zero solely on missing `CONFIRMED_FAILURE`
 
 ## Next three actions
 
-1. Owner reviews S1 local commits / handoff  
-2. Owner may authorize push/PR of `feature/th-400-s1-f1p` (separate)  
-3. Do **not** start S2 until separate D-AUTH  
+1. Owner: authorize **merge** of PR #13 (or request further review)  
+2. After merge: separate **D-AUTH-S3** before F3  
+3. Do **not** mark Taiga #35 / #37 Done  

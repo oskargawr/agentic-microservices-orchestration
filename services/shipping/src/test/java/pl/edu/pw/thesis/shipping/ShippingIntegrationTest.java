@@ -25,14 +25,17 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import pl.edu.pw.thesis.contracts.common.IdempotencyRules;
+import pl.edu.pw.thesis.shipping.fault.ShippingFault;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 @EnabledIf("postgresAvailable")
 class ShippingIntegrationTest {
 
@@ -162,6 +165,79 @@ class ShippingIntegrationTest {
             assertThat(f.get()).isEqualTo(first);
         }
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM shipments", Long.class)).isEqualTo(1);
+    }
+
+    @Test
+    void arrangeRejected_noShipmentRow() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        String key = orderId + ":arrange";
+        mockMvc.perform(post("/api/v1/shipments/arrange")
+                        .header(IdempotencyRules.HEADER, key)
+                        .header(ShippingFault.HEADER, ShippingFault.ARRANGE_REJECTED.name())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"orderId\":\"" + orderId + "\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ARRANGE_REJECTED"));
+
+        assertThat(jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM shipments WHERE order_id = ?::uuid", Long.class, orderId))
+                .isZero();
+        Integer httpStatus = jdbc.queryForObject(
+                "SELECT http_status FROM idempotency_records WHERE idempotency_key = ?",
+                Integer.class,
+                key);
+        assertThat(httpStatus).isEqualTo(409);
+    }
+
+    @Test
+    void arrangeRejected_idempotentReplayWithoutHeader() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        String key = orderId + ":arrange";
+        mockMvc.perform(post("/api/v1/shipments/arrange")
+                        .header(IdempotencyRules.HEADER, key)
+                        .header(ShippingFault.HEADER, ShippingFault.ARRANGE_REJECTED.name())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"orderId\":\"" + orderId + "\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ARRANGE_REJECTED"));
+
+        // Replay after "disarm": same key, no fault header — still ARRANGE_REJECTED
+        mockMvc.perform(post("/api/v1/shipments/arrange")
+                        .header(IdempotencyRules.HEADER, key)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"orderId\":\"" + orderId + "\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ARRANGE_REJECTED"));
+
+        assertThat(jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM shipments WHERE order_id = ?::uuid", Long.class, orderId))
+                .isZero();
+        Long arrangeOps = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM operation_log WHERE order_id = ?::uuid AND operation = 'arrange'",
+                Long.class,
+                orderId);
+        assertThat(arrangeOps).isEqualTo(1);
+    }
+
+    @Test
+    void arrangeRejected_fingerprintConflict() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        String key = orderId + ":arrange";
+        mockMvc.perform(post("/api/v1/shipments/arrange")
+                        .header(IdempotencyRules.HEADER, key)
+                        .header(ShippingFault.HEADER, ShippingFault.ARRANGE_REJECTED.name())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"orderId\":\"" + orderId + "\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ARRANGE_REJECTED"));
+
+        UUID other = UUID.randomUUID();
+        mockMvc.perform(post("/api/v1/shipments/arrange")
+                        .header(IdempotencyRules.HEADER, key)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"orderId\":\"" + other + "\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("IDEMPOTENCY_KEY_CONFLICT"));
     }
 
     @Test

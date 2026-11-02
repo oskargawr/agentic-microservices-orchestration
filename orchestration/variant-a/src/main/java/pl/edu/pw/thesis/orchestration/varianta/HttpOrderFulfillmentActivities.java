@@ -60,13 +60,13 @@ public class HttpOrderFulfillmentActivities implements OrderFulfillmentActivitie
     }
 
     @Override
-    public ArrangeResponse arrange(UUID orderId) {
+    public ArrangeResponse arrange(UUID orderId, String faultHint) {
         return post(
                 shipping,
                 "/api/v1/shipments/arrange",
                 IdempotencyKeys.arrange(orderId),
                 new ArrangeRequest(orderId),
-                null,
+                faultHint,
                 ArrangeResponse.class);
     }
 

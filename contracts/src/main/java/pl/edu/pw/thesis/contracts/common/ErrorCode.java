@@ -9,5 +9,7 @@ public enum ErrorCode {
     IDEMPOTENCY_KEY_CONFLICT,
     NOT_FOUND,
     VALIDATION_ERROR,
-    REFUND_NOT_ALLOWED
+    REFUND_NOT_ALLOWED,
+    /** TH-400 F2: shipping arrange rejected before shipment insert (fault injection). */
+    ARRANGE_REJECTED
 }

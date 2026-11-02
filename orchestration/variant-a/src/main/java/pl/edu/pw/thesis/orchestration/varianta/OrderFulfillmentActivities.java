@@ -26,8 +26,9 @@ public interface OrderFulfillmentActivities {
     @ActivityMethod
     ChargeResponse charge(UUID orderId, Money amount, String faultHint);
 
+    /** {@code faultHint} maps to shipping {@code X-Thesis-Fault} when non-null/blank; otherwise omitted. */
     @ActivityMethod
-    ArrangeResponse arrange(UUID orderId);
+    ArrangeResponse arrange(UUID orderId, String faultHint);
 
     @ActivityMethod
     ConsumeResponse consume(UUID reservationId);
