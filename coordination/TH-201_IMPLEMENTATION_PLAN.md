@@ -2,9 +2,9 @@
 
 | Field | Value |
 | --- | --- |
-| **Status** | **Approved** (Owner 2026-11-02) |
-| **Coding** | Allowed after this handoff review; **not started** in the approval turn |
-| **Date** | 2026-11-01 (plan) · 2026-11-02 (Owner approve + clarifications) |
+| **Status** | **Done / Closed** (merged PR #6 @ `4814de6`; impl `f052768`) |
+| **Coding** | Complete on `main` — see `TH-201_CLOSURE.md` |
+| **Date** | 2026-11-01 (plan) · 2026-11-02 (Owner approve + merge) |
 | **Depends** | TH-200, TH-205 (Done @ `1137fd1`) |
 
 Related: `NEXT_TASK.md` (`approved`) · `HANDOFF_TO_CHATGPT.md` · `DECISION_LOG.md` **D-201 approved**

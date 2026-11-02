@@ -1,44 +1,27 @@
 # NEXT_TASK
 
-**Status:** `in_progress` — implementation complete on feature branch; **not Done** until PR merge  
-**Last updated:** 2026-11-02  
-**Approved by:** Project Owner (2026-11-02)
+**Status:** `idle` — no Owner-approved implementation task queued  
+**Last updated:** 2026-11-02
 
-## Task ID and title
+## Previous task (closed)
 
-**TH-201** — Variant A Saga Compensation
+**TH-201** — Variant A Saga Compensation → **Done / Closed**  
+See `TH-201_CLOSURE.md` (PR #6, merge `4814de6`, impl `f052768`).
 
-## Branch
+## Proposed candidates (not approved)
 
-`feature/th-201-variant-a-saga-compensation` (from `main` @ `1137fd1`)
+| ID | Title | Status |
+| --- | --- | --- |
+| TH-206 | Temporal E2E in CI — no silent skip | **Proposed** / unapproved |
+| TH-202 | Retries/timeouts documented + tested | Todo (backlog) |
+| — | Console UI/CORS polish from stash | Unrelated WIP stash only |
 
-## Objective
+## Owner next action
 
-Deterministic Variant A Temporal saga with compensation (cancel → refund CAPTURED → release HELD), structured outcomes, T-201-1…6 tests including `operation_log` ordering.
-
-## Decision pack
-
-D-201 / U-201-1…5 **approved** (see `DECISION_LOG.md`).
-
-## Verification (local)
-
-- Unit `OrderFulfillmentWorkflowOrderTest`: tests=7 skipped=0 failures=0  
-- IT `OrderFulfillmentCompensationIT`: tests=6 skipped=0 failures=0 (Postgres + Temporal test env + bootJars)  
-- `./gradlew build` SUCCESS  
-- ConsoleRealTemporalE2EIT: tests=1 skipped=0  
-
-## Out of scope (unchanged)
-
-TH-206 · TH-205 modifications · protocol/oracle/invariant edits · `2599` as protocol constant
+Approve the next `NEXT_TASK` explicitly before coding. Do **not** treat TH-206 as approved.
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-01 | proposed | Cursor |
-| 2026-11-02 | approved | Owner |
-| 2026-11-02 | in_progress (impl+PR) | Cursor |
-
-## Owner next action
-
-Review and merge PR (do not merge without Owner authorization — Cursor will open PR only).
+| 2026-11-02 | idle (TH-201 closed) | Cursor (post-merge verification) |

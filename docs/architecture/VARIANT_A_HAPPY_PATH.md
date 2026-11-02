@@ -96,3 +96,4 @@ Tests use `Money.plnMinor(2599)` as an **explicit local test input** — not an 
 - Console (TH-205) observation of new outcomes is optional / out of mandatory TH-201 scope.
 - Full F0–F3 experiment fault profiles remain TH-400.
 - Exact numeric resolve bound may be tuned later without changing AMBIGUOUS semantics.
+- **Coverage follow-up:** no dedicated integration test that cancels the main workflow scope and asserts detached compensation still runs (unit/IT cover compensation paths without an explicit cancel-signal scenario). Does not reopen TH-201.

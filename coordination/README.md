@@ -21,8 +21,9 @@ Lightweight Markdown handoff between:
 | [DECISION_LOG.md](DECISION_LOG.md) | Decisions with proposed/approved status |
 | [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) | Index of runs (not raw data) |
 | [TH-205_CLOSURE.md](TH-205_CLOSURE.md) | TH-205 Done/Closed evidence |
+| [TH-201_CLOSURE.md](TH-201_CLOSURE.md) | TH-201 Done/Closed evidence |
 | [TH-206_PROPOSAL.md](TH-206_PROPOSAL.md) | Proposed CI E2E fail-hard ticket |
-| [TH-201_IMPLEMENTATION_PLAN.md](TH-201_IMPLEMENTATION_PLAN.md) | TH-201 plan + Pending decisions |
+| [TH-201_IMPLEMENTATION_PLAN.md](TH-201_IMPLEMENTATION_PLAN.md) | TH-201 plan (D-201 approved) |
 
 ## Protocol (summary)
 
