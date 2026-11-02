@@ -87,13 +87,15 @@ class OrderFulfillmentRetryTimeoutTest {
         OrderFulfillmentResult result = stub().fulfill(new OrderFulfillmentInput(
                 UUID.randomUUID(), "SKU-MVP-1", 1, Money.plnMinor(2599)));
 
-        assertThat(result.outcome()).isEqualTo(BusinessOutcome.COMPENSATED_FAILURE);
-        assertThat(activities.arrangeInvocations()).isEqualTo(5);
-        // Timeout/retry exhaustion must not be classified as payment FAILED (D-202 / D-011).
+        // D-208: technical arrange exhaustion triggers lost-id recovery; if shipment id still
+        // missing → AMBIGUOUS (not COMPENSATED_FAILURE). Payment/reservation still compensated.
+        assertThat(result.outcome()).isEqualTo(BusinessOutcome.AMBIGUOUS);
+        assertThat(activities.arrangeInvocations()).isEqualTo(6); // 5 Temporal + 1 recover
         assertThat(result.paymentState()).isEqualTo(PaymentState.REFUNDED);
         assertThat(result.paymentState()).isNotEqualTo(PaymentState.FAILED);
         assertThat(result.reservationState()).isEqualTo(ReservationState.RELEASED);
-        assertThat(result.compensationLog()).containsExactly("cancel-skipped:none", "refund", "release");
+        assertThat(result.compensationLog()).anyMatch(s -> s.startsWith("recover-arrange-failed"));
+        assertThat(result.compensationLog()).contains("refund", "release");
         assertThat(activities.operations()).containsSubsequence("charge", "arrange", "getPayment", "refund", "release");
         assertThat(activities.operations()).doesNotContain("consume", "cancel");
     }

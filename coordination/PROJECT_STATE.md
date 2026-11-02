@@ -1,7 +1,7 @@
 # PROJECT_STATE
 
 **Last updated:** 2026-11-02  
-**Updated by:** Cursor Agent (TH-208 architecture investigation complete)
+**Updated by:** Cursor Agent (TH-208 B+E implementation in progress)
 
 ## Current thesis scope (MVP)
 
@@ -9,22 +9,19 @@
 | --- | --- |
 | **Mandatory** | A vs C (D-009) |
 | **Protocol** | `protocol-v0` (unchanged) |
-| **Services / A** | TH-100–104 · 101.1 · 200–202 · 205–206 **Done** |
-| **TH-208** | Investigation **complete**; impl **blocked** on D-208 approval |
-| **OPTIONAL** | B, MCP, RQ4 |
+| **Orchestration** | TH-200–202 Done; **TH-208 B+E implementing** |
+| **Decisions** | D-201 · D-202 · **D-208 approved** |
 
 ## Engineering
 
 | | |
 | --- | --- |
-| **Branch** | `main` |
-| **TH-208 doc** | `docs/architecture/LOST_RESPONSE_WITHOUT_ID.md` |
-| **D-208** | **proposed** (not approved) |
+| **Branch** | `feature/th-208-lost-id-recovery-be` |
 | **Stash** | `stash@{0}` preserved |
-| **NEXT_TASK** | none approved for implementation |
+| **Estimate (proposed)** | ~3–3.5 SP (B+E); C deferred |
 
 ## Next three actions
 
-1. Owner review TH-208 investigation + approve/reject/amend D-208  
-2. Or approve a different NEXT_TASK (e.g. TH-203)  
-3. Continue MVP A vs C
+1. Finish TH-208 tests/docs → PR  
+2. Owner merge + post-merge verify → close TH-208  
+3. Owner pick next (TH-203 / TH-204 / …); Option C later

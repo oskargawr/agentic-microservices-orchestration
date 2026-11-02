@@ -38,6 +38,20 @@ final class RecordingActivities implements OrderFulfillmentActivities {
     private int chargeRetryableFailuresRemaining;
     private int arrangeInvocations;
     private int chargeInvocations;
+    private int reserveInvocations;
+
+    /** TH-208: commit side effect once, then lose body for N attempts (0 = forever until recover). */
+    private int chargeLostBodyFailuresRemaining = -1;
+    private int reserveLostBodyFailuresRemaining = -1;
+    private int arrangeLostBodyFailuresRemaining = -1;
+    private boolean chargeSideEffectCommitted;
+    private boolean reserveSideEffectCommitted;
+    private boolean arrangeSideEffectCommitted;
+    private PaymentState lostChargeObservedState = PaymentState.CAPTURED;
+    private PaymentState lostChargeGetState = PaymentState.CAPTURED;
+    private boolean chargeLostBodyNeverRecover;
+    private boolean reserveLostBodyNeverRecover;
+    private boolean arrangeLostBodyNeverRecover;
 
     private UUID lastOrderId;
     private UUID lastReservationId;
@@ -108,12 +122,59 @@ final class RecordingActivities implements OrderFulfillmentActivities {
         this.chargeRetryableFailuresRemaining = times;
     }
 
+    /**
+     * TH-208: first call commits payment id; next {@code lostAttempts} calls throw retryable lost-body.
+     * Use {@code Integer.MAX_VALUE} so Temporal exhaustion + recovery prelude eventually succeeds.
+     */
+    void chargeCommitThenLoseBody(int lostAttempts, PaymentState observedOnRecover) {
+        this.chargeLostBodyFailuresRemaining = lostAttempts;
+        this.lostChargeObservedState = observedOnRecover;
+        this.lostChargeGetState = observedOnRecover;
+        this.chargeLostBodyNeverRecover = false;
+    }
+
+    /** Like {@link #chargeCommitThenLoseBody} but GET reports CAPTURED while observed recover is UNKNOWN. */
+    void chargeCommitThenLoseBodyObservedUnknownGetCaptured(int lostAttempts) {
+        chargeCommitThenLoseBody(lostAttempts, PaymentState.UNKNOWN);
+        this.lostChargeGetState = PaymentState.CAPTURED;
+    }
+
+    /** Commit once then always lose body (recovery also fails) → AMBIGUOUS. */
+    void chargeCommitThenLoseBodyForever() {
+        this.chargeLostBodyFailuresRemaining = Integer.MAX_VALUE;
+        this.chargeLostBodyNeverRecover = true;
+        this.lostChargeObservedState = PaymentState.CAPTURED;
+        this.lostChargeGetState = PaymentState.CAPTURED;
+    }
+
+    void reserveCommitThenLoseBody(int lostAttempts) {
+        this.reserveLostBodyFailuresRemaining = lostAttempts;
+    }
+
+    void reserveCommitThenLoseBodyForever() {
+        this.reserveLostBodyFailuresRemaining = Integer.MAX_VALUE;
+        this.reserveLostBodyNeverRecover = true;
+    }
+
+    void arrangeCommitThenLoseBody(int lostAttempts) {
+        this.arrangeLostBodyFailuresRemaining = lostAttempts;
+    }
+
+    void arrangeCommitThenLoseBodyForever() {
+        this.arrangeLostBodyFailuresRemaining = Integer.MAX_VALUE;
+        this.arrangeLostBodyNeverRecover = true;
+    }
+
     int arrangeInvocations() {
         return arrangeInvocations;
     }
 
     int chargeInvocations() {
         return chargeInvocations;
+    }
+
+    int reserveInvocations() {
+        return reserveInvocations;
     }
 
     int resolveInvocations() {
@@ -135,6 +196,22 @@ final class RecordingActivities implements OrderFulfillmentActivities {
     public ReserveResponse reserve(UUID orderId, String sku, int qty) {
         operations.add("reserve");
         lastOrderId = orderId;
+        reserveInvocations++;
+        if (reserveLostBodyFailuresRemaining >= 0) {
+            if (!reserveSideEffectCommitted) {
+                reserveSideEffectCommitted = true;
+                lastReservationId = UUID.randomUUID();
+                reservationState = ReservationState.HELD;
+            }
+            if (reserveLostBodyNeverRecover || reserveLostBodyFailuresRemaining > 0) {
+                if (reserveLostBodyFailuresRemaining > 0
+                        && reserveLostBodyFailuresRemaining != Integer.MAX_VALUE) {
+                    reserveLostBodyFailuresRemaining--;
+                }
+                throw ApplicationFailure.newFailure("lost reserve body", "HTTP_503");
+            }
+            return new ReserveResponse(lastReservationId, orderId, sku, qty, ReservationState.HELD);
+        }
         if (delegate != null) {
             ReserveResponse r = delegate.reserve(orderId, sku, qty);
             lastReservationId = r.reservationId();
@@ -150,6 +227,21 @@ final class RecordingActivities implements OrderFulfillmentActivities {
     public ChargeResponse charge(UUID orderId, Money amount, String faultHint) {
         operations.add("charge");
         chargeInvocations++;
+        if (chargeLostBodyFailuresRemaining >= 0) {
+            if (!chargeSideEffectCommitted) {
+                chargeSideEffectCommitted = true;
+                lastPaymentId = UUID.randomUUID();
+                paymentState = lostChargeGetState;
+            }
+            if (chargeLostBodyNeverRecover || chargeLostBodyFailuresRemaining > 0) {
+                if (chargeLostBodyFailuresRemaining > 0 && chargeLostBodyFailuresRemaining != Integer.MAX_VALUE) {
+                    chargeLostBodyFailuresRemaining--;
+                }
+                throw ApplicationFailure.newFailure("lost charge body", "HTTP_503");
+            }
+            paymentState = lostChargeObservedState;
+            return new ChargeResponse(lastPaymentId, orderId, amount, lostChargeObservedState);
+        }
         if (chargeRetryableFailuresRemaining > 0) {
             chargeRetryableFailuresRemaining--;
             throw ApplicationFailure.newFailure("transient charge", "HTTP_503");
@@ -175,6 +267,21 @@ final class RecordingActivities implements OrderFulfillmentActivities {
         operations.add("arrange");
         lastOrderId = orderId;
         arrangeInvocations++;
+        if (arrangeLostBodyFailuresRemaining >= 0) {
+            if (!arrangeSideEffectCommitted) {
+                arrangeSideEffectCommitted = true;
+                lastShipmentId = UUID.randomUUID();
+                shipmentState = ShipmentState.ARRANGED;
+            }
+            if (arrangeLostBodyNeverRecover || arrangeLostBodyFailuresRemaining > 0) {
+                if (arrangeLostBodyFailuresRemaining > 0
+                        && arrangeLostBodyFailuresRemaining != Integer.MAX_VALUE) {
+                    arrangeLostBodyFailuresRemaining--;
+                }
+                throw ApplicationFailure.newFailure("lost arrange body", "HTTP_503");
+            }
+            return new ArrangeResponse(lastShipmentId, orderId, ShipmentState.ARRANGED);
+        }
         if (arrangeOverride != null) {
             return arrangeOverride.get();
         }
@@ -277,7 +384,15 @@ final class RecordingActivities implements OrderFulfillmentActivities {
             paymentState = r.state();
             return r;
         }
-        return new PaymentSnapshot(paymentId, UUID.randomUUID(), Money.plnMinor(2599), paymentState);
+        PaymentState reported = chargeSideEffectCommitted ? lostChargeGetState : paymentState;
+        // After refund, paymentState is REFUNDED — prefer live paymentState when terminal.
+        if (paymentState == PaymentState.REFUNDED || paymentState == PaymentState.FAILED) {
+            reported = paymentState;
+        } else if (chargeSideEffectCommitted) {
+            reported = lostChargeGetState;
+            paymentState = reported;
+        }
+        return new PaymentSnapshot(paymentId, UUID.randomUUID(), Money.plnMinor(2599), reported);
     }
 
     @Override

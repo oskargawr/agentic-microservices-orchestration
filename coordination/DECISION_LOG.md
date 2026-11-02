@@ -8,18 +8,19 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
-## D-208 — Lost-response-without-returned-ID recovery (**PROPOSED**)
+## D-208 — Lost-response-without-returned-ID recovery (B+E)
 
 | Field | Value |
 | --- | --- |
-| **Date** | 2026-11-02 |
-| **Status** | **proposed** (not approved — investigation only) |
-| **Decision-maker** | — (awaiting Project Owner) |
-| **Context** | Closes the gap deferred by D-202-3; see `docs/architecture/LOST_RESPONSE_WITHOUT_ID.md` |
-| **Recommendation** | **B+E:** idempotent re-POST recovery before compensation when create ids are missing; honest non-`COMPENSATED_FAILURE` labeling if discovery fails. Optional later **C:** GET-by-orderId for harness/oracle. Reject deterministic ids (D) for MVP. |
-| **Non-goals** | No D-201 order change; no refund without CAPTURED; no release without HELD; timeout ≠ FAILED; no protocol edit required for B+E |
-| **Open** | AMBIGUOUS vs COMPENSATION_INCOMPLETE when CAPTURED may exist but id unknown |
-| **Related** | D-202-3; D-201; TH-208; TH-400; TH-401 |
+| **Date** | 2026-11-02 (proposed) · **2026-11-02 (Owner approved)** |
+| **Status** | **approved** |
+| **Decision-maker** | Project Owner |
+| **Context** | Closes D-202-3 deferral; investigation `docs/architecture/LOST_RESPONSE_WITHOUT_ID.md` |
+| **Evidence** | Owner Authorization — D-208 and TH-208 Implementation (2026-11-02) |
+| **Decision** | Adopt **Option B** (bounded idempotent re-POST recovery per missing create id before compensation) + **Option E** (honest terminal labeling). **Defer Option C** (GET-by-orderId) to a separate future task. **Reject** Options D and F for MVP. |
+| **Outcome taxonomy (mandatory)** | `AMBIGUOUS` — authoritative state cannot be established / uncertain whether side effect occurred; `COMPENSATION_INCOMPLETE` — resource authoritatively known and requires compensation that could not be completed/confirmed; `COMPENSATED_FAILURE` — all required compensations authoritatively confirmed. Never `COMPENSATED_FAILURE` if CAPTURED/HELD/ARRANGED may remain without confirmed compensation. Never classify UNKNOWN as FAILED. |
+| **Non-goals** | No D-201 order change; no protocol-v0 / F3 definition change; no GET-by-orderId in TH-208; no TH-203/204/400 in this task |
+| **Related** | D-202-3; D-201; TH-208; TH-400 (later); TH-401 |
 
 ---
 
