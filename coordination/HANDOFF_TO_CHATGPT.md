@@ -1,74 +1,103 @@
 # HANDOFF_TO_CHATGPT
 
-**Date:** 2026-11-01  
-**Task:** TH-205 — Manual Testing Runtime & Experiment Console  
-**Prepared by:** Cursor Agent  
-**MODE:** IMPLEMENTATION  
-**Branch:** `feature/th-205-experiment-console`
+**Date:** 2026-11-02  
+**From:** Cursor Agent  
+**Task:** TH-201 Variant A Saga Compensation (implementation)
 
 ---
 
-## Architecture / modules
+## 1. Branch / base / HEAD
 
-| Module | Role |
+| Field | Value |
 | --- | --- |
-| `:orchestration:variant-a` | + `runtime` (TemporalSettings/Clients/Workers) |
-| `:orchestration:worker` | Independent worker Boot app (web none) |
-| `:orchestration:console` | BFF on `127.0.0.1:8090` |
-| `console-ui/` | Vite + React + TS on `127.0.0.1:3000` |
+| Branch | `feature/th-201-variant-a-saga-compensation` |
+| Base | `main` @ `1137fd1` (TH-205 merged) |
+| HEAD | *(set after push — see PR)* |
 
-Docs: `docs/architecture/EXPERIMENT_CONSOLE.md`  
-Scripts: `scripts/dev-up.sh`, `scripts/dev-down.sh`
+Preserved unrelated dirty console UI/CORS work in git stash: `preserve dirty tree before th-201 branch`.
 
-## Temporal compatibility
+---
 
-- Server Compose `1.25.2` + Java SDK `1.40.0`
-- Temporal docs: SDK and server version independently; all SDKs support all servers
-- Verified by E2E: `GetSystemInfo` + completed workflow on real server
+## 2. Changed files (by purpose)
 
-## BFF contracts
+**Workflow / activities**
+- `OrderFulfillmentWorkflowImpl.java` — saga + detached compensation scope
+- `OrderFulfillmentActivities.java` / `HttpOrderFulfillmentActivities.java` — cancel, refund, release, resolve, fault hint on charge
+- `ActivityPolicies.java` — compensation options + `COMPENSATION_INCOMPLETE`
+- `BusinessOutcome.java`, `OrderFulfillmentResult.java`, `OrderFulfillmentInput.java`
 
-- `POST /api/console/runs` — required orderId, sku, qty, amountMinor, currency; 409 duplicate workflowId
-- `GET /api/console/runs/{id}` — Temporal status, history steps, result/errors
-- `GET /api/console/runs/{id}/business` — fresh service GETs + console consistency check (not formal oracle)
+**Tests**
+- `OrderFulfillmentWorkflowOrderTest.java` — T-201-1…6 unit
+- `OrderFulfillmentCompensationIT.java` — T-201-1…6 real services + Postgres + `operation_log`
+- `RecordingActivities.java`, HappyPathIT hikari pool
 
-## Tests
+**Docs / coordination**
+- `docs/architecture/VARIANT_A_HAPPY_PATH.md`
+- `coordination/*` (D-201 already approved; TH-205 closure / TH-206 proposal / plans)
 
-| Suite | Result |
+---
+
+## 3. Mapping to U-201-1…5
+
+| Decision | Implementation |
 | --- | --- |
-| `ConsoleRealTemporalE2EIT` | **1/1, skipped=0** (real Temporal + Postgres + HTTP services) |
-| variant-a | 2/2, skipped=0 |
-| inventory/payment/shipping | 11/13/7, skipped=0 |
-| `./gradlew build` | SUCCESS |
+| U-201-1 | Consume fail → cancel → refund CAPTURED → release HELD |
+| U-201-2 | Bounded resolve (default 3); UNKNOWN → AMBIGUOUS + safe release; never refund UNKNOWN |
+| U-201-3 | try/catch + `newDetachedCancellationScope` for compensation |
+| U-201-4 | Payment `X-Thesis-Fault` in IT; arrange/consume faults via test double over HTTP |
+| U-201-5 | `SUCCESS` / `COMPENSATED_FAILURE` / `AMBIGUOUS`; incomplete → `COMPENSATION_INCOMPLETE` failure |
 
-## Example manual/E2E execution
+---
 
-```
-workflowId=order-34fd5c47-07ef-448e-8d52-ae23b42408de
-reservation=CONSUMED · payment=CAPTURED · shipment=ARRANGED
-stock onHand=99 held=0
-consistencyCheck.looksConsistentWithConfirmedSuccess=true
-```
+## 4. Compensation / cancellation
 
-## Startup
+- Snapshots before each compensation step.
+- Detached cancellation scope for compensation; cancel rethrown after attempt.
+- Incomplete compensation does not return `COMPENSATED_FAILURE`.
 
-```bash
-cd infra && docker compose up -d
-./scripts/dev-up.sh
-cd console-ui && npm install && npm run dev
-```
+---
 
-## Known limitations
+## 5. Test results (local)
 
-- Amount `2599` only as explicit test input — not protocol-approved
-- Console consistency check ≠ TH-401 oracle
-- No fault UI / saga / Variant C
-- Activity history types are PascalCase (`Reserve`…) per Java SDK
-- CI may skip E2E if Temporal service absent (local verification used real Temporal; CI currently Postgres-only — consider adding Temporal later)
+| Suite | tests | skipped | failures | Infra |
+| --- | --- | --- | --- | --- |
+| WorkflowOrderTest | 7 | 0 | 0 | Temporal test env |
+| CompensationIT | 6 | 0 | 0 | Postgres `:5433` + bootJars + Temporal test env |
+| HappyPathIT | 1 | 0 | 0 | same |
+| ConsoleRealTemporalE2EIT | 1 | 0 | 0 | real Temporal `:7233` + Postgres |
+| Inventory/Payment/Shipping ITs | 11/13/7 | 0 | 0 | (prior; build green) |
+| `./gradlew build` | — | — | — | **SUCCESS** |
 
-## Commits / PR
+### T-201-1…6 (summary)
 
-| **HEAD** | a6ffdd3fcb68195f78c0c7da763cfa11863f9c8c |
-| **PR** | https://github.com/oskargawr/agentic-microservices-orchestration/pull/5 |
+| ID | Expected | Actual (unit+IT) |
+| --- | --- | --- |
+| T-201-1 | RELEASED, not CAPTURED, no arrange/refund, COMPENSATED_FAILURE | OK; ops reserve→…→release |
+| T-201-2 | REFUNDED + RELEASED; refund before release | OK |
+| T-201-3 | CANCELLED + REFUNDED + RELEASED; cancel→refund→release | OK |
+| T-201-4 | UNKNOWN→CAPTURED → SUCCESS; no refund/release | OK |
+| T-201-5 | UNKNOWN remains; AMBIGUOUS; release; no arrange/refund | OK |
+| T-201-6 | Incomplete → workflow fail COMPENSATION_INCOMPLETE; cancel without full compensate | OK |
 
-**Next:** TH-201 Saga compensations A (not started).
+---
+
+## 6. Protocol lock
+
+Unchanged: BUSINESS_INVARIANTS, EXPERIMENTAL_PROTOCOL_V0, oracle taxonomy, `2599` not a protocol constant, TH-205 not modified, TH-206 still Proposed.
+
+---
+
+## 7. Limitations
+
+- X-201-1 exercised via detached scope; dedicated cancel-signal IT not added.
+- Console display of new outcomes not extended (out of mandatory scope).
+- Local Postgres can hit `max_connections` if leftover JVMs hold pools — hikari test pool=3.
+
+---
+
+## 8. PR / Owner next action
+
+PR URL: *(filled after `gh pr create`)*  
+**Do not merge without Owner authorization.**
+
+**Owner next:** review PR → approve merge when satisfied.

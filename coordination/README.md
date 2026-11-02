@@ -20,6 +20,9 @@ Lightweight Markdown handoff between:
 | [HANDOFF_TO_CHATGPT.md](HANDOFF_TO_CHATGPT.md) | External review report |
 | [DECISION_LOG.md](DECISION_LOG.md) | Decisions with proposed/approved status |
 | [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) | Index of runs (not raw data) |
+| [TH-205_CLOSURE.md](TH-205_CLOSURE.md) | TH-205 Done/Closed evidence |
+| [TH-206_PROPOSAL.md](TH-206_PROPOSAL.md) | Proposed CI E2E fail-hard ticket |
+| [TH-201_IMPLEMENTATION_PLAN.md](TH-201_IMPLEMENTATION_PLAN.md) | TH-201 plan + Pending decisions |
 
 ## Protocol (summary)
 

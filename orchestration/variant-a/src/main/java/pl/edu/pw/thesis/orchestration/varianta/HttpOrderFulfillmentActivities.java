@@ -9,18 +9,23 @@ import pl.edu.pw.thesis.contracts.common.IdempotencyKeys;
 import pl.edu.pw.thesis.contracts.common.IdempotencyRules;
 import pl.edu.pw.thesis.contracts.common.Money;
 import pl.edu.pw.thesis.contracts.inventory.ConsumeResponse;
+import pl.edu.pw.thesis.contracts.inventory.ReleaseResponse;
 import pl.edu.pw.thesis.contracts.inventory.ReservationSnapshot;
 import pl.edu.pw.thesis.contracts.inventory.ReserveRequest;
 import pl.edu.pw.thesis.contracts.inventory.ReserveResponse;
 import pl.edu.pw.thesis.contracts.payment.ChargeRequest;
 import pl.edu.pw.thesis.contracts.payment.ChargeResponse;
 import pl.edu.pw.thesis.contracts.payment.PaymentSnapshot;
+import pl.edu.pw.thesis.contracts.payment.RefundResponse;
 import pl.edu.pw.thesis.contracts.shipping.ArrangeRequest;
 import pl.edu.pw.thesis.contracts.shipping.ArrangeResponse;
+import pl.edu.pw.thesis.contracts.shipping.CancelShipmentResponse;
 import pl.edu.pw.thesis.contracts.shipping.ShipmentSnapshot;
 
 /** Activity implementation that calls service HTTP APIs only (no direct DB access). */
 public class HttpOrderFulfillmentActivities implements OrderFulfillmentActivities {
+
+    public static final String FAULT_HEADER = "X-Thesis-Fault";
 
     private final RestClient inventory;
     private final RestClient payment;
@@ -39,16 +44,18 @@ public class HttpOrderFulfillmentActivities implements OrderFulfillmentActivitie
                 "/api/v1/reservations",
                 IdempotencyKeys.reserve(orderId),
                 new ReserveRequest(orderId, sku, qty),
+                null,
                 ReserveResponse.class);
     }
 
     @Override
-    public ChargeResponse charge(UUID orderId, Money amount) {
+    public ChargeResponse charge(UUID orderId, Money amount, String faultHint) {
         return post(
                 payment,
                 "/api/v1/payments/charge",
                 IdempotencyKeys.charge(orderId),
                 new ChargeRequest(orderId, amount),
+                faultHint,
                 ChargeResponse.class);
     }
 
@@ -59,6 +66,7 @@ public class HttpOrderFulfillmentActivities implements OrderFulfillmentActivitie
                 "/api/v1/shipments/arrange",
                 IdempotencyKeys.arrange(orderId),
                 new ArrangeRequest(orderId),
+                null,
                 ArrangeResponse.class);
     }
 
@@ -69,7 +77,55 @@ public class HttpOrderFulfillmentActivities implements OrderFulfillmentActivitie
                 "/api/v1/reservations/" + reservationId + "/consume",
                 IdempotencyKeys.consume(reservationId),
                 null,
+                null,
                 ConsumeResponse.class);
+    }
+
+    @Override
+    public ReleaseResponse release(UUID reservationId) {
+        return post(
+                inventory,
+                "/api/v1/reservations/" + reservationId + "/release",
+                IdempotencyKeys.release(reservationId),
+                null,
+                null,
+                ReleaseResponse.class);
+    }
+
+    @Override
+    public RefundResponse refund(UUID paymentId) {
+        return post(
+                payment,
+                "/api/v1/payments/" + paymentId + "/refund",
+                IdempotencyKeys.refund(paymentId),
+                null,
+                null,
+                RefundResponse.class);
+    }
+
+    @Override
+    public CancelShipmentResponse cancelShipment(UUID shipmentId) {
+        return post(
+                shipping,
+                "/api/v1/shipments/" + shipmentId + "/cancel",
+                IdempotencyKeys.cancelShipment(shipmentId),
+                null,
+                null,
+                CancelShipmentResponse.class);
+    }
+
+    @Override
+    public PaymentSnapshot resolvePayment(UUID paymentId, String faultHint) {
+        try {
+            RestClient.RequestHeadersSpec<?> spec = payment.post()
+                    .uri("/api/v1/payments/" + paymentId + "/resolve");
+            if (faultHint != null && !faultHint.isBlank()) {
+                spec = spec.header(FAULT_HEADER, faultHint.trim());
+            }
+            return spec.retrieve().body(PaymentSnapshot.class);
+        } catch (RestClientResponseException e) {
+            throw toFailure(e);
+        }
     }
 
     @Override
@@ -99,11 +155,19 @@ public class HttpOrderFulfillmentActivities implements OrderFulfillmentActivitie
     }
 
     private static <T> T post(
-            RestClient client, String path, String idempotencyKey, Object body, Class<T> type) {
+            RestClient client,
+            String path,
+            String idempotencyKey,
+            Object body,
+            String faultHint,
+            Class<T> type) {
         try {
             RestClient.RequestBodySpec spec = client.post()
                     .uri(path)
                     .header(IdempotencyRules.HEADER, idempotencyKey);
+            if (faultHint != null && !faultHint.isBlank()) {
+                spec = spec.header(FAULT_HEADER, faultHint.trim());
+            }
             if (body != null) {
                 return spec.contentType(MediaType.APPLICATION_JSON)
                         .body(body)

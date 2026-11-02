@@ -172,6 +172,7 @@ class OrderFulfillmentHappyPathIT {
                 "--spring.datasource.password=" + PASS,
                 "--spring.flyway.schemas=" + schema,
                 "--spring.flyway.default-schema=" + schema,
+                "--spring.datasource.hikari.maximum-pool-size=3",
                 "--spring.main.banner-mode=off",
                 "--logging.level.root=WARN");
         pb.redirectErrorStream(true);
