@@ -1,39 +1,23 @@
 # NEXT_TASK
 
-**Status:** `approved` (implementation complete on feature branch; awaiting merge)  
+**Status:** `done` (TH-401-A closed; awaiting Owner next approval)  
 **Last updated:** 2026-11-02  
-**Approved by:** Project Owner (TH-401-A Independent Oracle Core)
+**Closed by:** Cursor Agent after Owner merge authorization + post-merge verification
 
-## Task ID and title
+## Closed task
 
-**TH-401-A** — Independent Oracle Core (Option C)
+**TH-401-A** — Independent Oracle Core (Option C) — **Done / Closed**
 
-## Objective
+| Field | Value |
+| --- | --- |
+| Merge | PR #10 → `main` @ `ab82fceac6f0448eca03d4d854e6dcf94e63e1d0` |
+| Reviewed HEAD | `df25bbd7c348ad6befd3bf49a1734ec1edf4ed45` (impl review base `1cef270`) |
+| Decision | Option C · D-011/D-012 preserved |
+| Taiga | #36 Done |
 
-Implement DB-primary, read-only Independent Oracle in `experiment/oracle` per frozen TH-011 / D-011 / D-012 and Owner-approved Option C.
+## Next
 
-## Locked scope
-
-- **In:** module `experiment/oracle`; RO JDBC snapshots; classifier; tests S1–S14 + IND-1…6
-- **Out:** TH-401-B HTTP cross-check; Experiment Runner; TH-400; Variant C; LLM; Temporal dependency; protocol / D-201 / D-208 edits; new oracle labels or pattern values beyond `{SUCCESS,F0,F1,F2,NONE}`
-
-## Classification (Option C)
-
-1. I1–I4/I7 fail → `INVALID`
-2. I5 success package → `CONFIRMED_SUCCESS` / `SUCCESS`
-3. F0–F2 + I6 → `CONFIRMED_FAILURE`
-4. UNKNOWN/PENDING payment → `AMBIGUOUS` / `NONE`
-5. Known dangling compensation → `AMBIGUOUS` / `NONE` + reason `COMPENSATION_INCOMPLETE`
-6. Other partial → `AMBIGUOUS` / `NONE`
-
-## Branch
-
-`feature/th-401-independent-oracle`
-
-## Reference
-
-- `docs/architecture/INDEPENDENT_ORACLE_DESIGN.md` (§13 audit: `OPTION_C_COMPATIBLE_WITH_FROZEN_PROTOCOL`)
-- `docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md`
+No approved next task. Do **not** start TH-401-B, TH-400, Experiment Runner, Variant C, or dashboard work until Owner sets a new `approved` NEXT_TASK.
 
 ## Status history
 
@@ -41,4 +25,5 @@ Implement DB-primary, read-only Independent Oracle in `experiment/oracle` per fr
 | --- | --- | --- |
 | 2026-11-02 | analysis TH-401 / .1 / .2 | Cursor |
 | 2026-11-02 | **implementation approved** (TH-401-A) | Project Owner |
-| 2026-11-02 | implementation on feature branch | Cursor |
+| 2026-11-02 | implementation + CI fixes on feature branch | Cursor |
+| 2026-11-02 | **done / closed** | Cursor (post-merge verify) |
