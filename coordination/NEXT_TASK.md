@@ -2,31 +2,25 @@
 
 **Status:** `awaiting_owner`  
 **Last updated:** 2026-11-02  
-**Awaiting:** Project Owner — review phase-1.1 branch; separate approval for push/PR; G5 before pilot
+**Awaiting:** Independent read-only re-audit of D-AUTH-1.1 follow-up persist fix; then Owner review
 
-## Completed (this authorization)
+## Completed under D-AUTH-1.1 (+ limited follow-up)
 
-**TH-402 phase-1.1** remediation under **D-AUTH-1.1** implemented on  
-`feature/th-402-phase1-1-remediation` (HEAD `0e58127`, base `740f831`).
+- Phase-1.1 remediation A/B/C/E/F + merge-gate tests  
+- **Follow-up:** JSON SoT vs CSV derived — durable COMPLETED cannot be downgraded by CSV failure  
+- Strengthened G1 / G8 / malformed JSON CSV rebuild  
 
-Merge-gate tests G1–G4, G6–G8 executed green. **G5 deferred** (pre-pilot).
+**Branch:** `feature/th-402-phase1-1-remediation` @ `3ea8d8e`  
+**Do not claim merge-ready** until re-audit PASS.
 
-## Next Owner decisions
+## Out of scope / deferred
 
-1. Review / approve push or PR (not authorized by D-AUTH-1.1).  
-2. Before any pilot: require **G5** live Temporal IT (OWN-P4).  
-3. Later S1: authorize **TH-400** separately.  
-4. Do **not** mark Taiga #37 Done solely for phase-1.1.
-
-## Preserved
-
-Phase-1 commits `c862331` · `f2b0744` · `740f831` unchanged. Design contract rev. 3.1 wording unchanged.
+G5 live Temporal (pre-pilot) · push/PR/merge · Taiga #37 Done · TH-400 · design rewrite · OWN-P* changes
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-02 | D-AUTH phase-1 approved | Owner |
-| 2026-11-02 | OWN-P1–P4 approved; awaiting D-AUTH-1.1 | Owner |
-| 2026-11-02 | **D-AUTH-1.1 APPROVED** — remediation coding | Owner |
-| 2026-11-02 | Phase-1.1 implemented; NEXT_TASK → awaiting_owner (review/push/G5/TH-400) | Cursor |
+| 2026-11-02 | D-AUTH-1.1 approved; remediation implemented | Owner / Cursor |
+| 2026-11-02 | Independent audit → NEEDS FIXES (JSON/CSV) | Auditor |
+| 2026-11-02 | Follow-up fix committed (`3ea8d8e`); awaiting re-audit | Cursor |
