@@ -2,30 +2,26 @@
 
 **Date:** 2026-11-02  
 **From:** Cursor Agent  
-**Task:** TH-207 Taiga backlog reconciliation — **Done**
+**Task:** TH-208 lost-response-without-ID — **architecture investigation complete** (impl not approved)
 
 ---
 
-## Outcome
+## Deliverable
 
-Taiga project `agentic-orchestration-thesis` synchronized with repo merges PR #1–#8 and coordination SoT.
+`docs/architecture/LOST_RESPONSE_WITHOUT_ID.md`
 
-| Metric | Value |
-| --- | --- |
-| Updated stories | 10 |
-| Created stories | 5 (#63–#67) |
-| Deleted | 0 |
-| App code changes | none |
-| NEXT_TASK approval | **unchanged** (none) |
+## Recommendation (PROPOSED D-208)
 
-Full report: `coordination/TH-207_TAIGA_RECONCILIATION.md`
+**B+E:** idempotent re-POST recovery (same `IdempotencyKeys`) before compensate when create ids missing + honest outcome (not false `COMPENSATED_FAILURE`). Optional later **C:** GET-by-orderId. Reject deterministic ids for MVP.
 
-## Mapping (completed)
+## Key finding
 
-TH-100…104, TH-101.1, TH-200…202, TH-205…207 → Taiga **Done** with PR/SHA evidence.  
-TH-208 → **New / proposed** (D-202-3 lost-ID).  
-TH-203 annotated as **not** approved next.
+Temporal retry + idempotent replay **already** recovers ids in the common lost-body case. Residual gap: retry exhaustion without body → null ids → compensation skips → may still report `COMPENSATED_FAILURE` while DB holds CAPTURED/HELD.
+
+## Constraints honored
+
+No app code / endpoints / schema / D-201 / D-202 / protocol changes. Implementation not started.
 
 ## Owner next
 
-Approve a next implementation task explicitly in `NEXT_TASK.md`. Recommendation (not approval): TH-203 or TH-204.
+Approve/reject **D-208**; or pick another NEXT_TASK. Do not treat investigation Done as impl approval.

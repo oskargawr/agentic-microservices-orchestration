@@ -8,6 +8,21 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-208 — Lost-response-without-returned-ID recovery (**PROPOSED**)
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-02 |
+| **Status** | **proposed** (not approved — investigation only) |
+| **Decision-maker** | — (awaiting Project Owner) |
+| **Context** | Closes the gap deferred by D-202-3; see `docs/architecture/LOST_RESPONSE_WITHOUT_ID.md` |
+| **Recommendation** | **B+E:** idempotent re-POST recovery before compensation when create ids are missing; honest non-`COMPENSATED_FAILURE` labeling if discovery fails. Optional later **C:** GET-by-orderId for harness/oracle. Reject deterministic ids (D) for MVP. |
+| **Non-goals** | No D-201 order change; no refund without CAPTURED; no release without HELD; timeout ≠ FAILED; no protocol edit required for B+E |
+| **Open** | AMBIGUOUS vs COMPENSATION_INCOMPLETE when CAPTURED may exist but id unknown |
+| **Related** | D-202-3; D-201; TH-208; TH-400; TH-401 |
+
+---
+
 ## D-202 — TH-202 retries/timeouts implementation decisions (Owner pack)
 
 | Field | Value |

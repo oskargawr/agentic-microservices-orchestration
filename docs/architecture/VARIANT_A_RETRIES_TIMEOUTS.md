@@ -123,7 +123,7 @@ Outcomes:
 
 | Limitation | Notes |
 | --- | --- |
-| Lost response after commit **without returned resource ID** | Deferred (D-202-3) to a separate F3-related task. No orderId payment discovery in TH-202. If charge/reserve times out after side effect but before return, workflow state may lack IDs → cannot refund/release by id. **Do not** model this as a clean `COMPENSATED_FAILURE` in TH-202 tests. |
+| Lost response after commit **without returned resource ID** | Deferred by D-202-3; **architecture investigation:** [`LOST_RESPONSE_WITHOUT_ID.md`](LOST_RESPONSE_WITHOUT_ID.md) (TH-208). Implementation **not** approved (D-208 proposed). |
 | No workflow-level execution timeout | D-202-4; harness owns `T_run_max`. |
 | No explicit RestClient connect/read timeout | `HttpOrderFulfillmentActivities` builds default `RestClient` (Source fact). |
 | Transport exceptions not wrapped | D-202-2; classification remains Assumption for non-HTTP failures. |
