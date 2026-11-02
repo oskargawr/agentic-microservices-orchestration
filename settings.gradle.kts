@@ -9,4 +9,5 @@ include(
     "orchestration:variant-a",
     "orchestration:worker",
     "orchestration:console",
+    "experiment:oracle",
 )

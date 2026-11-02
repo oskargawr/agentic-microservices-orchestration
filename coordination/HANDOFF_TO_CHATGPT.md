@@ -1,89 +1,57 @@
 # HANDOFF_TO_CHATGPT
 
-**Date:** 2026-11-02  
-**From:** Cursor Agent  
-**Task:** TH-208 Lost-ID recovery B+E — **Done / Closed** after PR #9 merge + verification
+**Data:** 2026-11-02  
+**Od:** Cursor Agent  
+**Tryb:** IMPLEMENTATION (TH-401-A — OracleJdbcIT skip/baseline follow-up)  
+**PR:** https://github.com/oskargawr/agentic-microservices-orchestration/pull/10  
+**Nie zmergowano.**
 
 ---
 
-## 1. Decisions
+## Findings addressed
 
-| Item | Value |
+### 1. Narrow skip condition
+
+- Extracted `PostgresConnectivity.isUnreachable(SQLException)` — SQLState class `08*` or network causes (`ConnectException`, etc.).
+- Auth `28*` / other SQL (e.g. `42P01`) → **not** unreachable → setup **fails**.
+- `beforeAll` catches only `SQLException`; Flyway errors still propagate (never skipped).
+- Unit tests: `PostgresConnectivityTest` (4).
+- Live contrast: `OracleJdbcIT.invalidCredentials_areNotTreatedAsUnreachable` (expects `28*`).
+- Probe: primary wrong password → suite fails (not skip).
+
+### 2. `baselineOnMigrate`
+
+**Removed.** Reason:
+- Fresh empty schemas: plain `migrate()` applies V1.
+- Already migrated: history → idempotent no-op.
+- Non-empty without history: Flyway must **fail loudly**; `baselineOnMigrate(true)` would baseline at v1 and **skip** required V1 DDL.
+
+Documented in `OracleJdbcIT` class javadoc.
+
+---
+
+## Files changed
+
+- `experiment/oracle/.../OracleJdbcIT.java`
+- `experiment/oracle/.../support/PostgresConnectivity.java` *(new)*
+- `experiment/oracle/.../support/PostgresConnectivityTest.java` *(new)*
+- `coordination/HANDOFF_TO_CHATGPT.md`
+
+---
+
+## Verification
+
+| Scenario | Result |
 | --- | --- |
-| D-208 | **approved** (B+E; C deferred; D/F rejected) — preserved |
-| Outcome taxonomy | AMBIGUOUS / COMPENSATION_INCOMPLETE / COMPENSATED_FAILURE as Owner-specified |
-| Merge | PR #9 → `main` @ `efb8c5c4f98ee4ead586dc859476cf942686986a` |
-| Impl | `96cb1af` · reviewed HEAD `bb53052` |
-| Taiga | #67 **Done** |
-| Stash | `stash@{0}` untouched |
+| Fresh empty schemas | JdbcIT **RAN** (3 tests, 0 skip) |
+| Already migrated | JdbcIT **RAN** |
+| Unreachable (`127.0.0.1:1`) | JdbcIT **SKIP** (3); connectivity unit **RAN** |
+| Invalid primary credentials | Suite **FAIL** (not skip) |
+| `./gradlew --no-parallel :experiment:oracle:cleanTest :experiment:oracle:test` | SUCCESS |
+| `./gradlew --no-parallel cleanTest test` | SUCCESS · aggregate **135** / 0 skip / 0 fail / 0 err |
+| `./gradlew --no-parallel build` | SUCCESS |
 
----
+Classification / Option C / protocol unchanged. No Temporal/LLM. TH-401-B not started.
 
-## 2. Implementation summary
-
-`OrderFulfillmentWorkflowImpl`:
-
-- On **technical** `ActivityFailure` (never BUSINESS), one idempotent re-POST per missing create id via recovery stub (`maximumAttempts=1`).
-- Same `IdempotencyKeys` + original payloads / charge fault hint.
-- Then D-201 compensation (GET-before-mutate).
-- Honest outcomes: missing create ids after recovery → `AMBIGUOUS`; leftover CAPTURED/HELD/ARRANGED → `COMPENSATION_INCOMPLETE`; never false `COMPENSATED_FAILURE`.
-
-No GET-by-orderId. No protocol/F3 change. Pre-merge review: all 10 Owner conditions **PASS**.
-
----
-
-## 3. Post-merge verification
-
-### Local (`main` @ `efb8c5c`)
-
-| Command | Result |
-| --- | --- |
-| `./gradlew --no-parallel cleanTest test` | **SUCCESS** |
-| `./gradlew --no-parallel build` | **SUCCESS** |
-
-| Metric | Count |
-| --- | ---: |
-| **tests** | **102** |
-| **skipped** | **0** |
-| **failures** | **0** |
-| **errors** | **0** |
-
-Notable suites: `OrderFulfillmentLostIdRecoveryTest` 9; workflow order 7; retries/timeouts 4; `ConsoleRealTemporalE2EIT` 1; `ConsoleTemporalE2EGateTest` 5.
-
-### CI
-
-| | |
-| --- | --- |
-| Run | [41424419212](https://github.com/oskargawr/agentic-microservices-orchestration/actions/runs/41424419212) |
-| SHA | `efb8c5c` |
-| Build and test | SUCCESS |
-| Assert `ConsoleRealTemporalE2EIT` (no silent skip) | SUCCESS |
-| Local vs CI | both green; no material difference |
-
----
-
-## 4. Docs / coordination
-
-- `LOST_RESPONSE_WITHOUT_ID.md` status → Done on `main`
-- `NEXT_TASK` / `PROJECT_STATE` closed; D-208 remains approved
-- Language convention: Owner-facing Polish (see `AGENTS.md` / `.cursor/rules/thesis-agent.mdc`)
-
----
-
-## 5. Remaining limitations / follow-ups
-
-- Option C (GET-by-orderId) still deferred
-- Without C, failed recovery cannot prove absence of a row — missing id after technical failure ⇒ `AMBIGUOUS`
-- **Optional follow-up (non-blocking):** dedicated assertion that BUSINESS failures never invoke `recover-*` (no defect found; not part of TH-208 closure)
-- Unused test helper `chargeCommitThenLoseBodyObservedUnknownGetCaptured` (cleanup later if desired)
-
----
-
-## 6. Owner next
-
-No approved next task. Do **not** start TH-203 / TH-204 / TH-400 until Owner approval.
-
-## 7. PR
-
-URL: https://github.com/oskargawr/agentic-microservices-orchestration/pull/9  
-**MERGED** @ `efb8c5c`
+**Commit SHA:** `1cef2701b695fa1894461ebbd74418381f1e3042`  
+Await Owner review / CI; **do not merge** without Owner.
