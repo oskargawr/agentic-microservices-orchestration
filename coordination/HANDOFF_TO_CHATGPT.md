@@ -2,52 +2,98 @@
 
 **Date:** 2026-11-02  
 **From:** Cursor Agent  
-**Task:** TH-206 Temporal E2E in CI — **Done / Closed**
+**Task:** TH-202 Retries and Timeouts — **investigation complete**; awaiting Owner plan review  
+**Repo:** `main` @ `9385fdf`  
+**Full write-up:** `coordination/TH-202_INVESTIGATION.md`
 
 ---
 
-## 1. Outcome
+## 1. Coordination status
 
-| Field | Value |
+| Item | Value |
 | --- | --- |
-| PR | https://github.com/oskargawr/agentic-microservices-orchestration/pull/7 **MERGED** |
-| Merge SHA | `c1caa5badbbf396758e09b2cfdde81b53b52ed1a` |
-| Impl SHA | `7e1a84ce0b58158b6f53d632e0b8e2d4fe240c8d` |
-| Diff scope | TH-206 only (gate + IT wire + assert script + ci.yml + docs/coordination) |
-| Pre-merge CI | success (PR checks) |
-| Post-merge CI | success — https://github.com/oskargawr/agentic-microservices-orchestration/actions/runs/41415199394 |
-| Stash | `stash@{0}` untouched |
+| `NEXT_TASK` | TH-202 **`approved`** (implementation **not** started) |
+| TH-201 / TH-206 | **Done / Closed** (preserved) |
+| D-201 / protocol / oracle | **unchanged** |
+| App code | **no modifications** this phase |
+| `stash@{0}` | preserved |
 
 ---
 
-## 2. Post-merge verification (local, on `main` @ `c1caa5b`)
+## 2. Current implementation findings (Source fact)
 
-| Check | Result |
+`ActivityPolicies`:
+
+| | Forward | Compensation |
+| --- | --- | --- |
+| Start-to-close | 10s | 10s |
+| Schedule-to-close | 60s | 90s |
+| Max attempts | 5 | 5 |
+| Backoff | 200ms → 2s, coeff 2.0 | same |
+| Non-retryable | `BUSINESS`, `COMPENSATION_INCOMPLETE` | same |
+
+- HTTP 4xx → non-retryable `BUSINESS`; 5xx → retryable `HTTP_*` (`HttpOrderFulfillmentActivities.toFailure`).
+- UNKNOWN resolve bound = **3** workflow-level attempts (`OrderFulfillmentInput`), **separate** from Temporal retries.
+- Mutating calls use stable `IdempotencyKeys`; `resolvePayment` has **no** idempotency header (re-entrant by `paymentId` lock).
+- No workflow execution timeout in console/test starters.
+- RestClient: no explicit connect/read timeouts configured.
+
+---
+
+## 3. Identified gaps
+
+1. **No tests** for retry/timeout policy behavior (values, retryable vs BUSINESS, timeout→compensation).
+2. Docs list options but **lack rationale** vs protocol `T_observe=30s` / `T_run_max=120s`.
+3. **Lost response without returned IDs:** if charge/reserve times out after commit, workflow may lack IDs → incomplete compensate-by-id; protocol F-PAY-AMB edge not covered by Variant A workflow tests.
+4. Transport errors outside `RestClientResponseException` not explicitly classified (**Assumption:** Temporal retries them).
+5. Cancel-signal + detached compensation IT still a known TH-201 follow-up (unchanged; not TH-202 core).
+
+---
+
+## 4. Proposed implementation scope (minimal)
+
+**Default recommendation:** documentation + tests only; **keep** current numeric policies.
+
+| Include | Exclude |
 | --- | --- |
-| `ConsoleTemporalE2EGateTest` | tests=5 skipped=0 failures=0 errors=0 |
-| `ConsoleRealTemporalE2EIT` | tests=1 skipped=0 failures=0 errors=0 |
-| `scripts/ci-assert-console-temporal-e2e.sh` | OK (exit 0) |
-| Post-merge CI assert step | `OK: ConsoleRealTemporalE2EIT executed with skipped=0` (CI XML: tests=1 skipped=0 failures=0 errors=0) |
+| T-202-1…5 (unit) + policy docs expansion | F0–F3 harness / runner (TH-400) |
+| Clarify retry vs resolve-bound vs protocol T_* | Protocol / invariant / oracle edits |
+| Record lost-response-without-ID as **limitation** | D-201 behavior changes without Owner OK |
+| Estimate **2 SP** | Unrelated console / stash |
+
+Optional (needs Owner OK): wrap transport failures as typed retryable failures; set workflow timeout vs `T_run_max`; retune ActivityOptions numbers.
 
 ---
 
-## 3. Behavior shipped
+## 5. Test plan (proposed)
 
-- CI / `THESIS_REQUIRE_TEMPORAL_E2E=true` → missing Temporal/Postgres **fails** (not skip).
-- Local without require → optional skip preserved.
-- Assert script fails job if E2E JUnit XML missing or `skipped!=0`.
-- No protocol / oracle / invariant / app behavior changes; Compose not duplicated.
-
----
-
-## 4. Remaining limitations
-
-- Local macOS checkout with `core.autocrlf=true` can rewrite the assert script to CRLF; Git blob and Linux CI use LF (CI assert step green).
-- Fail-hard path without Compose was verified pre-merge via env override; post-merge relied on real stack + CI assert.
-- No approved next task yet (TH-202 candidate).
+| ID | Intent |
+| --- | --- |
+| T-202-1 | Assert exact `ActivityPolicies` values / `doNotRetry` |
+| T-202-2 | Retryable failure then success → SUCCESS, attempts ≥ 2 |
+| T-202-3 | `BUSINESS` → single attempt + existing compensation semantics |
+| T-202-4 | Retry/timeout exhaustion → compensation; default `COMPENSATED_FAILURE` when no pending AMBIGUOUS |
+| T-202-5 | UNKNOWN path resolve call count ≤ bound; distinct from Temporal retries |
+| T-202-6 | Idempotency key stability for mutating activities (light) |
 
 ---
 
-## 5. Owner next
+## 6. Acceptance criteria (proposed)
 
-Approve next `NEXT_TASK` (e.g. TH-202). TH-206 is closed.
+1. Exact retry/timeout config documented with code locations.  
+2. T-202-1…5 green in CI.  
+3. No protocol/oracle/D-201 semantic drift unless Owner-approved.  
+4. Deferred gaps listed explicitly (lost-response-without-ID).  
+5. TH-201/206 stay Closed; stash untouched.
+
+---
+
+## 7. Open questions for Owner
+
+1. Keep current ActivityOptions numbers or retune vs `T_observe`/`T_run_max`?  
+2. Docs/tests only, or also transport-failure wrapping?  
+3. Lost-response-without-returned-ID: TH-202, later ticket, or TH-400?  
+4. Set workflow execution timeout capped by `T_run_max`, or harness-only?  
+5. Docs in `VARIANT_A_HAPPY_PATH.md` only vs dedicated retries note?
+
+**Stop condition:** wait for Owner review of this plan before any application code changes.

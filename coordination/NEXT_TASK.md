@@ -1,27 +1,45 @@
 # NEXT_TASK
 
-**Status:** `done` (TH-206 closed; awaiting Owner next approval)  
+**Status:** `approved`  
 **Last updated:** 2026-11-02  
-**Closed by:** Cursor Agent after Owner merge authorization + post-merge verification
+**Approved by:** Project Owner (explicit TH-202 approval)
 
-## Closed task
+## Task ID and title
 
-**TH-206** — Temporal E2E in CI — no silent skip — **Done / Closed**
+**TH-202** — Retries and Timeouts — documented and tested
 
-| Field | Value |
-| --- | --- |
-| Merge | PR #7 → `main` @ `c1caa5badbbf396758e09b2cfdde81b53b52ed1a` |
-| Impl | `7e1a84ce0b58158b6f53d632e0b8e2d4fe240c8d` |
-| Post-merge CI | success — https://github.com/oskargawr/agentic-microservices-orchestration/actions/runs/41415199394 |
+## Objective
 
-## Next
+Document and test Variant A Temporal activity retry/timeout policy; verify interaction with saga compensation, idempotency, and UNKNOWN payment resolution. **Do not** change D-201 semantics, protocol, invariants, or oracle without explicit Owner approval.
 
-No approved next task. Candidate: **TH-202** (retries/timeouts) or Owner pick.
+## Phase
+
+**Investigation complete** (this cycle). **Implementation deferred** until Owner reviews the proposed plan in `coordination/TH-202_INVESTIGATION.md` / `HANDOFF_TO_CHATGPT.md`.
+
+## Scope (locked for investigation)
+
+- Inspect `ActivityOptions` / retry policies / timeouts on `main`
+- Analyze retries vs business errors vs compensation vs UNKNOWN
+- Propose minimal impl + tests + docs + acceptance criteria
+- No application code changes in this phase
+- No F0–F3 fault-injection / experiment runner work (TH-400+)
+- Preserve `stash@{0}`; no unrelated console changes
+
+## Reference
+
+- `coordination/TH-202_INVESTIGATION.md`
+- `docs/architecture/VARIANT_A_HAPPY_PATH.md`
+- D-201 / D-012 / D-011 in `coordination/DECISION_LOG.md`
+
+## Out of scope
+
+- Reopening TH-201 / TH-206
+- Protocol / invariant / oracle edits
+- Arbitrary retune of retry numbers without rationale + Owner OK
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-01 | proposed | Cursor |
-| 2026-11-02 | approved | Project Owner |
-| 2026-11-02 | **done / closed** | Cursor (post-merge verify) |
+| 2026-11-02 | **approved** (investigation first) | Project Owner |
+| 2026-11-02 | investigation complete; awaiting Owner plan review | Cursor |
