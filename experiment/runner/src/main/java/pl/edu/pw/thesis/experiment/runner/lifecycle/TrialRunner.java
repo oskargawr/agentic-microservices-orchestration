@@ -28,8 +28,8 @@ import pl.edu.pw.thesis.experiment.runner.variant.VariantAdapter;
 import pl.edu.pw.thesis.experiment.runner.variant.WorkflowStopInfo;
 
 /**
- * Phase-1 trial lifecycle: reset → arm F0 → start A → await/terminate (R6) → quiesce →
- * full T_observe (R14) → Oracle once → persist (retry, no re-run).
+ * Phase-1 / 1.1 trial lifecycle: reset → arm F0 → start A → await/terminate (R6) → quiesce →
+ * full T_observe (R14) → Oracle once → durable persist (OWN-P1).
  */
 public final class TrialRunner {
 
@@ -44,6 +44,9 @@ public final class TrialRunner {
 
     /** When true after WORKFLOW_NOT_QUIESCED, further trials should be blocked by the caller. */
     private boolean blockFurtherTrials;
+
+    /** Operator interrupt observed — CLI should write experiment-level ABORTED_EXPERIMENT. */
+    private boolean operatorInterrupted;
 
     public TrialRunner(
             ExperimentDefinition experiment,
@@ -66,6 +69,10 @@ public final class TrialRunner {
 
     public boolean isFurtherTrialsBlocked() {
         return blockFurtherTrials;
+    }
+
+    public boolean wasOperatorInterrupted() {
+        return operatorInterrupted;
     }
 
     public TrialRecord run(TrialSpec spec) {
@@ -105,12 +112,38 @@ public final class TrialRunner {
             if (stop.terminal()) {
                 terminatedBy = TerminatedBy.WORKFLOW_STOP;
             } else {
-                // R6: Temporal terminate — not cancel; not business compensation
-                variantAdapter.terminate(handle, "T_run_max");
-                terminatedBy = TerminatedBy.T_RUN_MAX;
+                // C: re-describe before terminate — natural completion wins the race
+                WorkflowStopInfo latest = variantAdapter.describe(handle);
+                if (latest.terminal()) {
+                    stop = latest;
+                    terminatedBy = TerminatedBy.WORKFLOW_STOP;
+                } else {
+                    try {
+                        // R6: Temporal terminate — not cancel; not business compensation
+                        variantAdapter.terminate(handle, "T_run_max");
+                        terminatedBy = TerminatedBy.T_RUN_MAX;
+                    } catch (RuntimeException terminateError) {
+                        WorkflowStopInfo after = variantAdapter.describe(handle);
+                        if (after.terminal()) {
+                            stop = after;
+                            terminatedBy = TerminatedBy.WORKFLOW_STOP;
+                        } else {
+                            return persistExcluded(
+                                    spec,
+                                    t0,
+                                    "TEMPORAL_TERMINATE_FAILED",
+                                    terminateError.getMessage(),
+                                    faultTriggeredAt,
+                                    armed,
+                                    handle,
+                                    after,
+                                    null,
+                                    baseline.onHand());
+                        }
+                    }
+                }
             }
 
-            // Establish Temporal quiescence (R14 prerequisite)
             Instant quiesceDeadline = clock.now().plus(environment.timing().quiesceWait());
             WorkflowStopInfo quiesced = variantAdapter.awaitStop(handle, quiesceDeadline);
             if (!quiesced.terminal()) {
@@ -130,7 +163,6 @@ public final class TrialRunner {
             }
 
             Instant tWorkflowStop = quiesced.observedAt();
-            // R14: after quiescence, wait FULL T_observe, then Oracle
             clock.sleep(environment.timing().tObserve());
             Instant tTerminal = clock.now();
 
@@ -156,7 +188,7 @@ public final class TrialRunner {
             }
             Instant tOracle = oracleResult.evaluatedAt();
 
-            TrialRecord completed = new TrialRecord(
+            TrialRecord completedCandidate = new TrialRecord(
                     TrialRecord.SCHEMA_VERSION,
                     spec.experimentId(),
                     spec.trialId(),
@@ -170,7 +202,7 @@ public final class TrialRunner {
                     experiment.gitSha(),
                     t0,
                     faultTriggeredAt,
-                    null, // F0: faultObservedAt must be null
+                    null,
                     tWorkflowStop,
                     tTerminal,
                     tOracle,
@@ -189,12 +221,12 @@ public final class TrialRunner {
                     baseline.onHand(),
                     null);
 
-            persistWithRetry(completed);
-            return completed;
+            return persistCompletedOwnP1(completedCandidate);
         } catch (UnsafeEnvironmentException e) {
             return persistExcluded(spec, t0, e.exclusionReason(), e.getMessage());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            operatorInterrupted = true;
             return persistExcluded(spec, t0, "HARNESS_CRASH", "Interrupted: " + e.getMessage());
         } catch (SQLException e) {
             return persistExcluded(spec, t0, "SERVICE_UNAVAILABLE", e.getMessage());
@@ -205,16 +237,74 @@ public final class TrialRunner {
                 try {
                     faultController.disarm(spec.trialId());
                 } catch (Exception ignored) {
-                    // disarm best-effort; failed disarm should block next — set flag
                     blockFurtherTrials = true;
                 }
             }
         }
     }
 
-    private void persistWithRetry(TrialRecord record) throws IOException {
-        // Keep evaluated result in memory (parameter); ResultStore retries durable write.
-        resultStore.saveTrial(record);
+    /**
+     * OWN-P1: COMPLETED only after durable JSON; on failure keep oracle, write .partial,
+     * durable EXCLUDED/PERSISTENCE_FAILURE — never re-run workflow/Oracle.
+     */
+    private TrialRecord persistCompletedOwnP1(TrialRecord completedCandidate) {
+        try {
+            resultStore.saveTrial(completedCandidate);
+            return completedCandidate;
+        } catch (IOException persistError) {
+            try {
+                resultStore.saveOracleConfirmedPartial(completedCandidate);
+            } catch (IOException ignored) {
+                // best-effort partial
+            }
+            TrialRecord excluded = withPersistenceFailure(completedCandidate, persistError);
+            try {
+                resultStore.saveTrial(excluded);
+            } catch (IOException second) {
+                // Durable EXCLUDED also failed — still return in-memory excluded with oracle
+                return withPersistenceFailure(
+                        completedCandidate,
+                        new IOException(
+                                "Durable EXCLUDED also failed: " + second.getMessage(),
+                                persistError));
+            }
+            return excluded;
+        }
+    }
+
+    private static TrialRecord withPersistenceFailure(TrialRecord completed, IOException error) {
+        return new TrialRecord(
+                completed.schemaVersion(),
+                completed.experimentId(),
+                completed.trialId(),
+                completed.protocolId(),
+                completed.phase(),
+                completed.variant(),
+                completed.faultProfileId(),
+                completed.repetitionIndex(),
+                completed.orderId(),
+                completed.businessInputs(),
+                completed.gitSha(),
+                completed.t0(),
+                completed.faultTriggeredAt(),
+                completed.faultObservedAt(),
+                completed.tWorkflowStop(),
+                completed.tTerminal(),
+                completed.tOracle(),
+                completed.terminatedBy(),
+                completed.workflowQuiesced(),
+                completed.workflowId(),
+                completed.runId(),
+                completed.temporalStatus(),
+                HarnessStatus.EXCLUDED,
+                false,
+                ExclusionCategory.TECHNICAL,
+                "PERSISTENCE_FAILURE",
+                completed.oracle(),
+                completed.workflowOutcome(),
+                completed.faultArmedRecord(),
+                completed.baselineOnHand(),
+                error.getMessage());
     }
 
     private TrialRecord persistExcluded(
@@ -279,7 +369,6 @@ public final class TrialRunner {
         try {
             resultStore.saveTrial(record);
         } catch (IOException e) {
-            // Do not fabricate COMPLETED; return in-memory EXCLUDED
             return new TrialRecord(
                     record.schemaVersion(),
                     record.experimentId(),

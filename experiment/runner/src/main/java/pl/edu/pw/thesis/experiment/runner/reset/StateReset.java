@@ -7,11 +7,13 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Objects;
 import javax.sql.DataSource;
+import pl.edu.pw.thesis.experiment.runner.config.JdbcConnectionGate;
 import pl.edu.pw.thesis.experiment.runner.config.RunnerEnvironment;
 import pl.edu.pw.thesis.experiment.runner.config.UnsafeEnvironmentException;
 
 /**
- * Deterministic business-DB reset to protocol baseline. Always checks allowlist first.
+ * Deterministic business-DB reset to protocol baseline. Always checks allowlist and
+ * live connection metadata before any destructive SQL.
  */
 public final class StateReset {
 
@@ -26,6 +28,8 @@ public final class StateReset {
     public BaselineSnapshot resetToProtocolBaseline(String sku) throws SQLException {
         environment.assertSafeForDestructiveOps();
         try (Connection c = dataSource.getConnection()) {
+            JdbcConnectionGate.requireAllowedConnection(
+                    c, environment.allowlist(), environment.jdbcUrl());
             c.setAutoCommit(false);
             try {
                 exec(c, "SET search_path TO inventory");

@@ -5,14 +5,18 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -100,7 +104,7 @@ class TrialRunnerLifecycleTest {
     }
 
     @Test
-    void happyPathWorkflowStopThenFullObserveThenOracleOnce() throws Exception {
+    void g6_g7_happyPathWorkflowStopThenFullObserveThenOracleOnce() throws Exception {
         UUID orderId = UUID.randomUUID();
         TrialSpec spec = TrialSpec.forVariantA(
                 experiment.experimentId(), "t1", "F0", 0, orderId, experiment.businessDefaults());
@@ -121,7 +125,7 @@ class TrialRunnerLifecycleTest {
         assertThat(record.oracle().classification()).isEqualTo("CONFIRMED_SUCCESS");
         assertThat(clock.slept).contains(Duration.ofSeconds(30));
         verify(variantAdapter, never()).terminate(any(), any());
-        verify(oracle).evaluate(any());
+        verify(oracle, times(1)).evaluate(any());
     }
 
     @Test
@@ -136,6 +140,8 @@ class TrialRunnerLifecycleTest {
                         new WorkflowStopInfo("RUNNING", false, Instant.parse("2026-11-02T12:02:00Z"), null),
                         new WorkflowStopInfo(
                                 "TERMINATED", true, Instant.parse("2026-11-02T12:02:01Z"), null));
+        when(variantAdapter.describe(any()))
+                .thenReturn(new WorkflowStopInfo("RUNNING", false, clock.now(), null));
         when(oracle.evaluate(any())).thenReturn(oracleSuccess(orderId, "t2"));
 
         TrialRecord record = runner.run(spec);
@@ -147,6 +153,61 @@ class TrialRunnerLifecycleTest {
     }
 
     @Test
+    void g4_naturalCompletionBetweenAwaitAndTerminateIsWorkflowStop() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        TrialSpec spec = TrialSpec.forVariantA(
+                experiment.experimentId(), "t-race", "F0", 0, orderId, experiment.businessDefaults());
+        ExecutionHandle handle = new ExecutionHandle(spec.workflowId(), "run-race");
+        when(variantAdapter.start(any(), any())).thenReturn(handle);
+        when(variantAdapter.awaitStop(any(), any()))
+                .thenReturn(
+                        new WorkflowStopInfo("RUNNING", false, clock.now(), null),
+                        new WorkflowStopInfo(
+                                "COMPLETED", true, Instant.parse("2026-11-02T12:01:00Z"), "SUCCESS"));
+        when(variantAdapter.describe(any()))
+                .thenReturn(new WorkflowStopInfo(
+                        "COMPLETED", true, Instant.parse("2026-11-02T12:01:00Z"), "SUCCESS"));
+        when(oracle.evaluate(any())).thenReturn(oracleSuccess(orderId, "t-race"));
+
+        TrialRecord record = runner.run(spec);
+
+        assertThat(record.harnessStatus()).isEqualTo(HarnessStatus.COMPLETED);
+        assertThat(record.terminatedBy()).isEqualTo(TerminatedBy.WORKFLOW_STOP);
+        verify(variantAdapter, never()).terminate(any(), any());
+        verify(oracle, times(1)).evaluate(any());
+    }
+
+    @Test
+    void g4_terminateErrorButAlreadyTerminalIsWorkflowStop() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        TrialSpec spec = TrialSpec.forVariantA(
+                experiment.experimentId(), "t-race2", "F0", 0, orderId, experiment.businessDefaults());
+        ExecutionHandle handle = new ExecutionHandle(spec.workflowId(), "run-race2");
+        when(variantAdapter.start(any(), any())).thenReturn(handle);
+        when(variantAdapter.awaitStop(any(), any()))
+                .thenReturn(
+                        new WorkflowStopInfo("RUNNING", false, clock.now(), null),
+                        new WorkflowStopInfo(
+                                "COMPLETED", true, Instant.parse("2026-11-02T12:01:05Z"), "SUCCESS"));
+        when(variantAdapter.describe(any()))
+                .thenReturn(
+                        new WorkflowStopInfo("RUNNING", false, clock.now(), null),
+                        new WorkflowStopInfo(
+                                "COMPLETED", true, Instant.parse("2026-11-02T12:01:05Z"), "SUCCESS"));
+        org.mockito.Mockito.doThrow(new IllegalStateException("already completed"))
+                .when(variantAdapter)
+                .terminate(any(), any());
+        when(oracle.evaluate(any())).thenReturn(oracleSuccess(orderId, "t-race2"));
+
+        TrialRecord record = runner.run(spec);
+
+        assertThat(record.harnessStatus()).isEqualTo(HarnessStatus.COMPLETED);
+        assertThat(record.terminatedBy()).isEqualTo(TerminatedBy.WORKFLOW_STOP);
+        assertThat(record.exclusionReason()).isNull();
+        verify(oracle, times(1)).evaluate(any());
+    }
+
+    @Test
     void notQuiescedExcludesAndBlocksNext() throws Exception {
         UUID orderId = UUID.randomUUID();
         TrialSpec spec = TrialSpec.forVariantA(
@@ -154,6 +215,8 @@ class TrialRunnerLifecycleTest {
         ExecutionHandle handle = new ExecutionHandle(spec.workflowId(), "run-3");
         when(variantAdapter.start(any(), any())).thenReturn(handle);
         when(variantAdapter.awaitStop(any(), any()))
+                .thenReturn(new WorkflowStopInfo("RUNNING", false, clock.now(), null));
+        when(variantAdapter.describe(any()))
                 .thenReturn(new WorkflowStopInfo("RUNNING", false, clock.now(), null));
 
         TrialRecord record = runner.run(spec);
@@ -197,6 +260,53 @@ class TrialRunnerLifecycleTest {
 
         assertThat(record.harnessStatus()).isEqualTo(HarnessStatus.EXCLUDED);
         assertThat(record.exclusionReason()).isEqualTo("WRONG_DATABASE");
+    }
+
+    @Test
+    void g8_persistFailurePreservesOracleWithoutRerun() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        TrialSpec spec = TrialSpec.forVariantA(
+                experiment.experimentId(), "t-persist", "F0", 0, orderId, experiment.businessDefaults());
+        ExecutionHandle handle = new ExecutionHandle(spec.workflowId(), "run-p");
+        when(variantAdapter.start(any(), any())).thenReturn(handle);
+        when(variantAdapter.awaitStop(any(), any()))
+                .thenReturn(new WorkflowStopInfo(
+                        "COMPLETED", true, Instant.parse("2026-11-02T12:00:10Z"), "SUCCESS"));
+        when(oracle.evaluate(any())).thenReturn(oracleSuccess(orderId, "t-persist"));
+
+        AtomicInteger saveCalls = new AtomicInteger();
+        FileResultStore failingStore = new FileResultStore(tmp, experiment, 2) {
+            @Override
+            public void saveTrial(TrialRecord record) throws IOException {
+                if (record.harnessStatus() == HarnessStatus.COMPLETED) {
+                    saveCalls.incrementAndGet();
+                    throw new IOException("disk full");
+                }
+                super.saveTrial(record);
+            }
+        };
+        failingStore.saveExperiment(experiment);
+        TrialRunner failingRunner = new TrialRunner(
+                experiment,
+                environment,
+                stateReset,
+                new F0FaultController(clock),
+                variantAdapter,
+                oracle,
+                failingStore,
+                clock);
+
+        TrialRecord record = failingRunner.run(spec);
+
+        assertThat(record.harnessStatus()).isEqualTo(HarnessStatus.EXCLUDED);
+        assertThat(record.exclusionReason()).isEqualTo("PERSISTENCE_FAILURE");
+        assertThat(record.oracle()).isNotNull();
+        assertThat(record.oracle().classification()).isEqualTo("CONFIRMED_SUCCESS");
+        assertThat(record.includeInRqRates()).isFalse();
+        assertThat(Files.exists(failingStore.trialPartialPath("t-persist"))).isTrue();
+        assertThat(saveCalls.get()).isGreaterThanOrEqualTo(1);
+        verify(variantAdapter, times(1)).start(any(), any());
+        verify(oracle, times(1)).evaluate(any());
     }
 
     private static OracleResult oracleSuccess(UUID orderId, String trialId) {

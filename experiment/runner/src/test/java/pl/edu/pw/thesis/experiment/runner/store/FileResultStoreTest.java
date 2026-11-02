@@ -48,6 +48,35 @@ class FileResultStoreTest {
         assertThatThrownBy(() -> store.saveTrial(other)).hasMessageContaining("Refuse overwrite");
     }
 
+    @Test
+    void csvRebuildIsIdempotentAcrossRepeatedSaves() throws Exception {
+        ExperimentDefinition exp = experiment("exp-csv");
+        FileResultStore store = new FileResultStore(tmp, exp);
+        store.saveExperiment(exp);
+
+        UUID order = UUID.randomUUID();
+        TrialRecord record = excluded(exp, "trial-csv", order);
+        store.saveTrial(record);
+        store.saveTrial(record);
+
+        String csv = Files.readString(tmp.resolve("pilot/exp-csv/trials.csv"));
+        long dataRows = csv.lines().skip(1).filter(l -> !l.isBlank()).count();
+        assertThat(dataRows).isEqualTo(1);
+        assertThat(csv.lines().filter(l -> l.contains("trial-csv")).count()).isEqualTo(1);
+    }
+
+    @Test
+    void oracleConfirmedPartialPreservedSeparately() throws Exception {
+        ExperimentDefinition exp = experiment("exp-partial");
+        FileResultStore store = new FileResultStore(tmp, exp);
+        store.saveExperiment(exp);
+        TrialRecord candidate = excluded(exp, "trial-p", UUID.randomUUID());
+        // reuse builder shape — status COMPLETED-like fields not required for partial write
+        store.saveOracleConfirmedPartial(candidate);
+        assertThat(Files.exists(store.trialPartialPath("trial-p"))).isTrue();
+        assertThat(Files.exists(store.trialJsonPath("trial-p"))).isFalse();
+    }
+
     private static ExperimentDefinition experiment(String id) {
         return new ExperimentDefinition(
                 id,

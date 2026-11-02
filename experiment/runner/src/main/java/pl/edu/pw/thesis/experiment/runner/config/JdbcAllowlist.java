@@ -48,7 +48,8 @@ public final class JdbcAllowlist {
         return allowedNormalized.isEmpty();
     }
 
-    static String normalize(String jdbcUrl) {
+    /** Package + gate visible normalization of jdbc URLs (host/port/database). */
+    public static String normalize(String jdbcUrl) {
         String url = jdbcUrl.trim();
         if (!url.toLowerCase(Locale.ROOT).startsWith("jdbc:")) {
             throw new IllegalArgumentException("not a JDBC URL: " + jdbcUrl);

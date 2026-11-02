@@ -15,6 +15,7 @@ import pl.edu.pw.thesis.experiment.oracle.IndependentOracle;
 import pl.edu.pw.thesis.experiment.runner.config.JdbcAllowlist;
 import pl.edu.pw.thesis.experiment.runner.config.RunnerEnvironment;
 import pl.edu.pw.thesis.experiment.runner.fault.F0FaultController;
+import pl.edu.pw.thesis.experiment.runner.lifecycle.ExperimentAbort;
 import pl.edu.pw.thesis.experiment.runner.lifecycle.TrialRunner;
 import pl.edu.pw.thesis.experiment.runner.lock.ExperimentEnvLock;
 import pl.edu.pw.thesis.experiment.runner.model.BusinessInputs;
@@ -127,13 +128,23 @@ public final class RunnerMain {
                         experiment.businessDefaults());
 
                 TrialRecord record = runner.run(spec);
+                if (runner.wasOperatorInterrupted()) {
+                    // OWN-P3: experiment-level abort; do not rewrite terminal trial JSON
+                    ExperimentAbort.abortExperiment(
+                            store, experiment.experimentId(), "OPERATOR_INTERRUPT", Instant.now());
+                    System.err.println(
+                            "experimentStatus=ABORTED_EXPERIMENT reason=OPERATOR_INTERRUPT");
+                    System.exit(130);
+                }
                 System.out.println(
                         "trialId="
                                 + record.trialId()
                                 + " harnessStatus="
                                 + record.harnessStatus()
                                 + " oracle="
-                                + (record.oracle() == null ? "null" : record.oracle().classification())
+                                + (record.oracle() == null
+                                        ? "null"
+                                        : record.oracle().classification())
                                 + " exclusion="
                                 + record.exclusionReason());
                 if (record.harnessStatus() != HarnessStatus.COMPLETED) {
