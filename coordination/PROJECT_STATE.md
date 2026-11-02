@@ -26,8 +26,9 @@
 
 | | |
 | --- | --- |
-| **Branch** | `feature/th-201-variant-a-saga-compensation` |
+| **Branch** | `feature/th-201-variant-a-saga-compensation` @ `f052768` |
 | **Base** | `main` @ `1137fd1` |
+| **PR** | https://github.com/oskargawr/agentic-microservices-orchestration/pull/6 |
 | **D-201** | approved |
 
 ## Next three actions

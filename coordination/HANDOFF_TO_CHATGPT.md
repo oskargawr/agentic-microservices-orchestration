@@ -12,7 +12,7 @@
 | --- | --- |
 | Branch | `feature/th-201-variant-a-saga-compensation` |
 | Base | `main` @ `1137fd1` (TH-205 merged) |
-| HEAD | *(set after push — see PR)* |
+| HEAD | `f052768` |
 
 Preserved unrelated dirty console UI/CORS work in git stash: `preserve dirty tree before th-201 branch`.
 
@@ -97,7 +97,8 @@ Unchanged: BUSINESS_INVARIANTS, EXPERIMENTAL_PROTOCOL_V0, oracle taxonomy, `2599
 
 ## 8. PR / Owner next action
 
-PR URL: *(filled after `gh pr create`)*  
+PR URL: https://github.com/oskargawr/agentic-microservices-orchestration/pull/6  
+PR status: **open** (not merged)  
 **Do not merge without Owner authorization.**
 
-**Owner next:** review PR → approve merge when satisfied.
+**Owner next:** review PR #6 → authorize merge when satisfied.
