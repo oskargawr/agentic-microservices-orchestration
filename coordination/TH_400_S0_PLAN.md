@@ -2,23 +2,23 @@
 
 | Field | Value |
 | --- | --- |
-| **Status** | OQ follow-up incorporated — **awaiting final Owner ratification** |
+| **Status** | **Owner-ratified (D-404, 2026-11-02)** — documentation complete |
 | **Branch** | `docs/th-400-s0-fault-profile-spec` |
 | **Normative spec** | [`docs/architecture/TH_400_FAULT_PROFILE_SPEC.md`](../docs/architecture/TH_400_FAULT_PROFILE_SPEC.md) |
 | **Verification** | [`docs/architecture/TH_400_S0_TECHNICAL_VERIFICATION.md`](../docs/architecture/TH_400_S0_TECHNICAL_VERIFICATION.md) |
-| **Decision** | **D-404** (directions + OQ-F2-1/F3U-1/F3U-2; coding **not** authorized) |
+| **Decision** | **D-404** Owner-ratified; coding **not** authorized |
 
-## Slice reminder (post-S0, needs D-AUTH)
+## Slice reminder (post-S0)
 
-| Slice | Content |
-| --- | --- |
-| S0 | Spec lock (this work) |
-| S1 | F1-P FaultController + payment arming |
-| S2 | Shipping F2 header + idempotent failure replay |
-| S3 | F3-Recovered + F3-Unresolved (after OQ-F3U-1) |
-| S4 | Cross-service verify/disarm / parity polish |
+| Slice | Content | Auth |
+| --- | --- | --- |
+| **S0** | Spec lock (this work) | **Done / ratified** |
+| **S1** | F1-P FaultController + payment `CHARGE_FAIL` arming | Needs **separate D-AUTH** |
+| **S2** | Shipping F2 `ARRANGE_REJECTED` + idempotent failure replay | Needs D-AUTH |
+| **S3** | F3-Recovered + F3-Unresolved (503 header-presence) | Needs D-AUTH |
+| **S4** | Cross-service verify/disarm / A×C parity polish | Needs D-AUTH |
 
 ## Blockers before coding
 
-1. Final Owner ratification of revised S0 / D-404.  
-2. Explicit **D-AUTH** + `NEXT_TASK=approved` for an implementation slice (OQs F2-1 / F3U-1 / F3U-2 are closed in docs).
+1. Explicit **D-AUTH** + `NEXT_TASK=approved` for a named slice (recommended first: **S1**).  
+2. Do **not** treat S0 ratification as implementation authorization.

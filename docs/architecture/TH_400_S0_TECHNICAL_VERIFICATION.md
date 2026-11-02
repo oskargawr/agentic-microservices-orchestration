@@ -98,3 +98,9 @@ Crash before commit: no shipment; safe to reject again. Crash after commit: dura
 | A Retry budget | Logical limit ≠ HTTP limit; S0 forbids silent under-budgeting |
 | B Isolation | Header-per-trial + serial lock sufficient if no unkeyed global counter; documented |
 | C F2 atomicity | Normative TX + idempotent failure replay specified; impl in S2 |
+
+---
+
+## Ratification note (2026-11-02)
+
+Owner **formally ratified** OQ-F2-1 / OQ-F3U-1 / OQ-F3U-2 (see D-404). Header-presence HTTP **503** across Temporal retries is the binding opacity model. Oracle independence for F3-Unresolved (harness trial/profile metadata + DB-primary; not orchestrator/HTTP) is recorded in the normative spec §5.3.3. This verification file remains evidence; it does **not** authorize implementation.

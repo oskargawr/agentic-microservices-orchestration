@@ -8,21 +8,27 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
-## D-404 — TH-400 S0 fault-profile directions (F2 / F3 split / FaultController)
+## D-404 — TH-400 S0 fault-profile specification (Owner-ratified)
 
 | Field | Value |
 | --- | --- |
 | **Date** | 2026-11-02 |
-| **Status** | **approved** for OD-F2 / OD-F3 / OD-FC **and** Owner OQ follow-up decisions below; S0 docs await **final ratification**; coding **not** authorized |
+| **Status** | **approved / Owner-ratified** (documentation complete) · coding **not** authorized |
 | **Decision-maker** | Project Owner |
-| **Context** | TH-400 · Taiga #35 · S0 specification lock (docs only) |
-| **Evidence** | Owner S0 lock (2026-11-02) · Owner review follow-up OQ-F2-1 / OQ-F3U-1 / OQ-F3U-2 (2026-11-02) |
+| **Context** | TH-400 · Taiga #35 · S0 fault-profile lock (docs only) |
+| **Evidence** | Owner S0 lock · Owner OQ follow-up · **Owner formal ratification** (2026-11-02) — TH-400 S0 Final Ratification & Documentation Sync |
 | **Normative spec** | `docs/architecture/TH_400_FAULT_PROFILE_SPEC.md` |
 | **Verification** | `docs/architecture/TH_400_S0_TECHNICAL_VERIFICATION.md` |
 | **Related** | D-012 · D-016 · D-011 · D-R4 · D-R5 · D-403 · D-402 · D-202 · TH-400 |
 | **Does NOT authorize** | Java/service/test implementation · S1–S4 · Variant C · protocol-v0 / rev. 3.1 rewrites · Taiga #35 Done |
 
-### Accepted Owner directions
+### History (preserved)
+
+1. **Directions accepted:** OD-F2 / OD-F3 / OD-FC (S0 lock).  
+2. **OQ follow-up proposed then decided:** OQ-F2-1 / OQ-F3U-1 / OQ-F3U-2.  
+3. **Formal ratification (this entry):** Owner confirms the OQ outcomes as binding design decisions for TH-400.
+
+### Ratified Owner directions
 
 | ID | Direction |
 | --- | --- |
@@ -30,13 +36,13 @@ Canonical research narrative also lives in Obsidian
 | **OD-F3** | F3 = two profiles: **F3-Recovered** and **F3-Unresolved**. |
 | **OD-FC** | Unified Runner **FaultController** + service-header injection; identical profiles for A and future C. |
 
-### Owner OQ follow-up decisions (2026-11-02)
+### Ratified OQ decisions (2026-11-02)
 
-| ID | Decision |
+| ID | Ratified outcome |
 | --- | --- |
-| **OQ-F2-1** | ErrorCode **`ARRANGE_REJECTED`**; HTTP **409**; non-retryable BUSINESS; idempotent failure replay for same key+fingerprint (incl. after disarm); same key+different fingerprint → **`IDEMPOTENCY_KEY_CONFLICT`**. |
-| **OQ-F3U-1** | F3-Unresolved harness cell Oracle label = **`AMBIGUOUS`**. Cell-specific rationale only; **do not** generalize to all dangling CAPTURED; do **not** change the four-label set or unrelated invariants. |
-| **OQ-F3U-2** | Transport opacity = HTTP **503**, subject to S0 verification (header-presence / explicit budget covering Temporal nested retries). |
+| **OQ-F2-1** | ErrorCode **`ARRANGE_REJECTED`**; HTTP **409**; non-retryable BUSINESS; atomic idempotent failure replay for same key+fingerprint (incl. after disarm); same key+different fingerprint → **`IDEMPOTENCY_KEY_CONFLICT`**; no shipment row. |
+| **OQ-F3U-1** | F3-Unresolved cell Oracle expectation = **`AMBIGUOUS`**. Cell-specific only. Oracle identifies the cell via **independent harness trial/profile metadata** + DB-primary state — **not** workflow outcome, HTTP observations, or orchestrator-supplied classification. Do **not** generalize to all dangling CAPTURED; do **not** change the four-label set. |
+| **OQ-F3U-2** | Transport opacity = HTTP **503** with **header-presence** for the armed trial across **all** Temporal Activity retries (no nested-retry burn-through to F3-Recovered). Must not mutate payment DB state or redefine D-016. |
 
 ### Preserved constraints
 
@@ -44,7 +50,7 @@ D-R4 · D-R5 · D-016 · D-012 OQ-2 · Oracle four-label **set** unchanged · de
 
 ### Documented technical bindings (S0; impl still needs D-AUTH)
 
-F2 single-TX atomicity (no row + failure idempotency + op-log) · F3-Unresolved header-presence opacity covering `resolveAttemptLimit × activityMaxAttempts` risk · trial isolation via per-trial headers + serial lock · getPayment must not bypass opacity on this cell.
+F2 single-TX atomicity (no row + failure idempotency + op-log) · F3-Unresolved header-presence opacity · trial isolation via per-trial headers + serial lock · getPayment must not bypass opacity on this cell · Oracle independence for F3-Unresolved metadata.
 
 ### Explicit non-authorization
 

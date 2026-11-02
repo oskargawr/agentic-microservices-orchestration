@@ -2,15 +2,15 @@
 
 | Field | Value |
 | --- | --- |
-| **Status** | **S0 revised after Owner OQ decisions — awaiting final Owner ratification** (docs only; **not** implementation auth) |
+| **Status** | **S0 Owner-ratified (D-404)** — documentation complete; **implementation not authorized** |
 | **Date** | 2026-11-02 |
 | **Ticket** | TH-400 · Taiga **#35** |
-| **Decision record** | **D-404** (see `coordination/DECISION_LOG.md`) |
+| **Decision record** | **D-404** Owner-ratified (see `coordination/DECISION_LOG.md`) |
 | **Basis** | D-012 · D-016 · D-011 · D-201 · D-202 · D-R4 · D-R5 · D-403 · D-402 (unchanged) |
 | **Does not amend** | `docs/protocol/EXPERIMENTAL_PROTOCOL_V0.md` constants · design contract rev. **3.1** wording · Oracle four-label **set** |
 | **Verification** | `docs/architecture/TH_400_S0_TECHNICAL_VERIFICATION.md` |
 
-> Labels: **Accepted Owner direction** · **Specified (S0)** · **Proposed (needs Owner ratification)** · **Open question (Owner)** · **Source fact**
+> Labels: **Owner-ratified** · **Accepted Owner direction** · **Specified (S0)** · **Open (needs D-AUTH)** · **Source fact**
 
 ---
 
@@ -74,9 +74,9 @@ For a given `faultProfileId`, A and C receive the **same** `effectiveConfig` (he
 | **F0** | Happy path | Baseline, no injection | — | — | _(none)_ | `NONE` |
 | **F1** / **F1-P** | Fail after reserve / before successful pay | **D-R5:** charge fails after **HELD** | `POST …/payments/charge` | payment | `CHARGE_FAIL` | header |
 | **F1-I** | Inventory fail | **Out of MVP** unless separately approved | — | — | — | — |
-| **F2** | Ship fail after pay | Arrange business-reject after **CAPTURED**, **no** shipment row | `POST …/shipments/arrange` | shipping | `ARRANGE_REJECTED` (**Proposed** code name) | header |
+| **F2** | Ship fail after pay | Arrange business-reject after **CAPTURED**, **no** shipment row | `POST …/shipments/arrange` | shipping | `ARRANGE_REJECTED` (**Owner-ratified** OQ-F2-1) | header |
 | **F3-Recovered** | Ambiguous payment then recover | D-016 charge ambiguity; resolve/GET expose CAPTURED; A continues | charge (+ normal resolve) | payment | `F3_CAPTURE_LOST_RESPONSE` | header |
-| **F3-Unresolved** | Ambiguous payment left unresolved | D-016 charge + **bounded resolve/GET transport opacity**; DB stays CAPTURED | charge + resolve/GET HTTP | payment | `F3_CAPTURE_LOST_RESPONSE` + `RESOLVE_TRANSPORT_OPAQUE` (**Proposed**) | header |
+| **F3-Unresolved** | Ambiguous payment left unresolved | D-016 charge + **header-presence HTTP 503** opacity on resolve/GET; DB stays CAPTURED | charge + resolve/GET HTTP | payment | `F3_CAPTURE_LOST_RESPONSE` + `RESOLVE_TRANSPORT_OPAQUE` (**Owner-ratified** OQ-F3U-2) | header |
 
 Protocol-v0 table text is **not** rewritten; D-R5 / OD-F3 **specialize** MVP harness mapping (vault/protocol pointer style).
 
@@ -89,8 +89,8 @@ Protocol-v0 table text is **not** rewritten; D-R5 / OD-F3 **specialize** MVP har
 | `CHARGE_CAPTURE` | payment | default | CAPTURED | CAPTURED | Existing |
 | `F3_CAPTURE_LOST_RESPONSE` | payment | F3-* | **CAPTURED** | charge body **UNKNOWN** (+ `paymentId`) | **D-016** |
 | `RESOLVE_CAPTURE` / `RESOLVE_FAIL` / `RESOLVE_INCONCLUSIVE` | payment | probes | per D-016/D-015 | resolve body | Existing |
-| `RESOLVE_TRANSPORT_OPAQUE` | payment | F3-Unresolved | **no DB write** | resolve and GET return **HTTP 503** while header present for the trial | **Owner-accepted mechanism (OQ-F3U-2)**; code name still new enum member at impl |
-| `ARRANGE_REJECTED` | shipping | F2 | **no shipment row** | **HTTP 409** `ApiError.code=ARRANGE_REJECTED` | **Owner-selected (OQ-F2-1)** — add to `ErrorCode` at impl |
+| `RESOLVE_TRANSPORT_OPAQUE` | payment | F3-Unresolved | **no DB write** | resolve and GET return **HTTP 503** while header present for the trial (all Temporal retries) | **Owner-ratified (OQ-F3U-2)**; enum member added at impl |
+| `ARRANGE_REJECTED` | shipping | F2 | **no shipment row** | **HTTP 409** `ApiError.code=ARRANGE_REJECTED` | **Owner-ratified (OQ-F2-1)** — add to `ErrorCode` at impl |
 
 Inventory: **no** MVP fault codes under D-R5.
 
@@ -124,13 +124,13 @@ Inventory: **no** MVP fault codes under D-R5.
 
 | Item | Specification | Label |
 | --- | --- | --- |
-| **ErrorCode** | **`ARRANGE_REJECTED`** (new member of shared `ErrorCode` at implementation) | **Owner decision** |
+| **ErrorCode** | **`ARRANGE_REJECTED`** (new member of shared `ErrorCode` at implementation) | **Owner-ratified (OQ-F2-1)** |
 | **Why not reuse** | Existing codes do not denote fault-injected arrange reject (`VALIDATION_ERROR`, `INVALID_STATE_TRANSITION`, `NOT_FOUND`) | **Source fact** |
-| **HTTP status** | **409 CONFLICT** | **Owner decision** |
-| **Retryability** | Non-retryable **BUSINESS** (`HttpOrderFulfillmentActivities`: 4xx → `BUSINESS`) | **Specified** |
+| **HTTP status** | **409 CONFLICT** | **Owner-ratified (OQ-F2-1)** |
+| **Retryability** | Non-retryable **BUSINESS** (`HttpOrderFulfillmentActivities`: 4xx → `BUSINESS`) | **Owner-ratified** |
 | **Forbidden** | HTTP **503** / other 5xx for F2 | **Specified** |
 
-### 4.3 Idempotency (**Owner OQ-F2-1** + atomicity)
+### 4.3 Idempotency (**Owner-ratified OQ-F2-1** + atomicity)
 
 | Rule | Spec |
 | --- | --- |
@@ -201,11 +201,12 @@ For both F3 profiles, charge uses **`F3_CAPTURE_LOST_RESPONSE`** when payment fa
 | --- | --- |
 | Charge | `F3_CAPTURE_LOST_RESPONSE` |
 | Opacity code | `RESOLVE_TRANSPORT_OPAQUE` on `POST …/resolve` and `GET …/payments/{id}` |
-| HTTP | **503** (**Owner OQ-F3U-2**) — retryable at Temporal; **not** a business FAILED body |
-| DB | Unchanged (CAPTURED) |
+| HTTP | **503** (**Owner-ratified OQ-F3U-2**) — retryable at Temporal; **not** a business FAILED body |
+| DB | Unchanged (CAPTURED) — opacity must **not** modify payment DB state or redefine D-016 |
+| Opacity duration | Header-presence for the **armed trial**, covering **all** Temporal Activity retries (no nested-retry burn-through into F3-Recovered) |
 | After disarm / no header | Normal D-016 exposure |
 
-#### 5.3.1 Retry budget — normative decision (**Specified**)
+#### 5.3.1 Retry budget — normative decision (**Specified** / Owner-ratified OQ-F3U-2)
 
 **Source facts (Variant A today):**
 
@@ -218,10 +219,10 @@ For both F3 profiles, charge uses **`F3_CAPTURE_LOST_RESPONSE`** when payment fa
 
 Therefore a naive opacity budget of `N = resolveAttemptLimit` HTTP calls is **insufficient**: one logical iteration can issue up to **5** HTTP resolve attempts. If opacity “runs out” mid-retries, a later attempt would expose CAPTURED and **silently become F3-Recovered**.
 
-**Normative implementation decision (do not guess a silent multiplier):**
+**Normative implementation decision (**Owner-ratified OQ-F3U-2** — header-presence; do not use a silent nested multiplier):**
 
-1. **Preferred:** Opacity is **header-presence scoped to the trial**, not a small global counter. While the trial’s activities send `X-Thesis-Fault: RESOLVE_TRANSPORT_OPAQUE`, every resolve/GET returns 503. Temporal retries re-send the same header → remain opaque for the **entire trial** without burn-through. Disarm / end of trial ⇒ adapter stops sending the header (no new production API).  
-2. **If a server-side counter is used instead:** it MUST be keyed by `paymentId` (and/or `orderId`) and sized to cover **at least** `resolveAttemptLimit × forwardActivityMaxAttempts` resolve attempts **plus** any `getPayment` attempts that can observe payment state for that trial; record the formula in `effectiveConfig`.  
+1. **Required:** Opacity is **header-presence scoped to the trial**, not a small global counter. While the trial’s activities send `X-Thesis-Fault: RESOLVE_TRANSPORT_OPAQUE`, every resolve/GET returns **503**. Temporal retries re-send the same header → remain opaque for the **entire armed trial** without burn-through into F3-Recovered. Disarm / end of trial ⇒ adapter stops sending the header (no new production API).  
+2. **Forbidden alternative unless separately Owner-approved:** a under-sized server counter that can exhaust mid Temporal retries.  
 3. **Harness rule:** any payment-state HTTP read used in the unresolved path for this profile (**resolve and getPayment**) MUST carry the opacity header (impl may extend activity signatures). An un-hinted `getPayment` after failed resolves is **forbidden** for this cell (would flip to Recovered).
 
 #### 5.3.2 Variant A expected terminal behavior
@@ -229,20 +230,27 @@ Therefore a naive opacity budget of `N = resolveAttemptLimit` HTTP calls is **in
 Orchestrator never observes CAPTURED over HTTP during the armed window → in-memory payment remains **UNKNOWN** → **no refund** → **no arrange**.  
 DB: **CAPTURED + HELD**, no shipment.
 
-#### 5.3.3 Oracle label (**Owner OQ-F3U-1**)
+#### 5.3.3 Oracle label (**Owner-ratified OQ-F3U-1**)
 
-For **this harness cell only**, Independent Oracle classifies the terminal DB state as **`AMBIGUOUS`**.
+For **this harness cell only**, Independent Oracle classifies the terminal DB business snapshot as warranting label **`AMBIGUOUS`**.
 
 **Rationale (cell-specific, not a new global rule):**
 
-- The experiment **injected** caller-visible payment ambiguity (D-016 charge) and **deliberately** blocked HTTP confirmation for the trial.  
-- The orchestrator did **not** confirm capture over its resolve/GET path and did **not** refund.  
-- Protocol OQ-2 / RQ2 treat unresolved payment observation as **AMBIGUOUS**, not success and not clean confirmed failure.  
-- JDBC still shows truthful CAPTURED (Oracle remains DB-primary and independent of the injected 503 responses).
+- The trial is armed as profile **F3-Unresolved** (harness metadata).  
+- DB shows truthful **CAPTURED + HELD** and no shipment (no fake states).  
+- Protocol OQ-2 / RQ2 treat unresolved payment situations as **AMBIGUOUS**, not success and not clean confirmed failure.  
+- This cell **deliberately** blocked HTTP confirmation for the trial; that does **not** rewrite D-016 success-path GET/resolve.
 
-**Non-generalization (**Specified**):** This does **not** amend I6 or invent a standing rule that every dangling `CAPTURED+HELD` in production bugs is AMBIGUOUS. Unrelated INVALID/CONFIRMED_FAILURE semantics elsewhere stay unchanged. The four Oracle labels are **not** extended.
+**Independent Oracle identification (**Owner-ratified / Specified**):**
 
-**D-016:** Intact — successful resolve/GET still expose CAPTURED when opacity is absent.
+| Requirement | Rule |
+| --- | --- |
+| How Oracle knows the cell | From **independent trial/profile metadata** recorded by the harness ResultStore (`faultProfileId` / experiment matrix), **not** from orchestrator workflow outcome text, HTTP observations, or any payload supplied by Variant A/C as “the answer” |
+| What Oracle reads for state | **DB-primary** business tables (and optional API cross-check of stored state) — unchanged TH-401-A posture |
+| Forbidden dependencies | Must **NOT** depend on Temporal workflow result enums, activity logs of 503 bodies, or orchestrator-claimed “I saw UNKNOWN” as the classification input |
+| Non-generalization | Does **not** amend I6 into “every dangling CAPTURED+HELD ⇒ AMBIGUOUS”. Unrelated INVALID/CONFIRMED_FAILURE semantics elsewhere unchanged. Four Oracle labels **not** extended |
+
+**D-016:** Intact — successful resolve/GET still expose CAPTURED when opacity is absent; opacity does not mutate payment DB state.
 
 ---
 
@@ -292,12 +300,12 @@ Timeout alone never means FAILED. Refund only from confirmed CAPTURED.
 
 | ID | Topic | Status | Resolution |
 | --- | --- | --- | --- |
-| **OQ-F2-1** | F2 ErrorCode name | **Owner decided** | `ARRANGE_REJECTED`; HTTP 409; BUSINESS; idempotent failure replay + fingerprint conflict rules |
-| **OQ-F3U-1** | F3-Unresolved Oracle label | **Owner decided** | **AMBIGUOUS** for this harness cell only; not a new global dangling-CAPTURED rule |
-| **OQ-F3U-2** | Opacity transport | **Owner decided** | HTTP **503** (with §5.3.1 budget/isolation rules) |
-| **OD-F2 / OD-F3 / OD-FC** | S0 directions | **Owner accepted** | See D-404 |
-| **OQ-AUTH** | Implementation authorization | **Open** | Needs separate D-AUTH + `NEXT_TASK=approved` before S1–S4 code |
-| **Impl detail** | Exact persistence shape for F2 failure idempotency rows | **Documented as normative behavior**; coding deferred | §4.4 |
+| **OQ-F2-1** | F2 ErrorCode / HTTP / idempotency | **Owner-ratified (2026-11-02)** | `ARRANGE_REJECTED`; HTTP 409; BUSINESS; idempotent failure replay + fingerprint conflict rules |
+| **OQ-F3U-1** | F3-Unresolved Oracle label | **Owner-ratified (2026-11-02)** | **AMBIGUOUS** for this cell only; identified via harness trial/profile metadata; Oracle independent of orchestrator/HTTP |
+| **OQ-F3U-2** | Opacity transport | **Owner-ratified (2026-11-02)** | HTTP **503** + header-presence across all Temporal retries |
+| **OD-F2 / OD-F3 / OD-FC** | S0 directions | **Owner-ratified** | See D-404 |
+| **OQ-AUTH** | Implementation authorization | **Open** | Separate D-AUTH + `NEXT_TASK=approved` required before S1–S4 code |
+| **Impl detail** | F2 failure idempotency row shape | **Normative behavior documented**; coding deferred | §4.4 |
 
 ---
 
@@ -312,19 +320,19 @@ Timeout alone never means FAILED. Refund only from confirmed CAPTURED.
 
 ---
 
-## 11. S0 readiness for final Owner ratification
+## 11. S0 closure status
 
 | Criterion | Met? |
 | --- | --- |
-| F2 semantics precise vs retry/idempotency/atomicity | **Yes** (OQ-F2-1 closed) |
+| F2 semantics precise vs retry/idempotency/atomicity | **Yes** (OQ-F2-1 **Owner-ratified**) |
 | F3-Recovered fully specified | **Yes** |
-| F3-Unresolved consistent with D-016 + Oracle AMBIGUOUS | **Yes** (OQ-F3U-1/2 closed; §5.3.1 normative) |
+| F3-Unresolved consistent with D-016 + cell AMBIGUOUS + Oracle independence | **Yes** (OQ-F3U-1/2 **Owner-ratified**) |
 | A/C identical profiles | **Yes** |
 | Protocol constants / Oracle label set / rev. 3.1 unchanged | **Yes** |
-| No implementation code modified | **Yes** |
-| Implementation authorized | **No** (OQ-AUTH open) |
+| No implementation code modified in S0 | **Yes** |
+| Implementation authorized | **No** (OQ-AUTH / D-AUTH open) |
 
-**Verdict:** S0 documentation is **ready for final Owner ratification** of D-404 + this spec revision. It is **not** an authorization to implement.
+**Verdict:** S0 is **Owner-ratified and documentation-complete**. It is **not** an authorization to implement. S1 requires a **separate explicit D-AUTH**.
 
 ---
 
