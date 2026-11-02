@@ -1,42 +1,32 @@
 # NEXT_TASK
 
-**Status:** `approved`  
+**Status:** `awaiting_owner`  
 **Last updated:** 2026-11-02  
-**Approved by:** Project Owner (**D-AUTH-1.1** — phase-1.1 remediation only)
+**Awaiting:** Project Owner — review phase-1.1 branch; separate approval for push/PR; G5 before pilot
 
-## Active task
+## Completed (this authorization)
 
-**TH-402 phase-1.1** — findings remediation (A/B/C/E/F + merge-gate tests)
+**TH-402 phase-1.1** remediation under **D-AUTH-1.1** implemented on  
+`feature/th-402-phase1-1-remediation` (HEAD `0e58127`, base `740f831`).
 
-| Field | Value |
-| --- | --- |
-| Ticket | TH-402 · Taiga **#37** (phase-1.1 ≠ full Done) |
-| Decisions | D-402 · D-403 · D-AUTH · **OWN-P1–P4** · **D-AUTH-1.1 APPROVED** |
-| Plan | `coordination/TH_402_PHASE1_1_REMEDIATION_PLAN.md` |
-| Branch | `feature/th-402-phase1-1-remediation` (from phase-1 HEAD `740f831`) |
+Merge-gate tests G1–G4, G6–G8 executed green. **G5 deferred** (pre-pilot).
 
-### In scope
+## Next Owner decisions
 
-- A connection-metadata gate + G1/G2  
-- C terminate race + G4  
-- B OWN-P1 persist + G8  
-- F idempotent CSV  
-- G3 lock IT  
-- E OWN-P3 experiment abort  
-- Merge gates G1–G4, G6–G8  
+1. Review / approve push or PR (not authorized by D-AUTH-1.1).  
+2. Before any pilot: require **G5** live Temporal IT (OWN-P4).  
+3. Later S1: authorize **TH-400** separately.  
+4. Do **not** mark Taiga #37 Done solely for phase-1.1.
 
-### Out of scope
+## Preserved
 
-G5 live Temporal (pre-pilot) · TH-400 · phase-2 · Variant C · design rewrite · #37 Done · push/PR/merge  
-
-### Preserve
-
-Phase-1 commits `c862331` · `f2b0744` · `740f831` unchanged.
+Phase-1 commits `c862331` · `f2b0744` · `740f831` unchanged. Design contract rev. 3.1 wording unchanged.
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-02 | D-AUTH APPROVED — phase-1 | Owner |
-| 2026-11-02 | OWN-P1–P4 APPROVED; NEXT_TASK awaiting_owner phase-1.1 | Owner |
-| 2026-11-02 | **D-AUTH-1.1 APPROVED — phase-1.1 remediation** | Project Owner |
+| 2026-11-02 | D-AUTH phase-1 approved | Owner |
+| 2026-11-02 | OWN-P1–P4 approved; awaiting D-AUTH-1.1 | Owner |
+| 2026-11-02 | **D-AUTH-1.1 APPROVED** — remediation coding | Owner |
+| 2026-11-02 | Phase-1.1 implemented; NEXT_TASK → awaiting_owner (review/push/G5/TH-400) | Cursor |
