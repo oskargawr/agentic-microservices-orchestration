@@ -1,26 +1,40 @@
-# Experiment Runner (TH-402 phase-1)
+# Experiment Runner (TH-402 / TH-400 S1)
 
-Bounded **F0 × Variant A** harness skeleton.
+Bounded harness library + CLI (`RunnerMain`). **Not** a Spring Boot HTTP service.
 
 ## Module
 
-`:experiment:runner` — reusable library + CLI (`RunnerMain`). **Not** a Spring Boot HTTP service.
+`:experiment:runner`
 
-## Phase-1 scope
+## Supported fault profiles
 
-- Trial lifecycle: `COMPLETED` | `EXCLUDED` | `ABORTED_EXPERIMENT`
-- Serial execution + exclusive env file lock
-- Fail-closed JDBC allowlist before destructive reset
-- File-first JSON + CSV results (`experiment/results/{phase}/{experimentId}/`)
-- Variant A Temporal adapter (terminate on `T_run_max`, not cancel)
-- R14: quiesce → full `T_observe` → Independent Oracle once
-- F0 FaultController (no-op)
+| Profile | Default | CLI | Injection |
+| --- | --- | --- | --- |
+| **F0** | yes | `--fault-profile=F0` (or omit) | none |
+| **F1-P** | no | `--fault-profile=F1-P` (explicit) | `X-Thesis-Fault: CHARGE_FAIL` via workflow input |
 
-## Not in phase-1
+Canonical F1 id is **`F1-P` only** (do not pass `F1`).
 
-TH-400 / F1–F3 injectors, Variant C, Postgres results DB, confirmatory runs.
+## F1-P environment (fail-closed)
 
-## CLI (example)
+Before an F1-P trial starts, `FaultController.verify` must confirm that the **live** Payment process honors fault injection:
+
+- Required: Payment started with `thesis.payment.fault-injection-enabled=true`
+- Runner preflight: POST existing `/api/v1/payments/charge` with `X-Thesis-Fault: CHARGE_FAIL` and require observed state **`FAILED`**
+- HTTP 2xx alone is **not** sufficient (when injection is off, Payment returns **CAPTURED**)
+- CLI requires `--payment-base-url=http://127.0.0.1:8082` (or `THESIS_PAYMENT_BASE_URL`) for F1-P
+- If confirmation fails → trial `EXCLUDED` / `FAULT_VERIFY_FAILED` (no workflow start)
+
+F0 does **not** call the payment preflight.
+
+## Oracle note (F1-P)
+
+Acceptance for a successful F1-P cell is Oracle classification **`CONFIRMED_FAILURE`**.  
+`OraclePattern.F1` is **not** required: `FAILED + RELEASED` may classify as pattern **`F2`** under the existing `OutcomeClassifier` order. Do not change the classifier for S1.
+
+## CLI (examples)
+
+F0 (default):
 
 ```bash
 ./gradlew :experiment:runner:run --args='\
@@ -29,10 +43,23 @@ TH-400 / F1–F3 injectors, Variant C, Postgres results DB, confirmatory runs.
   --results-dir=experiment/results'
 ```
 
-Requires Temporal + Variant A worker + business services running against the allowlisted DB.
+F1-P:
+
+```bash
+./gradlew :experiment:runner:run --args='\
+  --jdbc-url=jdbc:postgresql://localhost:5433/business \
+  --allowlist=jdbc:postgresql://localhost:5433/business \
+  --fault-profile=F1-P \
+  --payment-base-url=http://127.0.0.1:8082 \
+  --results-dir=experiment/results'
+```
+
+Requires Temporal + Variant A worker + business services against the allowlisted DB. For F1-P, Payment must have injection enabled.
 
 ## Tests
 
 ```bash
-./gradlew :experiment:runner:test
+./gradlew :experiment:runner:test \
+  :services:payment:test --tests '*PaymentIntegrationTest.confirmedFailure' \
+  :orchestration:variant-a:test --tests '*OrderFulfillmentCompensationIT.t201_1*'
 ```

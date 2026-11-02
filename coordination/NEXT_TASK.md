@@ -2,25 +2,40 @@
 
 **Status:** `awaiting_owner`  
 **Last updated:** 2026-11-02  
-**Awaiting:** Independent read-only re-audit of D-AUTH-1.1 follow-up persist fix; then Owner review
+**Awaiting:** Owner review of **S1 (F1-P)** local implementation; optional separate auth for push/PR
 
-## Completed under D-AUTH-1.1 (+ limited follow-up)
+## Important
 
-- Phase-1.1 remediation A/B/C/E/F + merge-gate tests  
-- **Follow-up:** JSON SoT vs CSV derived — durable COMPLETED cannot be downgraded by CSV failure  
-- Strengthened G1 / G8 / malformed JSON CSV rebuild  
+- **D-AUTH-S1 was GRANTED** and S1 was implemented on `feature/th-400-s1-f1p`.  
+- **Push / PR / merge remain unauthorized.**  
+- **Do not start S2–S4** until Owner issues a new D-AUTH.  
+- This file is **not** `approved` for further implementation slices.
 
-**Branch:** `feature/th-402-phase1-1-remediation` @ `3ea8d8e`  
-**Do not claim merge-ready** until re-audit PASS.
+## Completed (S1 local)
 
-## Out of scope / deferred
+- F1-P FaultController + Composite routing  
+- Fail-closed Payment injection preflight (existing charge API; CHARGE_FAIL → FAILED)  
+- VariantAAdapter `chargeFaultHint` wiring  
+- CLI `--fault-profile=F1-P` + `--payment-base-url`  
+- Runner README + unit/lifecycle tests  
+- Mandatory regression commands (see handoff)
 
-G5 live Temporal (pre-pilot) · push/PR/merge · Taiga #37 Done · TH-400 · design rewrite · OWN-P* changes
+## Candidate next (not approved)
+
+| Candidate | Notes |
+| --- | --- |
+| Push/PR S1 branch | Only with separate Owner publication auth |
+| **S2 — F2 shipping** | Needs separate D-AUTH; `ARRANGE_REJECTED` etc. |
+| Docs push/PR for S0 | Separate from S1 |
+
+## Out of scope until separate auth
+
+S2 F2 · S3 F3 · S4 unify · Variant C · phase-2 · Taiga Done marks
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-02 | D-AUTH-1.1 approved; remediation implemented | Owner / Cursor |
-| 2026-11-02 | Independent audit → NEEDS FIXES (JSON/CSV) | Auditor |
-| 2026-11-02 | Follow-up fix committed (`3ea8d8e`); awaiting re-audit | Cursor |
+| 2026-11-02 | PR #11 merged | Owner / Cursor |
+| 2026-11-02 | S0 Owner-ratified (D-404) | Owner / Cursor |
+| 2026-11-02 | D-AUTH-S1 granted; S1 implemented locally; awaiting_owner for publication / S2 | Owner / Cursor |

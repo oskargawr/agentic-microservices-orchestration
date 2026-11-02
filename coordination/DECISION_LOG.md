@@ -8,6 +8,56 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-404 — TH-400 S0 fault-profile specification (Owner-ratified)
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-02 |
+| **Status** | **approved / Owner-ratified** (documentation complete) · coding **not** authorized |
+| **Decision-maker** | Project Owner |
+| **Context** | TH-400 · Taiga #35 · S0 fault-profile lock (docs only) |
+| **Evidence** | Owner S0 lock · Owner OQ follow-up · **Owner formal ratification** (2026-11-02) — TH-400 S0 Final Ratification & Documentation Sync |
+| **Normative spec** | `docs/architecture/TH_400_FAULT_PROFILE_SPEC.md` |
+| **Verification** | `docs/architecture/TH_400_S0_TECHNICAL_VERIFICATION.md` |
+| **Related** | D-012 · D-016 · D-011 · D-R4 · D-R5 · D-403 · D-402 · D-202 · TH-400 |
+| **Does NOT authorize** | Java/service/test implementation · S1–S4 · Variant C · protocol-v0 / rev. 3.1 rewrites · Taiga #35 Done |
+
+### History (preserved)
+
+1. **Directions accepted:** OD-F2 / OD-F3 / OD-FC (S0 lock).  
+2. **OQ follow-up proposed then decided:** OQ-F2-1 / OQ-F3U-1 / OQ-F3U-2.  
+3. **Formal ratification (this entry):** Owner confirms the OQ outcomes as binding design decisions for TH-400.
+
+### Ratified Owner directions
+
+| ID | Direction |
+| --- | --- |
+| **OD-F2** | F2 = deterministic **business** failure on Shipping `arrange` **before** shipment creation (no shipment row); A compensates refund(CAPTURED)+release(HELD). |
+| **OD-F3** | F3 = two profiles: **F3-Recovered** and **F3-Unresolved**. |
+| **OD-FC** | Unified Runner **FaultController** + service-header injection; identical profiles for A and future C. |
+
+### Ratified OQ decisions (2026-11-02)
+
+| ID | Ratified outcome |
+| --- | --- |
+| **OQ-F2-1** | ErrorCode **`ARRANGE_REJECTED`**; HTTP **409**; non-retryable BUSINESS; atomic idempotent failure replay for same key+fingerprint (incl. after disarm); same key+different fingerprint → **`IDEMPOTENCY_KEY_CONFLICT`**; no shipment row. |
+| **OQ-F3U-1** | F3-Unresolved cell Oracle expectation = **`AMBIGUOUS`**. Cell-specific only. Oracle identifies the cell via **independent harness trial/profile metadata** + DB-primary state — **not** workflow outcome, HTTP observations, or orchestrator-supplied classification. Do **not** generalize to all dangling CAPTURED; do **not** change the four-label set. |
+| **OQ-F3U-2** | Transport opacity = HTTP **503** with **header-presence** for the armed trial across **all** Temporal Activity retries (no nested-retry burn-through to F3-Recovered). Must not mutate payment DB state or redefine D-016. |
+
+### Preserved constraints
+
+D-R4 · D-R5 · D-016 · D-012 OQ-2 · Oracle four-label **set** unchanged · design rev. 3.1 unchanged.
+
+### Documented technical bindings (S0; impl still needs D-AUTH)
+
+F2 single-TX atomicity (no row + failure idempotency + op-log) · F3-Unresolved header-presence opacity · trial isolation via per-trial headers + serial lock · getPayment must not bypass opacity on this cell · Oracle independence for F3-Unresolved metadata.
+
+### Explicit non-authorization
+
+**D-404 does not authorize TH-400 implementation.** Separate Owner **D-AUTH** + `NEXT_TASK=approved` required before S1–S4 code.
+
+---
+
 ## D-402 — Experiment Runner design contract (rev. 3.1)
 
 | Field | Value |

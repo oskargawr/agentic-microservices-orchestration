@@ -14,7 +14,11 @@ import java.util.UUID;
 import pl.edu.pw.thesis.experiment.oracle.IndependentOracle;
 import pl.edu.pw.thesis.experiment.runner.config.JdbcAllowlist;
 import pl.edu.pw.thesis.experiment.runner.config.RunnerEnvironment;
+import pl.edu.pw.thesis.experiment.runner.fault.CompositeFaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.F0FaultController;
+import pl.edu.pw.thesis.experiment.runner.fault.F1PFaultController;
+import pl.edu.pw.thesis.experiment.runner.fault.FaultController;
+import pl.edu.pw.thesis.experiment.runner.fault.HttpPaymentFaultInjectionVerifier;
 import pl.edu.pw.thesis.experiment.runner.lifecycle.ExperimentAbort;
 import pl.edu.pw.thesis.experiment.runner.lifecycle.TrialRunner;
 import pl.edu.pw.thesis.experiment.runner.lock.ExperimentEnvLock;
@@ -32,7 +36,7 @@ import pl.edu.pw.thesis.orchestration.varianta.runtime.TemporalClients;
 import pl.edu.pw.thesis.orchestration.varianta.runtime.TemporalSettings;
 
 /**
- * CLI entry for TH-402 phase-1 (library + CLI, D-R3). Not a Spring Boot HTTP service.
+ * CLI entry for TH-402 / TH-400 S1 (library + CLI, D-R3). Not a Spring Boot HTTP service.
  *
  * <pre>
  * Required:
@@ -43,6 +47,9 @@ import pl.edu.pw.thesis.orchestration.varianta.runtime.TemporalSettings;
  *   --results-dir=experiment/results
  *   --env-id=local-lab
  *   --experiment-id=exp-...
+ *   --fault-profile=F0          (default)
+ *   --fault-profile=F1-P        (explicit; requires payment base URL)
+ *   --payment-base-url=http://127.0.0.1:8082   (required for F1-P)
  *   --quiesce-wait-ms=5000
  *   --t-observe-ms=30000 --t-run-max-ms=120000
  * </pre>
@@ -79,12 +86,14 @@ public final class RunnerMain {
         // Fail closed before lock / connections that would mutate
         env.assertSafeForDestructiveOps();
 
+        FaultController faultController = buildFaultController(a, clock);
+
         ExperimentDefinition experiment = new ExperimentDefinition(
                 a.experimentId,
                 "protocol-v0",
                 a.phase,
                 List.of("A"),
-                List.of(F0FaultController.PROFILE_F0),
+                List.of(a.faultProfileId),
                 1,
                 BusinessInputs.protocolPilotDefaults(),
                 timing,
@@ -111,7 +120,7 @@ public final class RunnerMain {
                         experiment,
                         env,
                         new StateReset(env, ds),
-                        new F0FaultController(clock),
+                        faultController,
                         adapter,
                         new IndependentOracle(ds),
                         store,
@@ -122,7 +131,7 @@ public final class RunnerMain {
                 TrialSpec spec = TrialSpec.forVariantA(
                         experiment.experimentId(),
                         trialId,
-                        F0FaultController.PROFILE_F0,
+                        a.faultProfileId,
                         0,
                         orderId,
                         experiment.businessDefaults());
@@ -156,6 +165,24 @@ public final class RunnerMain {
         }
     }
 
+    static FaultController buildFaultController(Args a, RunnerClock clock) {
+        if (F0FaultController.PROFILE_F0.equals(a.faultProfileId)) {
+            return CompositeFaultController.f0Only(clock);
+        }
+        if (F1PFaultController.PROFILE_F1_P.equals(a.faultProfileId)) {
+            if (a.paymentBaseUrl == null || a.paymentBaseUrl.isBlank()) {
+                throw new IllegalArgumentException(
+                        "F1-P requires --payment-base-url=... (or THESIS_PAYMENT_BASE_URL) "
+                                + "for fail-closed injection preflight");
+            }
+            return CompositeFaultController.f0AndF1P(
+                    clock, HttpPaymentFaultInjectionVerifier.forBaseUrl(a.paymentBaseUrl.trim()));
+        }
+        throw new IllegalArgumentException(
+                "unsupported --fault-profile=" + a.faultProfileId
+                        + " (supported: F0, F1-P; F1 is not a canonical id)");
+    }
+
     static final class Args {
         String jdbcUrl;
         String jdbcUser = env("THESIS_JDBC_USER", "thesis");
@@ -168,6 +195,8 @@ public final class RunnerMain {
         String temporalTarget = env("TEMPORAL_TARGET", TemporalSettings.DEFAULT_TARGET);
         String temporalNamespace = env("TEMPORAL_NAMESPACE", TemporalSettings.DEFAULT_NAMESPACE);
         String gitSha = env("GIT_SHA", "unknown");
+        String faultProfileId = F0FaultController.PROFILE_F0;
+        String paymentBaseUrl = env("THESIS_PAYMENT_BASE_URL", null);
         long quiesceWaitMs = 5000;
         long tObserveMs = 30_000;
         long tRunMaxMs = 120_000;
@@ -201,6 +230,10 @@ public final class RunnerMain {
                     a.tRunMaxMs = Long.parseLong(arg.substring("--t-run-max-ms=".length()));
                 } else if (arg.startsWith("--git-sha=")) {
                     a.gitSha = arg.substring("--git-sha=".length());
+                } else if (arg.startsWith("--fault-profile=")) {
+                    a.faultProfileId = arg.substring("--fault-profile=".length()).trim();
+                } else if (arg.startsWith("--payment-base-url=")) {
+                    a.paymentBaseUrl = arg.substring("--payment-base-url=".length()).trim();
                 } else if ("--help".equals(arg)) {
                     System.out.println("See RunnerMain javadoc for flags.");
                     System.exit(0);
@@ -223,6 +256,10 @@ public final class RunnerMain {
                         }
                     }
                 }
+            }
+            if ("F1".equals(a.faultProfileId)) {
+                throw new IllegalArgumentException(
+                        "canonical profile id is F1-P (not F1); use --fault-profile=F1-P");
             }
             return a;
         }

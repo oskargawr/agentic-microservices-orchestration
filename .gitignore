@@ -64,5 +64,8 @@ console-ui/dist/
 # Local process PIDs / logs from scripts/dev-up.sh
 .run/
 
+# Local git worktrees (never commit nested checkouts)
+.worktrees/
+
 # Academic full-text PDFs (keep bibliographic notes only; never commit papers)
 *.pdf

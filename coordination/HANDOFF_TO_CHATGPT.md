@@ -2,47 +2,50 @@
 
 **Data:** 2026-11-02  
 **Od:** Cursor Agent  
-**Tryb:** IMPLEMENTATION (limited follow-up to D-AUTH-1.1)  
-**Task:** Fix JSON/CSV persistence semantics after independent audit NEEDS FIXES  
-**Branch:** `feature/th-402-phase1-1-remediation` @ `3ea8d8e`  
-**Prior audited HEAD:** `9dd7cd8`
+**Tryb:** IMPLEMENTATION (TH-400 S1 F1-P)  
+**Task:** Owner-authorized S1 implementation (D-AUTH-S1); local commits only  
+**Branch:** `feature/th-400-s1-f1p`  
+**Worktree:** `cursor_space/worktrees/agentic-orchestration-thesis-th400-s1`  
+**Base:** `34b6a74f298e2bf1c09b356621ce261a025bfea5` (S0 docs branch HEAD)  
+**Primary checkout:** untouched — dirty `AGENTS.md` preserved
 
 ---
 
-## Root cause
+## Authorization boundary
 
-`FileResultStore.saveTrial` treated JSON write + CSV rebuild as one atomic success. If JSON committed and CSV failed, `saveTrial` threw; `TrialRunner.persistCompletedOwnP1` then wrote `EXCLUDED/PERSISTENCE_FAILURE`, overwriting durable `COMPLETED`.
-
-## Fix
-
-1. **Canonical JSON** commit (with retries) alone determines `saveTrial` success.  
-2. **CSV rebuild** is best-effort after JSON success; failure does not fail `saveTrial`.  
-3. **Refuse downgrade** of durable `COMPLETED` to any non-COMPLETED status.  
-4. `TrialRunner` re-reads durable JSON on persist error and returns COMPLETED if already committed.  
-5. Malformed JSON during CSV rebuild fails closed (no skip).
-
-## Tests
-
-```
-./gradlew :experiment:runner:test  → 28 tests, 0 fail, 0 skip
-./gradlew test                     → BUILD SUCCESSFUL
-```
-
-| Test | Coverage |
+| | |
 | --- | --- |
-| `csvFailureAfterJsonCommitDoesNotFailSaveOrDowngrade` | JSON stays COMPLETED; rebuild idempotent |
-| `g8_csvFailureAfterJsonCommitKeepsCompletedWithoutRerun` | Runner path; no workflow/Oracle rerun |
-| `g8_persistFailurePreservesOracleWithoutRerun` | partial content + durable ≠ false COMPLETED |
-| `g1_…` | wrong-DB probe + business tables unchanged |
-| `malformedCanonicalJsonFailsClosedDuringCsvRebuild` | fail-closed |
+| D-AUTH-S1 | **GRANTED** (F1-P only) |
+| Push / PR / merge | **Not authorized** |
+| S2–S4 / Variant C | **Not authorized** |
+| Payment / orchestration prod / Oracle classifier | **Not modified** |
 
-## Confirmations
+## Preflight mechanism (S1-ENV resolved in-scope)
 
-- Durable COMPLETED **cannot** be downgraded by CSV failure.  
-- Phase-1 commits unchanged. Design rev. 3.1 unchanged. OWN-P* unchanged.  
-- G5 still pre-pilot. No push / PR / merge / Taiga change.  
-- Working tree may still show unrelated `AGENTS.md`.  
+Architecture had **no** actuator/`info` exposure of `thesis.payment.fault-injection-enabled`.  
+Reliable confirmation without Payment API changes:
 
-## Next
+1. Runner POST existing `/api/v1/payments/charge` with `X-Thesis-Fault: CHARGE_FAIL`  
+2. Require response `state=FAILED`  
+3. `CAPTURED` ⇒ injection appears disabled → `FAULT_VERIFY_FAILED` (fail-closed)  
+4. HTTP 2xx alone is insufficient  
 
-**Independent read-only re-audit** required before any merge readiness claim. `NEXT_TASK=awaiting_owner` for that review.
+F0 never calls this probe.
+
+## Implementation summary
+
+- `F1PFaultController` + `CompositeFaultController`  
+- `HttpPaymentFaultInjectionVerifier` / transport  
+- `VariantAAdapter.resolveChargeFaultHint`  
+- CLI `--fault-profile=` (default F0) + `--payment-base-url=` for F1-P  
+- Rejects canonical id `F1`  
+
+## Oracle
+
+Acceptance = classification **`CONFIRMED_FAILURE`**. Pattern may be **`F2`** for FAILED+RELEASED; classifier unchanged.
+
+## Next Owner action
+
+1. Review S1 diff / tests / this handoff  
+2. Optionally authorize push/PR of `feature/th-400-s1-f1p`  
+3. Do not authorize S2 in the same breath unless intentional  
