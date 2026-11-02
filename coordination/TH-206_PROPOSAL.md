@@ -5,7 +5,7 @@
 | **ID** | TH-206 |
 | **Title** | Temporal E2E in CI — no silent skip |
 | **Estimate** | 1–2 SP |
-| **Status** | **Approved** / implementation in progress (not Done until merge + post-merge verification) |
+| **Status** | **Done / Closed** (PR #7 merge `c1caa5b`; post-merge verify OK 2026-11-02) |
 | **Depends** | TH-205 (Done) |
 | **Tag** | CORE / CI hardening |
 | **Owner approved** | 2026-11-02 |

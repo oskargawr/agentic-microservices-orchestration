@@ -1,38 +1,27 @@
 # NEXT_TASK
 
-**Status:** `approved`  
+**Status:** `done` (TH-206 closed; awaiting Owner next approval)  
 **Last updated:** 2026-11-02  
-**Approved by:** Project Owner (explicit TH-206 approval)
+**Closed by:** Cursor Agent after Owner merge authorization + post-merge verification
 
-## Task ID and title
+## Closed task
 
-**TH-206** — Temporal E2E in CI — no silent skip
+**TH-206** — Temporal E2E in CI — no silent skip — **Done / Closed**
 
-## Objective
+| Field | Value |
+| --- | --- |
+| Merge | PR #7 → `main` @ `c1caa5badbbf396758e09b2cfdde81b53b52ed1a` |
+| Impl | `7e1a84ce0b58158b6f53d632e0b8e2d4fe240c8d` |
+| Post-merge CI | success — https://github.com/oskargawr/agentic-microservices-orchestration/actions/runs/41415199394 |
 
-Ensure `ConsoleRealTemporalE2EIT` **executes** in CI with fail-hard behavior when Temporal/PostgreSQL are unavailable or the test would be skipped/disabled. Preserve local optional-infra `@EnabledIf` for non-CI development. Do **not** duplicate Compose startup in CI.
+## Next
 
-## Scope (locked)
-
-- Fail hard in CI if Temporal or Postgres missing
-- Fail hard in CI if the required E2E test is skipped/disabled
-- Keep inventory/payment/shipping local optional-Postgres behavior
-- No protocol / invariants / oracle / application behavior changes
-- No `stash@{0}` apply/drop; no console UI/CORS
-
-## Reference
-
-`coordination/TH-206_PROPOSAL.md`
-
-## Out of scope
-
-- Expanding TH-205 console features
-- TH-201 reopen
-- Marking TH-206 Done before merge + post-merge verification
+No approved next task. Candidate: **TH-202** (retries/timeouts) or Owner pick.
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
 | 2026-11-01 | proposed | Cursor |
-| 2026-11-02 | **approved** | Project Owner |
+| 2026-11-02 | approved | Project Owner |
+| 2026-11-02 | **done / closed** | Cursor (post-merge verify) |
