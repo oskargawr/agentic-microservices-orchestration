@@ -2,78 +2,69 @@
 
 **Data:** 2026-11-02  
 **Od:** Cursor Agent  
-**Tryb:** IMPLEMENTATION  
-**Task:** TH-402 phase-1 — F0 × Variant A Runner skeleton  
-**Authorization:** **D-AUTH approved (phase-1 only)** · D-402 · D-403 · S1
+**Tryb:** DOCUMENTATION / COORDINATION ONLY  
+**Task:** Record Owner decisions OWN-P1–P4 + phase-1.1 remediation plan  
+**Authorization:** D-403 APPROVED · D-AUTH phase-1 APPROVED (historical) · OWN-P1–P4 **APPROVED** · **D-AUTH-1.1 NOT APPROVED**
 
 ---
 
-## Branch / base
+## Summary
+
+Owner resolved audit open questions OWN-P1–P4. Decisions recorded in Git coordination + Obsidian. Remediation plan updated with acceptance criteria. **No code, no commits, no push/PR, no Taiga changes.** Phase-1 implementation commits untouched. `NEXT_TASK=awaiting_owner` for phase-1.1.
+
+## OWN-P* (approved)
+
+| ID | Decision |
+| --- | --- |
+| **OWN-P1** | Durable-only `COMPLETED`; immutable OracleSummary; fail → EXCLUDED/PERSISTENCE_FAILURE + `.partial`; no re-run / no discard oracle |
+| **OWN-P2** | Retain D0 — `T_run_max` from trial start (setup included); no code/protocol change |
+| **OWN-P3** | Minimal experiment-level `ABORTED_EXPERIMENT`; never rewrite terminal trials; separate experiment status |
+| **OWN-P4** | G5 live Temporal = pre-pilot gate, not merge gate; merge needs unit + required IT incl. race handling |
+
+## Authorization state
+
+| Item | Status |
+| --- | --- |
+| D-403 | APPROVED |
+| D-AUTH (phase-1) | APPROVED (skeleton only; historical) |
+| OWN-P1–P4 | APPROVED |
+| D-AUTH-1.1 | **NOT APPROVED** |
+| NEXT_TASK | **`awaiting_owner`** — phase-1.1 remediation |
+
+## Phase-1 baseline (unchanged)
 
 | | |
 | --- | --- |
 | Branch | `feature/th-402-phase1-runner-skeleton` |
-| Base HEAD | `31256cdc288aa071fa9f873a454afc2a1d91c46a` |
+| Commits | `c862331` · `f2b0744` · `740f831` — **do not rewrite** |
 | Module | `:experiment:runner` |
 
-## Implemented
+## Paths updated this session (docs only)
 
-- Library + CLI (`RunnerMain`) — no Boot HTTP
-- Lifecycle `COMPLETED`/`EXCLUDED`/`ABORTED_EXPERIMENT`
-- Serial + `ExperimentEnvLock`
-- Fail-closed `JdbcAllowlist` + `StateReset`
-- `FileResultStore` JSON+CSV, atomic write, overwrite refuse, persist retry
-- `VariantAAdapter` — Temporal start/describe/await/**terminate** (R6)
-- `TrialRunner` — R14 quiesce → full `T_observe` → Oracle once; F0 null `faultObservedAt`
-- `F0FaultController` no-op
-- Unit tests: allowlist, ResultStore, F0, lifecycle (happy / terminate / not-quiesced / wrong DB)
+### Git coordination / plan
 
-## Tests
+- `coordination/DECISION_LOG.md` — OWN-P1…P4 section  
+- `coordination/PROJECT_STATE.md`  
+- `coordination/NEXT_TASK.md` → `awaiting_owner`  
+- `coordination/HANDOFF_TO_CHATGPT.md` (this file)  
+- `coordination/TH_402_PHASE1_1_REMEDIATION_PLAN.md` (**new**)
 
-```
-./gradlew :experiment:runner:test  → BUILD SUCCESSFUL (11 tests)
-```
+### Obsidian (meaningful sync)
 
-No full-repo CI run claimed in this handoff unless executed separately.
+- `…/00 - Dashboard/Current Status.md`  
+- `…/00 - Dashboard/Open Questions.md`  
+- `…/06 - Implementation Log/Implementation Plan.md`  
+- `…/09 - Project Management/Decision Log.md`  
+- `…/04 - System Design/Architecture Overview.md` (Runner section)  
+- `…/09 - Project Management/Weekly Research Log.md`
 
-## Acceptance mapping (phase-1)
+### Explicitly NOT modified
 
-| # | Criterion | Status |
-| --- | --- | --- |
-| 1 | F0×A trial path | Implemented (CLI + library; IT against live stack = ops) |
-| 2 | Lifecycle statuses persisted | Yes |
-| 3 | Serial + env lock | Yes |
-| 4 | Allowlist fail-closed + tested | Yes |
-| 5 | Deterministic reset + gated | Yes |
-| 6 | Variant A Temporal | Yes |
-| 7 | Oracle once after observe | Yes (unit); live needs stack |
-| 8 | terminate not cancel | Yes |
-| 9 | No compensation on terminate | Yes (adapter does not call compensate APIs) |
-| 10 | Full 30s observe after quiesce | Yes (injectable clock in tests) |
-| 11 | F0 no-op | Yes |
-| 12 | JSON+CSV; no re-run on persist fail | Yes |
-| 13 | D-R10 skip incomplete / block on quiesce | Block on quiesce yes; matrix skip = CLI single-trial phase-1 |
-| 14 | Tests | Unit suite green |
-| 15 | Docs | README + coordination + this handoff |
+- Any `experiment/runner/**` Java/source  
+- `docs/architecture/EXPERIMENT_RUNNER_DESIGN.md` rev. 3.1  
+- Taiga #37 status / SP / dependencies  
+- Git commits / push / PR  
 
-**Phase-1 ≠ full TH-402 Done.** Taiga #37 = **In Progress**, 3 SP, not Done.
+## Recommended next (Owner)
 
-## Limitations / deferred
-
-- No live Temporal E2E IT in-module yet (console pattern exists; phase-1 unit coverage)
-- F1/F2/F3 / TH-400 not implemented
-- Variant C / TH-303 deferred
-- Postgres results deferred
-- ATOMIC_MOVE may fall back behavior on some FS (standard Java caveat)
-
-## Taiga
-
-#37 → **In Progress**; description notes D-AUTH phase-1; SP=3; full-acceptance deps retained narratively.
-
-## Obsidian
-
-Current Status / Implementation Plan / Decision Log / Weekly log updated for D-AUTH phase-1.
-
-## Next recommended task
-
-Owner review + merge phase-1; then separate auth for **TH-400** (S1 step 2).
+Grant **D-AUTH-1.1** with named slice: phase-1.1 remediation per `TH_402_PHASE1_1_REMEDIATION_PLAN.md` (A/B/C/E/F + merge-gate tests; G5 deferred to pre-pilot).

@@ -117,6 +117,87 @@ Phase-1 completion ≠ full TH-402 Done; do **not** mark Taiga #37 Done solely f
 
 ---
 
+## OWN-P1 … OWN-P4 — TH-402 phase-1.1 Owner clarifications
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-02 |
+| **Status** | **approved** (clarifications only) |
+| **Decision-maker** | Project Owner |
+| **Context** | Resolves open questions from the TH-402 phase-1.1 findings-resolution plan (post phase-1 audit) |
+| **Evidence** | Owner instruction — Record Owner Decisions OWN-P1–P4 (2026-11-02) |
+| **Related** | D-402 · D-403 · D-AUTH · TH-402 · Taiga #37 |
+| **Does NOT include** | Originally excluded D-AUTH-1.1; later granted as **D-AUTH-1.1** (see below) |
+
+### OWN-P1 — Persistence semantics (**approved**)
+
+**Durable-only `COMPLETED`.**
+
+- `OracleSummary` is **immutable** once computed.
+- `harnessStatus=COMPLETED` requires **successful durable JSON** persistence.
+- If persistence retries are exhausted: preserve `OracleSummary`; durable result = `EXCLUDED` / `PERSISTENCE_FAILURE`.
+- Preserve a complete `.partial` artifact containing the Oracle-confirmed candidate result.
+- Never re-run the workflow or Oracle because of persistence failure.
+- Never discard the computed Oracle result.
+
+*Reconciliation note:* Clarifies the D-402 §5.5 / §9.2 tension (“prefer COMPLETED after retry” vs “do not fabricate COMPLETED”) without rewriting historical design-contract wording. Durable COMPLETED only after successful JSON write; otherwise durable EXCLUDED + oracle + `.partial`.
+
+### OWN-P2 — `T_run_max` boundary (**approved**)
+
+**Retain D0.** Deadline starts at **trial start** (`t0`); setup/reset time is included. **No** code or protocol changes required for this item.
+
+### OWN-P3 — `ABORTED_EXPERIMENT` (**approved**)
+
+Implement **minimal experiment-level** semantics in phase-1.1:
+
+- `EXCLUDED` = individual trial.
+- `ABORTED_EXPERIMENT` = experiment as a whole.
+- Operator interruption or shutdown may produce `ABORTED_EXPERIMENT`.
+- Never rewrite an already terminal `COMPLETED` or `EXCLUDED` trial as `ABORTED_EXPERIMENT`.
+- Persist experiment-level status **separately** from trial status.
+- Do **not** introduce new enum values.
+
+### OWN-P4 — Live Temporal integration (**approved**)
+
+- **G5** (real Temporal worker/service IT: start / terminate / natural completion / Oracle) = **pre-pilot gate**, **not** a merge gate.
+- **Before merge:** unit tests + required ITs, including Temporal **race handling** (unit/mocked path).
+- **Before any actual pilot:** real Temporal integration covering start, terminate, natural completion, and Oracle.
+
+### Authorization state after OWN-P*
+
+| Item | Status |
+| --- | --- |
+| D-403 | APPROVED |
+| D-AUTH (phase-1) | APPROVED (historical; skeleton commits untouched) |
+| OWN-P1–P4 | **APPROVED** |
+| **D-AUTH-1.1** | **APPROVED** (see below) |
+
+Plan SoT: `coordination/TH_402_PHASE1_1_REMEDIATION_PLAN.md`.
+
+---
+
+## D-AUTH-1.1 — TH-402 phase-1.1 remediation authorization
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-02 |
+| **Status** | **approved** (exclusive remediation slice) |
+| **Decision-maker** | Project Owner |
+| **Authorized slice** | **TH-402 phase-1.1** — findings remediation A/B/C/E/F + merge-gate tests G1–G4, G6–G8 |
+| **Evidence** | Owner instruction — D-AUTH-1.1 IMPLEMENTATION AUTHORIZATION (2026-11-02) |
+| **Basis** | OWN-P1–P4 · `TH_402_PHASE1_1_REMEDIATION_PLAN.md` · D-402 · D-403 · D-AUTH phase-1 (historical) |
+| **Related** | TH-402 · Taiga #37 |
+
+### Scope (authorized)
+
+A JDBC connection-metadata gate + G1/G2; C Temporal terminate race + G4; B OWN-P1 persistence + G8; F idempotent CSV; G3 env-lock IT; E OWN-P3 experiment-level `ABORTED_EXPERIMENT`. Merge-gate tests G1–G4, G6–G8.
+
+### Explicitly NOT authorized
+
+G5 live Temporal (pre-pilot only) · TH-400 / F1–F3 · Variant C · phase-2 · rewrite design contract rev. 3.1 · change `T_run_max` (OWN-P2) · mark #37 Done · merge/push/PR without separate Owner approval · rewrite phase-1 commits `c862331`/`f2b0744`/`740f831`.
+
+---
+
 ## D-208 — Lost-response-without-returned-ID recovery (B+E)
 
 | Field | Value |
