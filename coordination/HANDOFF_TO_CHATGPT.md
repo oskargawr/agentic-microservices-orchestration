@@ -2,49 +2,36 @@
 
 **Data:** 2026-11-02  
 **Od:** Cursor Agent  
-**Tryb:** RESEARCH / DOCUMENTATION (TH-400 S0)  
-**Task:** Owner-approved specification lock for fault profiles (no code)  
-**Branch:** `docs/th-400-s0-fault-profile-spec` (from `origin/main` @ `90af3a9`)  
-**Worktree:** `.worktrees/th400-s0` (primary checkout left on prior branch with local `AGENTS.md` dirty — **not** included)
+**Tryb:** RESEARCH / DOCUMENTATION (TH-400 S0 Owner OQ follow-up)  
+**Task:** Incorporate OQ-F2-1 / OQ-F3U-1 / OQ-F3U-2; verify retry budget, isolation, F2 atomicity  
+**Branch:** `docs/th-400-s0-fault-profile-spec`  
+**Primary checkout:** left on prior branch; local `AGENTS.md` dirty **excluded**
 
 ---
 
-## Context
+## Owner decisions incorporated
 
-PR #11 merged TH-402 phase-1 + phase-1.1 into `main`. Owner accepted three TH-400 design directions and authorized **S0 documentation only**.
-
-## Delivered
-
-| Artifact | Path |
+| ID | Decision |
 | --- | --- |
-| Normative S0 spec | `docs/architecture/TH_400_FAULT_PROFILE_SPEC.md` |
-| Plan pointer | `coordination/TH_400_S0_PLAN.md` |
-| Decision | **D-404** in `coordination/DECISION_LOG.md` |
-| State / next / handoff | `PROJECT_STATE.md` · `NEXT_TASK.md` · this file |
+| OQ-F2-1 | `ARRANGE_REJECTED` · HTTP 409 · BUSINESS · idempotent failure replay · key+diff-fp → `IDEMPOTENCY_KEY_CONFLICT` |
+| OQ-F3U-1 | F3-Unresolved cell → Oracle **AMBIGUOUS** (cell-specific; no new global rule; four labels unchanged) |
+| OQ-F3U-2 | Opacity = HTTP **503** |
 
-## Accepted directions (D-404)
+## Technical verification (summary)
 
-1. **F2:** business reject on shipping `arrange` before insert; no shipment row; compensate refund+release.  
-2. **F3:** **F3-Recovered** + **F3-Unresolved**.  
-3. **Unified FaultController** + headers; A/C identical profiles.
+1. **`resolveAttemptLimit`** = logical loop only (default 3); each activity up to **5** Temporal attempts; 503 is retryable → naive N=3 HTTP budget is unsafe.  
+2. **Normative:** header-presence opacity for the trial (or explicit keyed counter covering the product); no un-hinted `getPayment` escape.  
+3. **Isolation:** per-trial headers + `trialId`/`orderId` in `effectiveConfig` + serial lock; no new production API.  
+4. **F2:** single TX = no shipment + failure idempotency row + op-log; replay after disarm.
 
-## Key technical bindings (for review)
+## Artifacts
 
-- **F2:** HTTP **409**, non-retryable BUSINESS (not 503); idempotent **failure replay** so post-disarm retries cannot create a shipment; ErrorCode name **Proposed** (`BUSINESS_REJECTED` / `ARRANGE_REJECTED`) → **OQ-F2-1**.  
-- **F3-Recovered:** existing `F3_CAPTURE_LOST_RESPONSE` + normal resolve → SUCCESS / CONFIRMED_SUCCESS.  
-- **F3-Unresolved:** D-016 charge unchanged + **trial-scoped resolve/GET transport opacity** (Proposed `RESOLVE_TRANSPORT_OPAQUE`); DB stays CAPTURED for Oracle JDBC; does **not** fake DB or redefine successful GET/resolve. Oracle label for CAPTURED+HELD terminal → **OQ-F3U-1** (AMBIGUOUS vs INVALID) — **blocks full F3-Unresolved acceptance**.  
-- **F1-P:** D-R5 preserved; arm `CHARGE_FAIL` after HELD.  
-- Protocol constants / Oracle label **set** / rev. **3.1** unchanged. **No Java.**
+- `docs/architecture/TH_400_FAULT_PROFILE_SPEC.md` (revised)  
+- `docs/architecture/TH_400_S0_TECHNICAL_VERIFICATION.md` (new)  
+- D-404 updated · PROJECT_STATE / NEXT_TASK / this handoff  
 
-## Confirmations
+## S0 readiness
 
-- No implementation code or tests modified.  
-- No push/PR/merge in this task.  
-- Taiga #35/#37 not marked Done.  
-- `AGENTS.md` unrelated local edit excluded.
-
-## Next (Owner)
-
-1. Review S0 spec; decide **OQ-F2-1**, **OQ-F3U-1**, optional **OQ-F3U-2**.  
-2. Separate auth for push/PR of docs branch if desired.  
-3. Separate **D-AUTH** before S1 (recommended first impl slice: F1-P).
+**Ready for final Owner ratification.**  
+**Not** ready to implement (OQ-AUTH / D-AUTH still required).  
+No Java/tests changed. No push/PR/merge. Taiga untouched.

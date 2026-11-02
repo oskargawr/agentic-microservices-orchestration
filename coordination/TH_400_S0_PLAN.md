@@ -2,10 +2,11 @@
 
 | Field | Value |
 | --- | --- |
-| **Status** | Documentation complete — **awaiting Owner review** |
+| **Status** | OQ follow-up incorporated — **awaiting final Owner ratification** |
 | **Branch** | `docs/th-400-s0-fault-profile-spec` |
 | **Normative spec** | [`docs/architecture/TH_400_FAULT_PROFILE_SPEC.md`](../docs/architecture/TH_400_FAULT_PROFILE_SPEC.md) |
-| **Decision** | Proposed **D-404** (Owner directions accepted; coding **not** authorized) |
+| **Verification** | [`docs/architecture/TH_400_S0_TECHNICAL_VERIFICATION.md`](../docs/architecture/TH_400_S0_TECHNICAL_VERIFICATION.md) |
+| **Decision** | **D-404** (directions + OQ-F2-1/F3U-1/F3U-2; coding **not** authorized) |
 
 ## Slice reminder (post-S0, needs D-AUTH)
 
@@ -19,5 +20,5 @@
 
 ## Blockers before coding
 
-1. Owner review / ratification of D-404 + OQ-F2-1 / OQ-F3U-1 (and soft OQ-F3U-2).  
-2. Explicit **D-AUTH** + `NEXT_TASK=approved` for an implementation slice.
+1. Final Owner ratification of revised S0 / D-404.  
+2. Explicit **D-AUTH** + `NEXT_TASK=approved` for an implementation slice (OQs F2-1 / F3U-1 / F3U-2 are closed in docs).

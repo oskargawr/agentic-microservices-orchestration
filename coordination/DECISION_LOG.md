@@ -13,13 +13,14 @@ Canonical research narrative also lives in Obsidian
 | Field | Value |
 | --- | --- |
 | **Date** | 2026-11-02 |
-| **Status** | **approved** for Owner directions OD-F2 / OD-F3 / OD-FC only; technical bindings in S0 spec remain under Owner review where marked Proposed / Open |
-| **Decision-maker** | Project Owner (directions) · Cursor documented S0 bindings |
-| **Context** | TH-400 · Taiga #35 · post-merge discovery; S0 specification lock (docs only) |
-| **Evidence** | Owner instruction — TH-400 S0 Owner-Approved Specification Lock (2026-11-02) |
+| **Status** | **approved** for OD-F2 / OD-F3 / OD-FC **and** Owner OQ follow-up decisions below; S0 docs await **final ratification**; coding **not** authorized |
+| **Decision-maker** | Project Owner |
+| **Context** | TH-400 · Taiga #35 · S0 specification lock (docs only) |
+| **Evidence** | Owner S0 lock (2026-11-02) · Owner review follow-up OQ-F2-1 / OQ-F3U-1 / OQ-F3U-2 (2026-11-02) |
 | **Normative spec** | `docs/architecture/TH_400_FAULT_PROFILE_SPEC.md` |
-| **Related** | D-012 · D-016 · D-011 · D-R4 · D-R5 · D-403 · D-402 · TH-400 |
-| **Does NOT authorize** | Java/service/test implementation · S1–S4 coding · Variant C · protocol-v0 / rev. 3.1 rewrites · Taiga #35 Done |
+| **Verification** | `docs/architecture/TH_400_S0_TECHNICAL_VERIFICATION.md` |
+| **Related** | D-012 · D-016 · D-011 · D-R4 · D-R5 · D-403 · D-402 · D-202 · TH-400 |
+| **Does NOT authorize** | Java/service/test implementation · S1–S4 · Variant C · protocol-v0 / rev. 3.1 rewrites · Taiga #35 Done |
 
 ### Accepted Owner directions
 
@@ -29,13 +30,21 @@ Canonical research narrative also lives in Obsidian
 | **OD-F3** | F3 = two profiles: **F3-Recovered** and **F3-Unresolved**. |
 | **OD-FC** | Unified Runner **FaultController** + service-header injection; identical profiles for A and future C. |
 
+### Owner OQ follow-up decisions (2026-11-02)
+
+| ID | Decision |
+| --- | --- |
+| **OQ-F2-1** | ErrorCode **`ARRANGE_REJECTED`**; HTTP **409**; non-retryable BUSINESS; idempotent failure replay for same key+fingerprint (incl. after disarm); same key+different fingerprint → **`IDEMPOTENCY_KEY_CONFLICT`**. |
+| **OQ-F3U-1** | F3-Unresolved harness cell Oracle label = **`AMBIGUOUS`**. Cell-specific rationale only; **do not** generalize to all dangling CAPTURED; do **not** change the four-label set or unrelated invariants. |
+| **OQ-F3U-2** | Transport opacity = HTTP **503**, subject to S0 verification (header-presence / explicit budget covering Temporal nested retries). |
+
 ### Preserved constraints
 
-D-R4 (headers; Toxiproxy deferred) · D-R5 (MVP F1 = **F1-P**; F1-I out) · D-016 (F3 charge: persist CAPTURED, observe UNKNOWN; resolve/GET expose capture when HTTP succeeds) · D-012 OQ-2 (no refund unless CAPTURED confirmed; timeout ≠ failure) · Oracle four labels unchanged.
+D-R4 · D-R5 · D-016 · D-012 OQ-2 · Oracle four-label **set** unchanged · design rev. 3.1 unchanged.
 
-### S0 bindings still under review (not silently approved)
+### Documented technical bindings (S0; impl still needs D-AUTH)
 
-See spec §8: **OQ-F2-1** (ErrorCode enum name), **OQ-F3U-1** (Oracle label for F3-Unresolved CAPTURED+HELD), **OQ-F3U-2** (opaque transport shape). F3-Unresolved is D-016-compatible via **transport opacity only**; full cell acceptance waits on **OQ-F3U-1**.
+F2 single-TX atomicity (no row + failure idempotency + op-log) · F3-Unresolved header-presence opacity covering `resolveAttemptLimit × activityMaxAttempts` risk · trial isolation via per-trial headers + serial lock · getPayment must not bypass opacity on this cell.
 
 ### Explicit non-authorization
 
