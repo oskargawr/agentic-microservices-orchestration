@@ -2,25 +2,24 @@
 
 **Status:** `awaiting_owner`  
 **Last updated:** 2026-11-02  
-**Awaiting:** Independent read-only re-audit of D-AUTH-1.1 follow-up persist fix; then Owner review
+**Awaiting:** Owner review of TH-400 **S0** fault-profile specification (D-404 directions already accepted; open OQs + future D-AUTH)
 
-## Completed under D-AUTH-1.1 (+ limited follow-up)
+## Completed (documentation only)
 
-- Phase-1.1 remediation A/B/C/E/F + merge-gate tests  
-- **Follow-up:** JSON SoT vs CSV derived — durable COMPLETED cannot be downgraded by CSV failure  
-- Strengthened G1 / G8 / malformed JSON CSV rebuild  
+- TH-400 S0 spec: `docs/architecture/TH_400_FAULT_PROFILE_SPEC.md`
+- D-404 directions OD-F2 / OD-F3 / OD-FC recorded
+- Coordination: PROJECT_STATE, HANDOFF, `TH_400_S0_PLAN.md`
+- Branch: `docs/th-400-s0-fault-profile-spec` @ docs-only commits (no Java)
 
-**Branch:** `feature/th-402-phase1-1-remediation` @ `3ea8d8e`  
-**Do not claim merge-ready** until re-audit PASS.
+## Explicitly not approved / not started
 
-## Out of scope / deferred
-
-G5 live Temporal (pre-pilot) · push/PR/merge · Taiga #37 Done · TH-400 · design rewrite · OWN-P* changes
+- TH-400 **implementation** (S1–S4)  
+- Push/PR for this docs branch (unless Owner separately authorizes)  
+- Variant C · phase-2 · protocol/rev.3.1 changes · Taiga Done marks  
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-02 | D-AUTH-1.1 approved; remediation implemented | Owner / Cursor |
-| 2026-11-02 | Independent audit → NEEDS FIXES (JSON/CSV) | Auditor |
-| 2026-11-02 | Follow-up fix committed (`3ea8d8e`); awaiting re-audit | Cursor |
+| 2026-11-02 | PR #11 merged (phase-1.1) | Owner / Cursor |
+| 2026-11-02 | TH-400 S0 docs; `awaiting_owner` review | Cursor |

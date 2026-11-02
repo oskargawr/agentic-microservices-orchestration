@@ -8,6 +8,41 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-404 — TH-400 S0 fault-profile directions (F2 / F3 split / FaultController)
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-02 |
+| **Status** | **approved** for Owner directions OD-F2 / OD-F3 / OD-FC only; technical bindings in S0 spec remain under Owner review where marked Proposed / Open |
+| **Decision-maker** | Project Owner (directions) · Cursor documented S0 bindings |
+| **Context** | TH-400 · Taiga #35 · post-merge discovery; S0 specification lock (docs only) |
+| **Evidence** | Owner instruction — TH-400 S0 Owner-Approved Specification Lock (2026-11-02) |
+| **Normative spec** | `docs/architecture/TH_400_FAULT_PROFILE_SPEC.md` |
+| **Related** | D-012 · D-016 · D-011 · D-R4 · D-R5 · D-403 · D-402 · TH-400 |
+| **Does NOT authorize** | Java/service/test implementation · S1–S4 coding · Variant C · protocol-v0 / rev. 3.1 rewrites · Taiga #35 Done |
+
+### Accepted Owner directions
+
+| ID | Direction |
+| --- | --- |
+| **OD-F2** | F2 = deterministic **business** failure on Shipping `arrange` **before** shipment creation (no shipment row); A compensates refund(CAPTURED)+release(HELD). |
+| **OD-F3** | F3 = two profiles: **F3-Recovered** and **F3-Unresolved**. |
+| **OD-FC** | Unified Runner **FaultController** + service-header injection; identical profiles for A and future C. |
+
+### Preserved constraints
+
+D-R4 (headers; Toxiproxy deferred) · D-R5 (MVP F1 = **F1-P**; F1-I out) · D-016 (F3 charge: persist CAPTURED, observe UNKNOWN; resolve/GET expose capture when HTTP succeeds) · D-012 OQ-2 (no refund unless CAPTURED confirmed; timeout ≠ failure) · Oracle four labels unchanged.
+
+### S0 bindings still under review (not silently approved)
+
+See spec §8: **OQ-F2-1** (ErrorCode enum name), **OQ-F3U-1** (Oracle label for F3-Unresolved CAPTURED+HELD), **OQ-F3U-2** (opaque transport shape). F3-Unresolved is D-016-compatible via **transport opacity only**; full cell acceptance waits on **OQ-F3U-1**.
+
+### Explicit non-authorization
+
+**D-404 does not authorize TH-400 implementation.** Separate Owner **D-AUTH** + `NEXT_TASK=approved` required before S1–S4 code.
+
+---
+
 ## D-402 — Experiment Runner design contract (rev. 3.1)
 
 | Field | Value |
