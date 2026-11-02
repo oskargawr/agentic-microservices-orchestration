@@ -66,3 +66,10 @@ T-202-4 updated: arrange technical exhaustion + failed recover → `AMBIGUOUS` (
 ## 6. Owner next
 
 Review/merge PR → post-merge verification → mark TH-208 Done/Closed.
+
+## 7. PR
+
+URL: https://github.com/oskargawr/agentic-microservices-orchestration/pull/9
+HEAD: `96cb1af`
+
+**Not Done** until merge + post-merge verification.
