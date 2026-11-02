@@ -24,6 +24,8 @@ jobs:
       VARIANT_A_TEST_PASSWORD: thesis
       TEMPORAL_TARGET: localhost:7233
       TEMPORAL_NAMESPACE: default
+      # TH-206: force ConsoleRealTemporalE2EIT fail-hard (CI=true is also set by GitHub Actions)
+      THESIS_REQUIRE_TEMPORAL_E2E: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -56,7 +58,11 @@ jobs:
 
       - name: Build and test
         # Serialize test workers: multiple modules boot services + share Postgres schemas
+        # Compose already started above — do not start Temporal/Postgres again here (TH-206).
         run: ./gradlew build --no-daemon --max-workers=1
+
+      - name: Assert ConsoleRealTemporalE2EIT executed (no silent skip)
+        run: bash scripts/ci-assert-console-temporal-e2e.sh
 
       - name: Stop infra
         if: always()

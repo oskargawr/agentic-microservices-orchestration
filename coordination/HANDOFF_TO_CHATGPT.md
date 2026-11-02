@@ -2,65 +2,74 @@
 
 **Date:** 2026-11-02  
 **From:** Cursor Agent  
-**Mode:** Post-merge coordination + verification only (no application code changes)
+**Task:** TH-206 Temporal E2E in CI — no silent skip
 
 ---
 
-## 1. TH-201 — Done / Closed
-
-Full record: `coordination/TH-201_CLOSURE.md`
-
-| Evidence | Value |
-| --- | --- |
-| PR #6 | MERGED |
-| Merge commit | `4814de6` |
-| Implementation commit | `f052768` |
-| Local `main` | synchronized with `origin/main` @ `4814de6` |
-| D-201 | remains **approved** |
-
-### Post-merge verification
-
-- `./gradlew cleanTest test --max-workers=1` → **BUILD SUCCESSFUL**
-- **81** tests executed across reported JUnit XML suites; **skipped=0**, **failures=0**, **errors=0**
-- Key suites: CompensationIT 6, WorkflowOrderTest 7, HappyPathIT 1, ConsoleRealTemporalE2EIT 1, Inventory 11, Payment 13, Shipping 7, contracts 35
-- Variant A saga implementation + `docs/architecture/VARIANT_A_HAPPY_PATH.md` present on `main`
-
-### Known coverage follow-up (not reopen)
-
-Dedicated **workflow cancellation** integration test still missing. Logged as follow-up/limitation only; TH-201 scope unchanged.
-
----
-
-## 2. TH-206
-
-Status: **Proposed** / **unapproved**. Not started.
-
----
-
-## 3. Unrelated stash (preserved)
+## 1. Branch / intent
 
 | Field | Value |
 | --- | --- |
-| Ref | `stash@{0}` |
-| Message | `On feature/th-205-experiment-console: preserve dirty tree before th-201 branch` |
-| Action | **Not applied, not dropped** |
-
-Contents (stat): console-ui (`App.tsx`, `api.ts`, `styles.css`, `package.json`, `vite.config.ts`), console BFF CORS/health (`application.yml`, `WebConfig`, `ConsoleController`), `EXPERIMENT_CONSOLE.md`, `dev-up.sh`, plus older coordination WIP snapshots.
-
----
-
-## 4. Protocol lock
-
-Unchanged: experimental protocol, business invariants, oracle, `amountMinor=2599` non-constant status.
+| Branch | `feature/th-206-temporal-e2e-ci-fail-hard` |
+| Base | `main` @ `5fa93b3` |
+| Status | Implementation complete locally; PR open; **not Done** until merge + post-merge verification |
+| Stash | `stash@{0}` untouched |
 
 ---
 
-## 5. Proposed next task (for Owner)
+## 2. Changed files
 
-Pick and **approve** one of:
+| File | Purpose |
+| --- | --- |
+| `ConsoleTemporalE2EGate.java` | CI fail-hard vs local optional enable logic |
+| `ConsoleTemporalE2EGateTest.java` | Unit coverage of gate |
+| `ConsoleRealTemporalE2EIT.java` | Wire gate into `@EnabledIf` |
+| `scripts/ci-assert-console-temporal-e2e.sh` | CI belt: XML must exist, tests≥1, skipped=0 |
+| `.github/workflows/ci.yml` | `THESIS_REQUIRE_TEMPORAL_E2E=true` + assert step; **no** extra Compose |
+| coordination | NEXT_TASK approved; PROJECT_STATE; this handoff; TH-206 proposal status |
 
-1. **TH-202** — retries/timeouts documented + tested  
-2. **TH-206** — CI Temporal E2E fail-hard (only if Owner promotes from Proposed)  
-3. Separate micro-PR for console UI/CORS stash (optional, unrelated)
+---
 
-**Exact Owner action:** set `NEXT_TASK.md` to a specific approved ticket before any further implementation.
+## 3. Behavior
+
+- **Local (no CI / no THESIS_REQUIRE):** missing Postgres/Temporal → **skip** (preserved).
+- **CI / THESIS_REQUIRE_TEMPORAL_E2E:** missing stack → **IllegalStateException** (ConditionEvaluationException / test **failure**, not skip).
+- After Gradle: assert script fails job if E2E XML missing or `skipped!=0`.
+- Inventory/payment/shipping `@EnabledIf(postgresAvailable)` **unchanged**.
+
+---
+
+## 4. Local verification evidence
+
+| Check | Result |
+| --- | --- |
+| GateTest | tests=5 skipped=0 failures=0 |
+| E2E with real Postgres+Temporal | tests=1 skipped=0 failures=0 |
+| `ci-assert-console-temporal-e2e.sh` on that report | OK |
+| Require + broken JDBC/Temporal | **FAILED** (initializationError / IllegalStateException) — not skipped |
+| No require + broken stack | **skipped=1** (local optional) |
+| Assert script on skipped XML | exit 1 |
+| Assert script on missing XML | exit 1 |
+| `stash@{0}` | still present |
+
+---
+
+## 5. Protocol lock
+
+No changes to protocol, invariants, oracle, or app business behavior. Compose startup not duplicated.
+
+---
+
+## 6. Limitations
+
+- Full “CI job without Compose” cannot be replayed locally as Actions; fail-hard path verified via env override + assert script.
+- TH-206 remains **not Done** until PR merge + post-merge verification.
+
+---
+
+## 7. PR / Owner next
+
+PR URL: https://github.com/oskargawr/agentic-microservices-orchestration/pull/7  
+HEAD: `40a7477`  
+CI on PR: **build success** — https://github.com/oskargawr/agentic-microservices-orchestration/actions/runs/41413839391  
+**Owner next:** authorize merge → request post-merge closure (TH-206 not Done until then).
