@@ -4,7 +4,7 @@
 **Od:** Cursor Agent  
 **Tryb:** IMPLEMENTATION (TH-401-A Owner review follow-up)  
 **PR:** https://github.com/oskargawr/agentic-microservices-orchestration/pull/10  
-**HEAD:** *(po push — poniżej)*  
+**HEAD:** `df245baf88552efc9fa6c47cbeda18da1bb5ab5b`  
 **Nie zmergowano.** TH-401-B nie rozpoczęte.
 
 ---
