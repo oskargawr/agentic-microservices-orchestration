@@ -1,6 +1,23 @@
-# End-state oracle (implementation placeholder)
+# Independent Oracle (TH-401-A)
 
-**Specification (canonical):** [`../docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md`](../../docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md)
+DB-primary, read-only end-state oracle for Variants A and C.
 
-This directory will hold the TH-401 implementation (DB snapshot → outcome codes).  
-No executable oracle code in TH-011.
+**Spec:** [`docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md`](../../docs/protocol/BUSINESS_INVARIANTS_AND_ORACLE.md)  
+**Design:** [`docs/architecture/INDEPENDENT_ORACLE_DESIGN.md`](../../docs/architecture/INDEPENDENT_ORACLE_DESIGN.md)
+
+## Usage
+
+```java
+DataSource ds = ...; // primary Postgres jdbc:postgresql://localhost:5433/business
+IndependentOracle oracle = new IndependentOracle(ds);
+OracleResult result = oracle.evaluate(orderId, "SKU-MVP-1");
+```
+
+Classification uses only durable Inventory / Payment / Shipping rows (Option C).  
+`workflowId` / `trialId` are optional metadata and never affect the label.
+
+## Non-goals (TH-401-A)
+
+- HTTP API cross-check (TH-401-B)
+- Experiment runner / fault injection
+- Temporal or LLM dependencies
