@@ -93,3 +93,10 @@ As documented (D-202-3/4/2): lost-response-without-returned-ID deferred; no work
 ## 7. Owner next
 
 Review/merge PR → request post-merge verification → only then mark TH-202 Done/Closed.
+
+## 8. PR
+
+URL: https://github.com/oskargawr/agentic-microservices-orchestration/pull/8
+HEAD: `3cc959d`
+
+**Not Done** until merge + post-merge verification.
