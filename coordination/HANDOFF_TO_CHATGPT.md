@@ -49,5 +49,5 @@ Aggregate XML: **0 skipped / 0 failures / 0 errors** (full suite). Oracle module
 
 ## 4. Commit / review
 
-- Push follow-up commit on `feature/th-401-independent-oracle` (SHA after push).  
+- Commit: `5e2f16b847094557120c617af785e9c746023d92`  
 - Await Owner re-review / CI green. **Do not merge** without Owner.
