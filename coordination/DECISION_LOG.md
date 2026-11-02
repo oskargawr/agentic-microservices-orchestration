@@ -8,6 +8,53 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-AUTH-S2 — TH-400 S2 (F2 shipping) implementation authorization
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-02 |
+| **Status** | **approved** (Owner: „zatwierdzam”) |
+| **Decision-maker** | Project Owner |
+| **Context** | TH-400 · Taiga #35 · S2 F2 after S1 merge `c732558` · proposal + feasibility review |
+| **Evidence** | Owner utterance authorizing D-AUTH-S2; impl on `feature/th-400-s2-f2` (local; no push/PR yet) |
+| **Related** | D-404 · OQ-F2-1 · D-405 · TH-400 · `TH_400_S2_PROPOSAL.md` · `TH_400_S2_FEASIBILITY_REVIEW.md` |
+| **SP** | **5** (narrow allowlist) |
+
+### Authorized
+
+1. `ErrorCode.ARRANGE_REJECTED` + Shipping `X-Thesis-Fault` injection + failure idempotency replay (idempotency **before** injection; `noRollbackFor` so failure rows commit).  
+2. Orchestration: `arrangeFaultHint` on input/activities/HTTP/workflow **including recovery**.  
+3. Runner: `F2FaultController` + shipping fail-closed preflight (409 + `code=ARRANGE_REJECTED`) + `VariantAAdapter` F2 → arrange hint.  
+4. Listed tests + F0/F1-P regression.
+
+### Explicitly excluded
+
+Oracle classifier edits · S0 doc rewrites · F3 · Variant C · Payment production changes · Taiga #35/#37 **Done** · push/PR/merge without separate Owner auth.
+
+### Semantics frozen (OQ-F2-1)
+
+HTTP **409** · BUSINESS · no shipment row · same key+fingerprint failure replay (incl. after disarm) · fingerprint mismatch → `IDEMPOTENCY_KEY_CONFLICT`.
+
+---
+
+## D-405 — TH-400 S1 (F1-P) merged to main (status)
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-02 |
+| **Status** | **recorded** (factual merge status — not a new design decision) |
+| **Decision-maker** | Project Owner (merge authorization) |
+| **Context** | D-AUTH-S1 granted; PR #12 merged after audit PASS WITH LIMITATIONS |
+| **Evidence** | PR [#12](https://github.com/oskargawr/agentic-microservices-orchestration/pull/12) · head `4ed5d57` · merge `c732558` · tests 46/0/0 |
+| **Related** | D-404 · D-AUTH-S1 · TH-400 · Taiga #35 |
+| **Does NOT** | Complete TH-400 · mark #35/#37 Done · authorize S2–S4 · change OQ-F2-1 / classifier / protocol |
+
+### Limitations carried forward
+
+Probe residue until StateReset · no live preflight↔Payment IT · no live Temporal F1-P E2E · CLI does not gate exit on `CONFIRMED_FAILURE` · expected `OraclePattern.F2` with `CONFIRMED_FAILURE` for F1-P FAILED+RELEASED.
+
+---
+
 ## D-404 — TH-400 S0 fault-profile specification (Owner-ratified)
 
 | Field | Value |

@@ -2,50 +2,41 @@
 
 **Data:** 2026-11-02  
 **Od:** Cursor Agent  
-**Tryb:** IMPLEMENTATION (TH-400 S1 F1-P)  
-**Task:** Owner-authorized S1 implementation (D-AUTH-S1); local commits only  
-**Branch:** `feature/th-400-s1-f1p`  
-**Worktree:** `cursor_space/worktrees/agentic-orchestration-thesis-th400-s1`  
-**Base:** `34b6a74f298e2bf1c09b356621ce261a025bfea5` (S0 docs branch HEAD)  
-**Primary checkout:** untouched — dirty `AGENTS.md` preserved
+**Tryb:** IMPLEMENTATION (D-AUTH-S2)  
+**Task:** TH-400 S2 F2 shipping fault injection — local complete  
+**Base `origin/main`:** `c73255842d771126153dba94d6bcf1031b1d072b`  
+**Branch:** `feature/th-400-s2-f2` (local commits; **no push/PR**)
 
 ---
 
-## Authorization boundary
+## Authorization
 
 | | |
 | --- | --- |
-| D-AUTH-S1 | **GRANTED** (F1-P only) |
-| Push / PR / merge | **Not authorized** |
-| S2–S4 / Variant C | **Not authorized** |
-| Payment / orchestration prod / Oracle classifier | **Not modified** |
+| D-AUTH-S2 | **GRANTED** — Owner „zatwierdzam” |
+| Push / PR / merge | **NOT** authorized |
+| TH-400 / #35 Done | **NOT** marked |
 
-## Preflight mechanism (S1-ENV resolved in-scope)
+## What shipped (local)
 
-Architecture had **no** actuator/`info` exposure of `thesis.payment.fault-injection-enabled`.  
-Reliable confirmation without Payment API changes:
+| Area | Change |
+| --- | --- |
+| Contracts | `ErrorCode.ARRANGE_REJECTED` |
+| Shipping | Header injection; failure idempotency before injection; `noRollbackFor` commit of 409 failure; IT cases |
+| Orchestration A | `arrangeFaultHint` on input/activities/HTTP/workflow + recovery; CompIT `t400_s2_*`; recovery hint unit test |
+| Runner | `F2FaultController` + shipping preflight + CLI `--shipping-base-url` + adapter mapping; F0/F1-P preserved |
 
-1. Runner POST existing `/api/v1/payments/charge` with `X-Thesis-Fault: CHARGE_FAIL`  
-2. Require response `state=FAILED`  
-3. `CAPTURED` ⇒ injection appears disabled → `FAULT_VERIFY_FAILED` (fail-closed)  
-4. HTTP 2xx alone is insufficient  
+## Tests
 
-F0 never calls this probe.
+Mandatory modules (contracts, runner, shipping, variant-a): **133 / 0 / 0 / 0**.  
+Also: payment `confirmedFailure` PASS; console compiles.
 
-## Implementation summary
+## Explicit non-goals (honored)
 
-- `F1PFaultController` + `CompositeFaultController`  
-- `HttpPaymentFaultInjectionVerifier` / transport  
-- `VariantAAdapter.resolveChargeFaultHint`  
-- CLI `--fault-profile=` (default F0) + `--payment-base-url=` for F1-P  
-- Rejects canonical id `F1`  
+Oracle classifier · F3 · Variant C · Payment production · S0 rewrites · Taiga Done · remote push
 
-## Oracle
+## Ask for ChatGPT / Owner
 
-Acceptance = classification **`CONFIRMED_FAILURE`**. Pattern may be **`F2`** for FAILED+RELEASED; classifier unchanged.
-
-## Next Owner action
-
-1. Review S1 diff / tests / this handoff  
-2. Optionally authorize push/PR of `feature/th-400-s1-f1p`  
-3. Do not authorize S2 in the same breath unless intentional  
+1. Review S2 local commit(s) / optional audit before push.  
+2. If OK: authorize push + PR (no merge until review).  
+3. S3 remains blocked without separate D-AUTH.
