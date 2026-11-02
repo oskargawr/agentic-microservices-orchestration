@@ -2,101 +2,72 @@
 
 **Date:** 2026-11-02  
 **From:** Cursor Agent  
-**Task:** TH-202 Retries and Timeouts — implementation complete; **PR pending merge** (not Done)
+**Task:** TH-202 Retries and Timeouts — **Done / Closed**
 
 ---
 
-## 1. Branch / decisions
+## 1. Outcome
 
 | Field | Value |
 | --- | --- |
-| Branch | `feature/th-202-retries-timeouts-documented` |
-| Base | `main` @ `06a672b` |
-| Owner decisions | **D-202-1…D-202-5** recorded in `coordination/DECISION_LOG.md` |
-| App policy numerics | **unchanged** (D-202-1) |
-| Transport wrapping | **not** introduced (D-202-2) |
-| Lost-response-without-ID | **deferred** / documented limitation (D-202-3) |
-| Workflow execution timeout | **not** added (D-202-4) |
+| PR | https://github.com/oskargawr/agentic-microservices-orchestration/pull/8 **MERGED** |
+| Merge SHA | `d33fc70afc44585668bcae1f43e4af6169a590cb` |
+| Pre-merge HEAD | `d45ad2edab538f42ce61e9b82e889fd8a95f5e3b` |
+| Pre-merge CI | success (PR checks) |
+| Post-merge CI | see §3 |
+| Decisions | D-202-1…5 · D-201 unchanged |
+| TH-201 / TH-206 | Done / Closed (unchanged) |
 | Stash | `stash@{0}` untouched |
-| TH-201 / TH-206 | remain Done / Closed |
+| App changes in closure | **none** (coordination/docs status only) |
+
+### Pre-merge consistency note
+
+`NEXT_TASK.md` on the merged branch still said “implementation in progress / Not Done until merge”. That was accurate at merge time. Post-merge closure updates it to **done / closed** (no leftover “deferred / awaiting approval” for TH-202 impl).
 
 ---
 
-## 2. Changed files
+## 2. Local post-merge verification (`main` @ `d33fc70`)
 
-| File | Role |
-| --- | --- |
-| `coordination/DECISION_LOG.md` | D-202 pack |
-| `coordination/NEXT_TASK.md` / `PROJECT_STATE.md` / this handoff | status |
-| `docs/architecture/VARIANT_A_RETRIES_TIMEOUTS.md` | **new** dedicated doc (D-202-5) |
-| `docs/architecture/VARIANT_A_HAPPY_PATH.md` | short pointer + limitation note |
-| `ActivityPolicies.java` | javadoc pointer only |
-| `RecordingActivities.java` | retryable arrange/charge helpers + invocation counters |
-| `ActivityPoliciesTest.java` | T-202-1 |
-| `OrderFulfillmentRetryTimeoutTest.java` | T-202-2…5 |
-| `OrderFulfillmentIdempotencyKeyStabilityTest.java` | T-202-6 |
+Commands:
 
-**No** protocol / invariants / oracle / D-201 business semantic edits. **No** F0–F3 harness.
+- `./gradlew cleanTest test --no-parallel` → **SUCCESS**
+- `./gradlew --no-parallel build` → **SUCCESS**
 
----
+### TH-202 + Variant A / Console focus
 
-## 3. Test evidence (local)
+| Suite | tests | skipped | failures | errors |
+| --- | ---: | ---: | ---: | ---: |
+| `ActivityPoliciesTest` (T-202-1) | 2 | 0 | 0 | 0 |
+| `OrderFulfillmentRetryTimeoutTest` (T-202-2…5) | 4 | 0 | 0 | 0 |
+| `OrderFulfillmentIdempotencyKeyStabilityTest` (T-202-6) | 1 | 0 | 0 | 0 |
+| `OrderFulfillmentWorkflowOrderTest` | 7 | 0 | 0 | 0 |
+| `OrderFulfillmentCompensationIT` | 6 | 0 | 0 | 0 |
+| `OrderFulfillmentHappyPathIT` | 1 | 0 | 0 | 0 |
+| `ConsoleTemporalE2EGateTest` | 5 | 0 | 0 | 0 |
+| `ConsoleRealTemporalE2EIT` | 1 | 0 | 0 | 0 |
 
-Variant A unit/IT (rerun):
-
-| Suite | tests | skipped | failures |
-| --- | ---: | ---: | ---: |
-| `ActivityPoliciesTest` | 2 | 0 | 0 |
-| `OrderFulfillmentRetryTimeoutTest` | 4 | 0 | 0 |
-| `OrderFulfillmentIdempotencyKeyStabilityTest` | 1 | 0 | 0 |
-| `OrderFulfillmentWorkflowOrderTest` | 7 | 0 | 0 |
-| `OrderFulfillmentCompensationIT` | 6 | 0 | 0 |
-| `OrderFulfillmentHappyPathIT` | 1 | 0 | 0 |
-
-Console (after clean rerun; first full `build` hit a transient dirty-stack E2E flake):
-
-| Suite | tests | skipped | failures |
-| --- | ---: | ---: | ---: |
-| `ConsoleTemporalE2EGateTest` | 5 | 0 | 0 |
-| `ConsoleRealTemporalE2EIT` | 1 | 0 | 0 |
-
-`./gradlew build` → **SUCCESS** after console retest.
-
-### Behavioral evidence
-
-- **T-202-2:** `failChargeRetryableTimes(2)` → `chargeInvocations=3`, outcome `SUCCESS`
-- **T-202-3:** BUSINESS arrange → `arrangeInvocations=1`, refund+release, `COMPENSATED_FAILURE`
-- **T-202-4:** retryable arrange exhausts **5** attempts; IDs known; refund CAPTURED→REFUNDED + release HELD; payment **not** FAILED; `COMPENSATED_FAILURE`
-- **T-202-5:** UNKNOWN resolve invocations **==** `resolveAttemptLimit` (3); outcome `AMBIGUOUS`
-- **T-202-6:** included — stable `IdempotencyKeys` patterns for mutating activities
+Broader `cleanTest test --no-parallel` also green for contracts + inventory/payment/shipping ITs (all skipped=0, failures=0 in collected XML).
 
 ---
 
-## 4. Documentation
+## 3. CI evidence
 
-`VARIANT_A_RETRIES_TIMEOUTS.md` covers options, forward vs compensation, retryable vs not, Temporal retries vs resolve loop, idempotency, timeout→compensation, `T_observe`/`T_run_max` distinction, and explicit limitations (lost ID, no workflow timeout, no RestClient timeouts, untyped transport errors).
-
----
-
-## 5. Deviations from approved plan
-
-None material. T-202-2 uses **charge** retryable failures (then success) rather than arrange — still verifies real Temporal activity retries under `ActivityPolicies.defaultOptions()`. T-202-4 uses retry exhaustion (retryable `HTTP_503` ×5) with known reservation/payment IDs rather than wall-clock start-to-close sleep; still exercises Temporal retry budget exhaustion → compensation.
+- Post-merge CI: **success** — https://github.com/oskargawr/agentic-microservices-orchestration/actions/runs/41418138695  
+- Assert step: `OK: ConsoleRealTemporalE2EIT executed with skipped=0`  
+- Pre-merge PR checks: build SUCCESS + GitGuardian SUCCESS
 
 ---
 
-## 6. Remaining limitations
+## 4. Remaining limitations (unchanged)
 
-As documented (D-202-3/4/2): lost-response-without-returned-ID deferred; no workflow execution timeout; RestClient timeouts unset; transport exceptions not wrapped.
+- Lost-response-after-commit-without-returned-ID deferred (D-202-3 / F3 follow-up)
+- No workflow execution timeout (D-202-4); `T_observe`/`T_run_max` remain harness/protocol
+- No explicit RestClient connect/read timeouts
+- Transport exceptions not explicitly wrapped (D-202-2)
+- Local parallel Gradle module tests can contend on shared Temporal task queue — prefer `--no-parallel` for local E2E+IT
 
 ---
 
-## 7. Owner next
+## 5. Owner next
 
-Review/merge PR → request post-merge verification → only then mark TH-202 Done/Closed.
-
-## 8. PR
-
-URL: https://github.com/oskargawr/agentic-microservices-orchestration/pull/8
-HEAD: `3cc959d`
-
-**Not Done** until merge + post-merge verification.
+Approve next `NEXT_TASK` (candidate TH-203). TH-202 is closed.

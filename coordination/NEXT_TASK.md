@@ -1,33 +1,22 @@
 # NEXT_TASK
 
-**Status:** `approved` (implementation in progress on feature branch)  
+**Status:** `done` (TH-202 closed; awaiting Owner next approval)  
 **Last updated:** 2026-11-02  
-**Approved by:** Project Owner (TH-202 implementation decisions D-202-1…D-202-5)
+**Closed by:** Cursor Agent after Owner merge authorization + post-merge verification
 
-## Task ID and title
+## Closed task
 
-**TH-202** — Retries and Timeouts — documented and tested
+**TH-202** — Retries and Timeouts — documented and tested — **Done / Closed**
 
-## Objective
+| Field | Value |
+| --- | --- |
+| Merge | PR #8 → `main` @ `d33fc70afc44585668bcae1f43e4af6169a590cb` |
+| Impl HEAD (pre-merge) | `d45ad2edab538f42ce61e9b82e889fd8a95f5e3b` |
+| Decisions | D-202-1…D-202-5 preserved |
 
-Document and test Variant A Temporal activity retry/timeout policy per Owner-approved plan. Keep ActivityOptions numerics unchanged (D-202-1). No transport wrapping (D-202-2). Defer lost-response-without-ID (D-202-3). No workflow execution timeout (D-202-4). Dedicated retries doc (D-202-5).
+## Next
 
-## Branch
-
-`feature/th-202-retries-timeouts-documented`
-
-## Locked constraints
-
-- No protocol / invariants / oracle / D-201 semantic changes
-- No F0–F3 harness
-- Preserve `stash@{0}`; TH-201 / TH-206 remain Done / Closed
-- **Not Done** until merge + post-merge verification
-
-## Reference
-
-- `coordination/TH-202_INVESTIGATION.md`
-- `coordination/DECISION_LOG.md` (D-202)
-- `docs/architecture/VARIANT_A_RETRIES_TIMEOUTS.md`
+No approved next task. Candidate: **TH-203** (fairness baseline) or Owner pick.
 
 ## Status history
 
@@ -35,4 +24,5 @@ Document and test Variant A Temporal activity retry/timeout policy per Owner-app
 | --- | --- | --- |
 | 2026-11-02 | approved (investigation first) | Project Owner |
 | 2026-11-02 | investigation complete | Cursor |
-| 2026-11-02 | **implementation approved** (D-202-1…5) | Project Owner |
+| 2026-11-02 | implementation approved (D-202-1…5) | Project Owner |
+| 2026-11-02 | **done / closed** | Cursor (post-merge verify) |
