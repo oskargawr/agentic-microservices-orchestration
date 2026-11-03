@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
-import org.junit.jupiter.api.io.TempDir;
 import pl.edu.pw.thesis.experiment.oracle.IndependentOracle;
 import pl.edu.pw.thesis.experiment.runner.config.JdbcAllowlist;
 import pl.edu.pw.thesis.experiment.runner.config.RunnerEnvironment;
@@ -60,7 +59,6 @@ import pl.edu.pw.thesis.orchestration.varianta.runtime.TemporalSettings;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class RunnerLiveTemporalG5IT {
 
-    @TempDir
     static Path resultsRoot;
 
     static boolean liveG5Enabled() {
@@ -68,7 +66,8 @@ class RunnerLiveTemporalG5IT {
     }
 
     @BeforeAll
-    static void requireInfrastructureWhenOptedIn() {
+    static void requireInfrastructureWhenOptedIn() throws Exception {
+        resultsRoot = G5ResultsDirectory.resolve(System.getenv(G5ResultsDirectory.ENV_RESULTS_DIR));
         if (!G5LabSupport.postgresAvailable() || !G5LabSupport.temporalAvailable()) {
             throw new IllegalStateException(
                     "THESIS_RUN_G5=true but Postgres and/or Temporal are unreachable. "
