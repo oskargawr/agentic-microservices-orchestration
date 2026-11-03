@@ -8,16 +8,42 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-408 — TH-400 S4 (A/B/C) merged to main (status)
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-03 |
+| **Status** | **recorded** (factual merge status — not a new design decision; does **not** rewrite D-AUTH-S4) |
+| **Decision-maker** | Project Owner (separate merge authorization after PR #15 review) |
+| **Context** | D-AUTH-S4 authorized S4-A/B/C implementation with merge **not** authorized at decision time; Owner later merged PR #15 |
+| **Evidence** | PR [#15](https://github.com/oskargawr/agentic-microservices-orchestration/pull/15) MERGED · merge commit `5982c1a0d30929cfbaaa9e1e0c45700521e961b3` · post-merge CI run **#65** (`41635218917`) **success** on that SHA |
+| **Related** | D-AUTH-S4 · D-407 · D-404 · TH-400 · Taiga #35 · TH-402 |
+| **Does NOT** | Complete TH-400 · mark #35/#37 Done · authorize S4-D · authorize Variant C · change Oracle / protocol · invent EXP-* runs |
+
+### Completed via this merge
+
+- **S4-A** — multi-profile `FaultController` + `MatrixExperimentDriver`  
+- **S4-B** — expected-vs-actual `MatrixSummary` / CLI exit codes  
+- **S4-C** — evidence/limitation register + bounded forward/recovery retry measurement (`TestWorkflowEnvironment`)
+
+### Still deferred / unchanged
+
+- **S4-D** live Temporal lab for F1–F3 fault-profile experiments  
+- Oracle classifier / API · protocol-v0 timing/semantics  
+- No EXP-* campaign yet (matrix **driver** on `main` ≠ completed experiment)
+
+---
+
 ## D-AUTH-S4 — TH-400 S4 (matrix readiness A/B/C) implementation authorization
 
 | Field | Value |
 | --- | --- |
 | **Date** | 2026-11-03 |
-| **Status** | **approved** (Owner D-AUTH-S4); **merge / auto-merge NOT authorized** |
+| **Status** | **approved** (Owner D-AUTH-S4); **merge / auto-merge NOT authorized** *(authorization boundary at decision time — later merge recorded separately as D-408)* |
 | **Decision-maker** | Project Owner |
 | **Context** | Post-S3 merge `bcc38c7` · discovery `TH_400_S4_DISCOVERY.md` |
 | **Evidence** | Owner message „TH-400 S4 — Owner Authorization & Implementation” (D-AUTH-S4 APPROVED) |
-| **Related** | D-407 · D-404 · D-AUTH-S3 · TH-400 · Taiga #35 · TH-402 |
+| **Related** | D-408 · D-407 · D-404 · D-AUTH-S3 · TH-400 · Taiga #35 · TH-402 |
 | **SP** | S4-A…C (est. ~6–10); **S4-D deferred** |
 
 ### Authorized
@@ -40,7 +66,8 @@ Canonical research narrative also lives in Obsidian
 ### Binding notes
 
 - Owner table shorthand **SUCCESS** for F0 / F3-Recovered means Oracle label **`CONFIRMED_SUCCESS`**.  
-- Push/open PR for this implementation branch is in-scope for the authorized workstream; **merge remains separate**.
+- Push/open PR for this implementation branch is in-scope for the authorized workstream; **merge remains separate**.  
+- Immutable: this entry’s “merge NOT authorized” records the boundary **at D-AUTH-S4 time**. The subsequent Owner merge is **D-408**, not an edit of this decision.
 
 ---
 

@@ -1,39 +1,33 @@
 # PROJECT_STATE
 
-**Last updated:** 2026-11-03 (PR #15 review remediation)  
+**Last updated:** 2026-11-03 (post-merge S4 reconciliation)  
 **Updated by:** Cursor Agent  
-**MODE this session:** IMPLEMENTATION / REVIEW REMEDIATION (TH-400 S4; merge NOT authorized)
+**MODE this session:** ANALYSIS / DOCUMENTATION (no implementation)
 
 ## Current thesis scope (MVP)
 
 | | |
 | --- | --- |
-| **Runner** | TH-402 phase-1 + 1.1 + F0–F3 on `main`; **S4 matrix on branch** |
-| **TH-400 S0–S3** | On `main` (S3 merge `bcc38c7` / PR #14) |
-| **TH-400 S4** | **D-AUTH-S4** — S4-A/B/C on `feature/th-400-s4-matrix-readiness` (PR #15); remediation pushed; S4-D deferred |
-| **TH-400 overall** | **In Progress** (≠ Done) |
-| **TH-402 overall** | Phase-1 on main · ticket **NOT Done** |
-| **Not authorized** | **merge** · S4-D · Variant C · Oracle changes · #35/#37 Done · #68 |
+| **Runner** | TH-402 phase-1 + 1.1 + F0–F3 **matrix driver** on `main` |
+| **TH-400 S0–S4-A/B/C** | On `main` (S4 merge `5982c1a` / PR #15) |
+| **TH-400 S4-D** | **Deferred / unauthorized** (live Temporal fault-profile lab) |
+| **TH-400 overall** | **In Progress** (≠ Done) — harness ready; **no** EXP-* campaign |
+| **TH-402 overall** | Phase-1 + 1.1 on main · G5 pre-pilot **open** · ticket **NOT Done** |
+| **Not authorized now** | G5 impl · S4-D · Variant C · Oracle changes · #35/#37 Done · #68 |
 
 ## Engineering
 
 | | |
 | --- | --- |
-| **Branch** | `feature/th-400-s4-matrix-readiness` |
-| **PR** | #15 OPEN (remediation) |
-| **Base** | `main` (includes post-S3 docs `3428e1d` + merge `bcc38c7`) |
-| **D-AUTH-S4** | approved · A/B/C only (immutable) |
-| **Oracle** | unchanged |
-| **Last test rerun** | variant-a 39 · runner 98 · payment 14 (all green) |
-
-## Remediation highlights
-
-- Planned matrix cells from definition × n; separate not-executed accounting
-- Forward vs recovery charge counters (5 + 1) under TestWorkflowEnvironment
-- Lifecycle event-order matrix test; schedule-aware CLI URLs; disarm regression
+| **Branch** | `main` @ `5982c1a0d30929cfbaaa9e1e0c45700521e961b3` |
+| **Last merge** | PR #15 → D-408 |
+| **Post-merge CI** | Run **#65** success on `5982c1a` (incl. `ConsoleRealTemporalE2EIT` skipped=0) |
+| **D-AUTH-S4** | Immutable (impl auth; merge-not-authorized at decision time) |
+| **Oracle / protocol** | Unchanged |
+| **EXP-*** | **None** |
 
 ## Next three actions
 
-1. Owner re-review PR #15  
-2. Separate **merge** auth if accepted  
-3. Do **not** mark Taiga #35/#37 Done  
+1. Owner: review `coordination/TH_402_G5_DISCOVERY.md`  
+2. Separate D-AUTH if G5 pre-pilot is next  
+3. Do **not** mark Taiga #35/#37 Done; do **not** claim S4-D done  

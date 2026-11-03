@@ -1,34 +1,30 @@
 # NEXT_TASK
 
 **Status:** `awaiting_owner`  
-**Last updated:** 2026-11-03 (PR #15 review remediation pushed)  
-**Authorized by:** Owner — **D-AUTH-S4** (immutable) for S4-A/B/C scope  
-**Implementation:** remediation complete on branch · **Merge / auto-merge:** **NOT authorized**  
-**Branch:** `feature/th-400-s4-matrix-readiness`  
-**PR:** #15 (open)
-
-## Scope (approved under D-AUTH-S4)
-
-| Slice | Content | Auth |
-| --- | --- | --- |
-| **S4-A** | Unified multi-profile FaultController + Variant A matrix driver | **authorized** (done + remediation) |
-| **S4-B** | Expected-vs-actual reporting / CLI polish (Oracle unchanged) | **authorized** (done + remediation) |
-| **S4-C** | Limitation register + bounded quantitative retry measurement | **authorized** (done + remediation) |
-| **S4-D** | Live Temporal lab | **NOT authorized** (deferred) |
+**Last updated:** 2026-11-03 (post-merge S4 reconciliation)  
+**Authorized by:** — (no new implementation authorized)  
+**Implementation:** **not** authorized · **Merge:** N/A (S4 already on `main`)  
+**Basis:** D-408 (S4 merge recorded) · discovery `coordination/TH_402_G5_DISCOVERY.md`
 
 ## Current gate
 
-Wait for Owner re-review of PR #15 remediation. Do **not** merge without separate Owner authorization.
+TH-400 **S4-A/B/C** are on `main` (`5982c1a` / PR #15). Recommended next research milestone:
 
-## Explicit exclusions
+| Proposal | Content | Auth needed? |
+| --- | --- | --- |
+| **TH-402 G5** | Live Temporal **runner** pre-pilot (start / natural completion / terminate / Oracle) per OWN-P4 | **Yes** — separate Owner D-AUTH (G5 was excluded from D-AUTH-1.1) |
+| **TH-400 S4-D** | Live Temporal **fault-profile** lab (F1–F3) | **Not** proposed now; remains deferred / unauthorized |
 
-S4-D · Variant C / TH-303 · Oracle classifier/API changes · protocol timing/semantics changes · Toxiproxy / F1-I · Java cleanup (#68) · Taiga #35/#37 Done · merge/auto-merge without separate Owner auth
+Do **not** start G5 implementation or live experiments until Owner approves a dedicated authorization.
+
+## Explicit exclusions (still)
+
+S4-D · Variant C / TH-303 · Oracle changes · protocol timing/semantics · #68 · Taiga #35/#37 Done · inventing EXP-* · rewriting historical readiness docs as if live F1–F3 experiments ran
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-03 | S3 merged; `awaiting_owner` (S4 discovery) | Cursor |
-| 2026-11-03 | **D-AUTH-S4 APPROVED** → `approved` (A/B/C only) | Owner |
-| 2026-11-03 | S4-A/B/C implemented; PR #15 opened | Cursor |
-| 2026-11-03 | PR #15 review remediation pushed → `awaiting_owner` | Cursor |
+| 2026-11-03 | **D-AUTH-S4 APPROVED** → S4-A/B/C impl | Owner |
+| 2026-11-03 | PR #15 remediation → `awaiting_owner` | Cursor |
+| 2026-11-03 | PR #15 **MERGED** `5982c1a` · D-408 recorded · NEXT = G5 discovery | Cursor / Owner merge |

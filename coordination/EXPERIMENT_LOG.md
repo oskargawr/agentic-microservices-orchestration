@@ -10,15 +10,18 @@ Raw outputs must live in the future code/data repository (immutable). Vault link
 
 | Exp ID | Date | Protocol ver. | Code commit | Variant | Scenario | Model / config | Artifact path | Status | Integrity notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| — | — | — | — | — | — | — | — | **none yet** | Harness F0–F3 on `main` (merge `bcc38c7`) exists; **no** protocol pilot/confirmatory trial artifacts recorded yet |
+| — | — | — | — | — | — | — | — | **none yet** | Harness F0–F3 + matrix driver on `main` (merge `5982c1a`) exist; **no** protocol pilot/confirmatory trial artifacts recorded yet |
 
 ## Harness readiness note (not a run)
 
 | Item | Fact |
 | --- | --- |
-| TH-400 S0–S3 | On `main` @ `bcc38c7` (PR #14 merge) |
+| TH-400 S0–S4-A/B/C | On `main` @ `5982c1a` (PR #15 merge / D-408) |
 | Profiles | F0, F1-P, F2, F3-Recovered, F3-Unresolved (Variant A) |
-| Live Temporal lab E2E for F1–F3 | **Not** performed (S3-E optional; G5 pre-pilot still open for full runner) |
+| Matrix driver | Implemented (`MatrixExperimentDriver`); **≠** completed experiment campaign |
+| Live Temporal lab E2E for F1–F3 (S4-D) | **Not** performed / **not** authorized |
+| CI `ConsoleRealTemporalE2EIT` | Console happy-path against Compose Temporal (TH-206) — **≠** runner G5 / **≠** S4-D |
+| TH-402 G5 runner pre-pilot | Still open (OWN-P4) |
 | This log | Remains empty of EXP-* until an actual harness experiment is executed and archived |
 
 ## Protocol versions (index)
