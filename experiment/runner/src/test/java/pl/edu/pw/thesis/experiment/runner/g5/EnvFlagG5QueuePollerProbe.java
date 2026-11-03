@@ -1,18 +1,28 @@
 package pl.edu.pw.thesis.experiment.runner.g5;
 
 /**
- * Deterministic lab probe for unit tests and local dry-runs.
+ * Deterministic <b>unit-test double</b> for {@link G5IsolationPreflight} wiring tests.
  *
- * <p>Treats {@code THESIS_G5_POLLER_DETECTED=true} as a poller present (fail exclusivity). Default:
- * no poller. Live G5 execution authorization may replace this with a stronger process/UI probe
- * without changing production runner code.
+ * <p><b>Not</b> isolation evidence for live G5-3. Live preflight must use {@link
+ * DescribeTaskQueueG5QueuePollerProbe}. {@code THESIS_G5_POLLER_DETECTED} must never be treated as
+ * proof of queue exclusivity.
  */
 public final class EnvFlagG5QueuePollerProbe implements G5QueuePollerProbe {
 
     public static final String ENV = "THESIS_G5_POLLER_DETECTED";
 
+    private final boolean pollerDetected;
+
+    public EnvFlagG5QueuePollerProbe() {
+        this(G5OptIn.isTruthy(System.getenv(ENV)));
+    }
+
+    public EnvFlagG5QueuePollerProbe(boolean pollerDetected) {
+        this.pollerDetected = pollerDetected;
+    }
+
     @Override
     public boolean anyPollerDetected(String taskQueue) {
-        return G5OptIn.isTruthy(System.getenv(ENV));
+        return pollerDetected;
     }
 }

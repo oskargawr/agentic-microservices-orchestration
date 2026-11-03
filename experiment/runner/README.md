@@ -180,21 +180,23 @@ G5-2 and G5-3 are **independent** scenarios. A worker-down G5-2 accident is **no
 | --- | --- |
 | `THESIS_RUN_G5=true` | Opt-in gate (required) |
 | `THESIS_RUN_G5_SCENARIO` | `G5-2` · `G5-3` · `ALL` (default) |
-| `THESIS_G5_DEDICATED_ENV=true` | Operator confirmation of isolated Temporal lab |
-| `THESIS_G5_POLLER_DETECTED` | Lab probe override (`true` fails G5-3 exclusivity) |
+| `THESIS_G5_DEDICATED_ENV=true` | Operator **ack** of a dedicated Temporal lab (required, but **not** poller proof) |
 | `TEMPORAL_TARGET` / `TEMPORAL_NAMESPACE` | Temporal client |
 | `VARIANT_A_TEST_JDBC_URL` (+ user/password) | Allowlisted business DB |
 | `GIT_SHA` | Recorded on trial / acceptance |
 
-JDBC allowlist must include the same URL used by StateReset / Independent Oracle. Protocol timings are **unmodified** (`T_run_max=120s`, `T_observe=30s`).
+**Not evidence:** `THESIS_G5_DEDICATED_ENV` alone, or any env-flag poller override. Live G5-3 exclusivity uses Temporal **`DescribeTaskQueue`** (workflow + activity, `reportPollers=true`). API failure ⇒ preflight **FAIL** (fail closed). History `eventId` gate remains a separate post-trial check.
+
+JDBC allowlist must include the same URL used by StateReset / Independent Oracle. Protocol timings are **unmodified** (`T_run_max=120s`, `T_observe=30s`). Ordinary CI must **not** set `THESIS_RUN_G5` (no long-running G5 job).
 
 ### G5-3 queue exclusivity checklist
 
-1. Dedicated Temporal environment confirmed (`THESIS_G5_DEDICATED_ENV=true`).  
-2. No console worker, standalone `:orchestration:worker`, embedded factory, or leftover IT worker polling `variant-a-order-fulfillment`.  
-3. Preflight **PASS** before `TrialRunner.run`; failed preflight must not start a measured trial.  
-4. After the trial: fetch history for exact `workflowId`/`runId`; gate uses `eventId` order (`EVENT_TYPE_WORKFLOW_TASK_STARTED` before `EVENT_TYPE_WORKFLOW_EXECUTION_TERMINATED` ⇒ `INVALID`).  
-5. Write `…/acceptance/g5-3-acceptance.json` **without** rewriting `TrialRecord` (harness `COMPLETED` may coexist with acceptance `INVALID`).
+1. Operator ack: `THESIS_G5_DEDICATED_ENV=true` (dedicated lab deployment).  
+2. Stop console worker, `:orchestration:worker`, embedded factories, leftover IT workers.  
+3. Preflight: `DescribeTaskQueue` reports **zero** pollers on `variant-a-order-fulfillment` (workflow + activity); otherwise **FAIL** before `TrialRunner.run`.  
+4. Paginated history for exact `workflowId`/`runId` (`nextPageToken` until empty); incomplete retrieval ⇒ acceptance `INVALID`.  
+5. Gate: `EVENT_TYPE_WORKFLOW_TASK_STARTED` with `eventId` **before** `EVENT_TYPE_WORKFLOW_EXECUTION_TERMINATED` ⇒ `INVALID`.  
+6. Write `…/acceptance/g5-3-acceptance.json` **without** rewriting `TrialRecord`, then **fail the test** if acceptance ≠ `VALID`.
 
 ### Local commands (execution requires **separate** Owner authorization)
 

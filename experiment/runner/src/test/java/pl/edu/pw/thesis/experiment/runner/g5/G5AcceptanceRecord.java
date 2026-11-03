@@ -84,4 +84,24 @@ public record G5AcceptanceRecord(
                 reason,
                 evaluatedAt);
     }
+
+    /** G5-3 test gate: call only after durable acceptance JSON is written. */
+    public void requireValidForG5Evidence() {
+        if (!VALID.equals(acceptanceResult)) {
+            throw new AssertionError(
+                    "G5-3 acceptance INVALID after durable artifact write: " + invalidationReason);
+        }
+        if (!"PASS".equalsIgnoreCase(preflightResult)) {
+            throw new AssertionError("G5-3 requires preflight PASS, got " + preflightResult);
+        }
+        if (!historyComplete) {
+            throw new AssertionError("G5-3 requires complete history");
+        }
+        if (!workflowExecutionTerminatedFound) {
+            throw new AssertionError("G5-3 requires WorkflowExecutionTerminated");
+        }
+        if (workflowTaskStartedBeforeTermination) {
+            throw new AssertionError("G5-3 requires no WorkflowTaskStarted before termination");
+        }
+    }
 }

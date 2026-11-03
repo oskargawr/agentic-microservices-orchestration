@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import io.temporal.api.history.v1.HistoryEvent;
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionRequest;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
@@ -82,7 +81,7 @@ class RunnerLiveTemporalG5IT {
         if (!G5LabSupport.dedicatedEnvironmentConfirmed()) {
             throw new IllegalStateException(
                     "THESIS_RUN_G5=true requires THESIS_G5_DEDICATED_ENV=true "
-                            + "(operator confirmation of an isolated Temporal lab environment).");
+                            + "(operator ack of dedicated Temporal lab — not poller proof).");
         }
     }
 
@@ -93,7 +92,6 @@ class RunnerLiveTemporalG5IT {
         assumeTrue(G5OptIn.scenarioEnabled("G5-2"), "THESIS_RUN_G5_SCENARIO excludes G5-2");
 
         try (G5LabSupport.ServiceStack stack = new G5LabSupport.ServiceStack()) {
-            // G5-2 boot order: services → worker up → measured trial
             stack.startServices();
             stack.startWorkerPolling();
 
@@ -108,6 +106,7 @@ class RunnerLiveTemporalG5IT {
                 WorkflowClient client = TemporalClients.newWorkflowClient(stubs, temporalSettings());
                 CountingVariantAdapter adapter = new CountingVariantAdapter(
                         new VariantAAdapter(client, stubs, temporalSettings().namespace(), clock));
+                G5OracleCallCounter oracleCounter = G5OracleCallCounter.wrap(new IndependentOracle(ds));
 
                 ExperimentDefinition experiment = experiment(expId);
                 RunnerEnvironment env = environment(expId, expResults);
@@ -120,7 +119,7 @@ class RunnerLiveTemporalG5IT {
                         new StateReset(env, ds),
                         new F0FaultController(clock),
                         adapter,
-                        new IndependentOracle(ds),
+                        oracleCounter.oracle(),
                         store,
                         clock);
 
@@ -130,28 +129,21 @@ class RunnerLiveTemporalG5IT {
 
                 TrialRecord record = runner.run(spec);
 
-                // G5-1 (prefix): ids + describe
                 assertThat(record.workflowId()).isEqualTo(spec.workflowId()).isNotBlank();
                 assertThat(record.runId()).isNotBlank();
                 assertDescribe(stubs, record.workflowId(), record.runId());
                 assertThat(OrderFulfillmentWorkflow.TASK_QUEUE).isEqualTo("variant-a-order-fulfillment");
 
-                // G5-2: natural completion — no measured terminate
-                assertThat(adapter.terminateCalls())
-                        .as("G5-2 must not invoke VariantAAdapter.terminate")
-                        .isZero();
+                assertThat(adapter.terminateCalls()).isZero();
                 assertThat(record.terminatedBy()).isEqualTo(TerminatedBy.WORKFLOW_STOP);
                 assertThat(record.temporalStatus()).isEqualTo("COMPLETED");
                 assertThat(record.harnessStatus()).isEqualTo(HarnessStatus.COMPLETED);
                 assertThat(record.workflowQuiesced()).isTrue();
 
-                // G5-4: Oracle once (persisted summary); CONFIRMED_SUCCESS for F0 package
+                oracleCounter.assertExactlyOnce();
                 assertThat(record.oracle()).isNotNull();
                 assertThat(record.oracle().classification()).isEqualTo("CONFIRMED_SUCCESS");
                 assertThat(record.tOracle()).isNotNull();
-                assertThat(record.tTerminal()).isNotNull();
-
-                // OWN-P1: durable JSON exists after COMPLETED
                 assertThat(store.trialJsonPath(spec.trialId())).exists();
             } finally {
                 stubs.shutdown();
@@ -165,13 +157,18 @@ class RunnerLiveTemporalG5IT {
     void g5_3_noPoller_tRunMax_terminate_historyGate_acceptanceArtifact() throws Exception {
         assumeTrue(G5OptIn.scenarioEnabled("G5-3"), "THESIS_RUN_G5_SCENARIO excludes G5-3");
 
-        // G5-3: do NOT start a worker. Separate from G5-2 stack.
-        G5IsolationPreflight.Result preflight = new G5IsolationPreflight(
-                        new EnvFlagG5QueuePollerProbe(), G5LabSupport.dedicatedEnvironmentConfirmed())
-                .evaluate();
-        preflight.requireOk();
+        WorkflowServiceStubs preflightStubs = TemporalClients.newServiceStubs(temporalSettings());
+        G5IsolationPreflight.Result preflight;
+        try {
+            DescribeTaskQueueG5QueuePollerProbe probe = new DescribeTaskQueueG5QueuePollerProbe(
+                    preflightStubs, temporalSettings().namespace());
+            preflight = new G5IsolationPreflight(probe, G5LabSupport.dedicatedEnvironmentConfirmed())
+                    .evaluate();
+            preflight.requireOk();
+        } finally {
+            preflightStubs.shutdown();
+        }
 
-        // Services optional for empty-DB Oracle path; start them so StateReset/Oracle JDBC work.
         try (G5LabSupport.ServiceStack stack = new G5LabSupport.ServiceStack()) {
             stack.startServices();
             // Explicit: no startWorkerPolling()
@@ -183,10 +180,19 @@ class RunnerLiveTemporalG5IT {
             WorkflowServiceStubs stubs = TemporalClients.newServiceStubs(temporalSettings());
             try (ExperimentEnvLock lock = ExperimentEnvLock.acquire(resultsRoot, "g5-3-lab");
                     HikariDataSource ds = dataSource()) {
+                // Re-check exclusivity immediately before measured trial (services do not poll)
+                DescribeTaskQueueG5QueuePollerProbe probe = new DescribeTaskQueueG5QueuePollerProbe(
+                        stubs, temporalSettings().namespace());
+                G5IsolationPreflight.Result preRun = new G5IsolationPreflight(
+                                probe, G5LabSupport.dedicatedEnvironmentConfirmed())
+                        .evaluate();
+                preRun.requireOk();
+
                 RunnerClock clock = RunnerClock.system();
                 WorkflowClient client = TemporalClients.newWorkflowClient(stubs, temporalSettings());
                 CountingVariantAdapter adapter = new CountingVariantAdapter(
                         new VariantAAdapter(client, stubs, temporalSettings().namespace(), clock));
+                G5OracleCallCounter oracleCounter = G5OracleCallCounter.wrap(new IndependentOracle(ds));
 
                 ExperimentDefinition experiment = experiment(expId);
                 RunnerEnvironment env = environment(expId, expResults);
@@ -199,7 +205,7 @@ class RunnerLiveTemporalG5IT {
                         new StateReset(env, ds),
                         new F0FaultController(clock),
                         adapter,
-                        new IndependentOracle(ds),
+                        oracleCounter.oracle(),
                         store,
                         clock);
 
@@ -209,7 +215,6 @@ class RunnerLiveTemporalG5IT {
 
                 TrialRecord beforeAcceptance = runner.run(spec);
 
-                // Measured R6 path
                 assertThat(adapter.terminateCalls()).isEqualTo(1);
                 assertThat(beforeAcceptance.terminatedBy()).isEqualTo(TerminatedBy.T_RUN_MAX);
                 assertThat(beforeAcceptance.temporalStatus()).isEqualTo("TERMINATED");
@@ -217,26 +222,27 @@ class RunnerLiveTemporalG5IT {
                 assertThat(beforeAcceptance.runId()).isNotBlank();
 
                 if (beforeAcceptance.harnessStatus() == HarnessStatus.COMPLETED) {
+                    oracleCounter.assertExactlyOnce();
                     assertThat(beforeAcceptance.oracle()).isNotNull();
-                    assertThat(beforeAcceptance.tOracle()).isNotNull();
+                } else {
+                    assertThat(oracleCounter.evaluateCalls()).isZero();
                 }
 
-                // History gate + acceptance — never mutates TrialRecord
                 G5HistoryFetcher fetcher =
                         new G5HistoryFetcher(stubs, temporalSettings().namespace());
-                List<HistoryEvent> events =
-                        fetcher.fetch(beforeAcceptance.workflowId(), beforeAcceptance.runId());
+                G5HistoryFetchResult fetch =
+                        fetcher.fetchAll(beforeAcceptance.workflowId(), beforeAcceptance.runId());
                 Path historyPath = expResults.resolve("history").resolve("g5-3-history.tsv");
-                G5HistoryFetcher.writeDiagnosticExport(historyPath, events);
+                G5HistoryFetcher.writeDiagnosticExport(historyPath, fetch.events());
 
-                G5HistoryValidationResult validation = G5HistoryGate.validateTemporalHistory(events);
+                G5HistoryValidationResult validation = G5HistoryGate.validateFetch(fetch);
                 G5AcceptanceRecord acceptance = G5AcceptanceRecord.fromValidation(
                         beforeAcceptance.workflowId(),
                         beforeAcceptance.runId(),
                         beforeAcceptance.gitSha(),
-                        preflight.preflightResult(),
-                        preflight.diagnostics(),
-                        "GetWorkflowExecutionHistory",
+                        preRun.preflightResult(),
+                        preRun.diagnostics(),
+                        "GetWorkflowExecutionHistory(paginated)",
                         historyPath.toString(),
                         validation,
                         Instant.now());
@@ -246,8 +252,14 @@ class RunnerLiveTemporalG5IT {
                 G5AcceptanceWriter.assertUnchanged(beforeAcceptance, afterAcceptance);
                 assertThat(acceptancePath).exists();
                 assertThat(acceptance.scenarioId()).isEqualTo("G5-3");
-                assertThat(acceptance.acceptanceResult())
-                        .isIn(G5AcceptanceRecord.VALID, G5AcceptanceRecord.INVALID);
+
+                // Acceptance generation must not call Oracle again
+                if (beforeAcceptance.harnessStatus() == HarnessStatus.COMPLETED) {
+                    assertThat(oracleCounter.evaluateCalls()).isEqualTo(1);
+                }
+
+                // Gate AFTER durable write — INVALID fails the test but leaves diagnostics
+                acceptance.requireValidForG5Evidence();
             } finally {
                 stubs.shutdown();
             }

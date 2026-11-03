@@ -95,4 +95,20 @@ class G5HistoryGateTest {
                 G5HistoryGate.validate(List.of(new G5HistoryEventView(1, G5HistoryEventKind.OTHER)));
         assertThat(otherRun.workflowExecutionTerminatedFound()).isFalse();
     }
+
+    @Test
+    void validateFetch_incompleteNeverPasses() {
+        G5HistoryFetchResult incomplete = G5HistoryFetchResult.incomplete(
+                "wf",
+                "run",
+                List.of(HistoryEvent.newBuilder()
+                        .setEventId(9)
+                        .setEventType(EventType.EVENT_TYPE_WORKFLOW_EXECUTION_TERMINATED)
+                        .build()),
+                1,
+                "truncated");
+        G5HistoryValidationResult r = G5HistoryGate.validateFetch(incomplete);
+        assertThat(r.historyComplete()).isFalse();
+        assertThat(r.passesAcceptanceGate()).isFalse();
+    }
 }

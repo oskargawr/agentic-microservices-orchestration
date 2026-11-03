@@ -11,11 +11,7 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
-import pl.edu.pw.thesis.experiment.oracle.IndependentOracle;
-import pl.edu.pw.thesis.experiment.oracle.OracleEvaluationRequest;
-import pl.edu.pw.thesis.experiment.oracle.OracleResult;
 import pl.edu.pw.thesis.experiment.runner.fault.ArmedFaultRecord;
 import pl.edu.pw.thesis.experiment.runner.model.BusinessInputs;
 import pl.edu.pw.thesis.experiment.runner.model.TrialSpec;
@@ -24,8 +20,8 @@ import pl.edu.pw.thesis.experiment.runner.variant.VariantAdapter;
 import pl.edu.pw.thesis.experiment.runner.variant.WorkflowStopInfo;
 
 /**
- * Non-live contracts for G5 scenario separation, terminate counting, and Oracle once semantics.
- * Does not start Temporal / Docker.
+ * Non-live contracts for G5 scenario separation and terminate counting. Oracle exactly-once on the
+ * TrialRunner path is covered by {@link G5OracleExactlyOnceViaTrialRunnerTest}.
  */
 class G5ScenarioContractTest {
 
@@ -62,22 +58,6 @@ class G5ScenarioContractTest {
         assertThat(counting.terminateCalls()).isEqualTo(1);
         verify(delegate, times(1)).terminate(h, "T_run_max");
         verify(delegate, never()).readWorkflowOutcome(any());
-    }
-
-    @Test
-    void oracleEvaluate_exactlyOnceContract_viaAtomicCounter() throws Exception {
-        AtomicInteger evaluations = new AtomicInteger();
-        IndependentOracle oracle = mock(IndependentOracle.class);
-        OracleResult result = mock(OracleResult.class);
-        when(oracle.evaluate(any(OracleEvaluationRequest.class))).thenAnswer(inv -> {
-            evaluations.incrementAndGet();
-            return result;
-        });
-
-        oracle.evaluate(OracleEvaluationRequest.of(
-                UUID.fromString("11111111-1111-1111-1111-111111111111"), "SKU-MVP-1"));
-        assertThat(evaluations.get()).isEqualTo(1);
-        verify(oracle, times(1)).evaluate(any(OracleEvaluationRequest.class));
     }
 
     @Test

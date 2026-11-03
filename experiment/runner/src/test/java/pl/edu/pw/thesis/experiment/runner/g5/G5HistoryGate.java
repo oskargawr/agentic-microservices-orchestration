@@ -46,6 +46,23 @@ public final class G5HistoryGate {
         return validate(fromTemporalEvents(events));
     }
 
+    /**
+     * Validates a paginated fetch. Incomplete retrieval fail-closes regardless of partial events.
+     * Callers must pass the fetch for the exact measured {@code workflowId}/{@code runId}.
+     */
+    public static G5HistoryValidationResult validateFetch(G5HistoryFetchResult fetch) {
+        if (fetch == null) {
+            return G5HistoryValidationResult.incomplete("history fetch result is null");
+        }
+        if (!fetch.complete()) {
+            String reason = fetch.failureReason().isBlank()
+                    ? "history retrieval incomplete"
+                    : fetch.failureReason();
+            return G5HistoryValidationResult.incomplete(reason);
+        }
+        return validateTemporalHistory(fetch.events());
+    }
+
     public static G5HistoryValidationResult validate(List<G5HistoryEventView> events) {
         if (events == null) {
             return G5HistoryValidationResult.incomplete("history event views list is null");
