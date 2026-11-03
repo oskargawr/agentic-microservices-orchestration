@@ -1,6 +1,9 @@
-# Experiment Runner (TH-402 / TH-400 S1–S3)
+# Experiment Runner (TH-402 / TH-400 S1–S4)
 
 Bounded harness library + CLI (`RunnerMain`). **Not** a Spring Boot HTTP service.
+
+**S4-A/B:** multi-profile matrix (`MatrixExperimentDriver`), schedule-aware FaultController registration, expected-vs-actual `matrix-summary.json` (planned cells from definition × n), CLI exit codes `0/1/3`.  
+**S4-D** live Temporal lab: **not** authorized.
 
 ## Module
 
@@ -124,7 +127,36 @@ F3-Unresolved:
   --results-dir=experiment/results'
 ```
 
+S4 matrix (serial F0→… under one env lock; writes `matrix-summary.json`):
+
+```bash
+./gradlew :experiment:runner:run --args='\
+  --jdbc-url=jdbc:postgresql://localhost:5433/business \
+  --allowlist=jdbc:postgresql://localhost:5433/business \
+  --fault-profiles=F0,F1-P,F2,F3-Recovered,F3-Unresolved \
+  --n=1 \
+  --payment-base-url=http://127.0.0.1:8082 \
+  --shipping-base-url=http://127.0.0.1:8083 \
+  --results-dir=experiment/results \
+  --git-sha=$(git rev-parse HEAD)'
+```
+
+URL requirements are **schedule-aware**:
+
+| Schedule | Controllers registered | Required URLs |
+| --- | --- | --- |
+| F0 only | F0 | none |
+| single F1-P / F3-* | F0 + that profile | payment only |
+| single F2 | F0 + F2 | shipping only |
+| multi-profile matrix | full F0–F3 concurrent map | payment **and** shipping |
+
+Fail-closed verify for the selected profile(s) is unchanged. `MatrixSummary.plannedCells` = `|profiles| × n` even if the run aborts early (`notExecuted` counted separately).
+
+Exit codes: `0` all planned cells matched · `1` harness exclusion / incomplete / empty · `3` classification mismatch · `130` operator abort.
+
 Requires Temporal + Variant A worker + business services against the allowlisted DB. For F1-P/F3, Payment must have injection enabled. For F2, Shipping must have injection enabled.
+
+Evidence / limitations: [`docs/architecture/TH_400_EVIDENCE_AND_LIMITATIONS.md`](../../docs/architecture/TH_400_EVIDENCE_AND_LIMITATIONS.md).
 
 ## Tests
 

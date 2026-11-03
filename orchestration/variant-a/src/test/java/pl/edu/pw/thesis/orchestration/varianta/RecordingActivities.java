@@ -1,5 +1,6 @@
 package pl.edu.pw.thesis.orchestration.varianta;
 
+import io.temporal.activity.Activity;
 import io.temporal.failure.ApplicationFailure;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,6 +40,15 @@ final class RecordingActivities implements OrderFulfillmentActivities {
     private int chargeRetryableFailuresRemaining;
     private int arrangeInvocations;
     private int chargeInvocations;
+    /** Forward stub ({@link ActivityPolicies#defaultOptions()}) charge executions only. */
+    private int forwardChargeInvocations;
+    /**
+     * Lost-id recovery stub ({@link ActivityPolicies#lostIdRecoveryOptions()}) charge executions.
+     * Detected as a new Temporal activity attempt=1 after forward {@code maximumAttempts} were
+     * already observed on this recording instance.
+     */
+    private int recoveryChargeInvocations;
+    private int maxForwardChargeAttemptSeen;
     private int reserveInvocations;
 
     /** TH-208: commit side effect once, then lose body for N attempts (0 = forever until recover). */
@@ -199,6 +209,14 @@ final class RecordingActivities implements OrderFulfillmentActivities {
         return chargeInvocations;
     }
 
+    int forwardChargeInvocations() {
+        return forwardChargeInvocations;
+    }
+
+    int recoveryChargeInvocations() {
+        return recoveryChargeInvocations;
+    }
+
     int reserveInvocations() {
         return reserveInvocations;
     }
@@ -253,6 +271,7 @@ final class RecordingActivities implements OrderFulfillmentActivities {
     public ChargeResponse charge(UUID orderId, Money amount, String faultHint) {
         operations.add("charge");
         chargeInvocations++;
+        recordChargeStubKind();
         if (chargeLostBodyFailuresRemaining >= 0) {
             if (!chargeSideEffectCommitted) {
                 chargeSideEffectCommitted = true;
@@ -431,5 +450,30 @@ final class RecordingActivities implements OrderFulfillmentActivities {
             return r;
         }
         return new ShipmentSnapshot(shipmentId, UUID.randomUUID(), shipmentState);
+    }
+
+    /**
+     * Separates forward Temporal retries from the D-208 lost-id recovery stub. Both stubs share
+     * this activity implementation under {@code TestWorkflowEnvironment}; recovery is a new
+     * activity execution whose attempt resets to 1 after forward {@code maximumAttempts} were
+     * already recorded.
+     */
+    private void recordChargeStubKind() {
+        int forwardMax =
+                ActivityPolicies.defaultOptions().getRetryOptions().getMaximumAttempts();
+        int attempt = 1;
+        try {
+            attempt = Activity.getExecutionContext().getInfo().getAttempt();
+        } catch (RuntimeException ignored) {
+            // Outside an activity context (rare in these tests) — count as forward.
+        }
+        if (attempt == 1 && forwardChargeInvocations >= forwardMax) {
+            recoveryChargeInvocations++;
+            return;
+        }
+        forwardChargeInvocations++;
+        if (attempt > maxForwardChargeAttemptSeen) {
+            maxForwardChargeAttemptSeen = attempt;
+        }
     }
 }

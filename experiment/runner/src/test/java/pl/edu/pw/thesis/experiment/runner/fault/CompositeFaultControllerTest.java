@@ -87,4 +87,83 @@ class CompositeFaultControllerTest {
         assertThat(checks.get()).isEqualTo(1);
         controller.disarm("t2");
     }
+
+    @Test
+    void variantAAllProfiles_registersCanonicalSet_andRoutesIndependently() {
+        AtomicInteger f1 = new AtomicInteger();
+        AtomicInteger f2 = new AtomicInteger();
+        AtomicInteger f3r = new AtomicInteger();
+        AtomicInteger f3u = new AtomicInteger();
+        CompositeFaultController controller = CompositeFaultController.variantAAllProfiles(
+                CLOCK,
+                () -> {
+                    f1.incrementAndGet();
+                    return PaymentInjectionCheckResult.enabled("ok");
+                },
+                () -> {
+                    f2.incrementAndGet();
+                    return PaymentInjectionCheckResult.enabled("ok");
+                },
+                new PaymentF3FaultInjectionVerifier() {
+                    @Override
+                    public PaymentInjectionCheckResult checkRecovered() {
+                        f3r.incrementAndGet();
+                        return PaymentInjectionCheckResult.enabled("ok");
+                    }
+
+                    @Override
+                    public PaymentInjectionCheckResult checkUnresolved() {
+                        f3u.incrementAndGet();
+                        return PaymentInjectionCheckResult.enabled("ok");
+                    }
+                });
+
+        assertThat(controller.registeredProfiles())
+                .containsExactly("F0", "F1-P", "F2", "F3-Recovered", "F3-Unresolved");
+
+        for (String profile : CanonicalFaultProfiles.ALL) {
+            UUID orderId = UUID.randomUUID();
+            TrialSpec trial = TrialSpec.forVariantA(
+                    "exp", "t-" + profile, profile, 0, orderId, BusinessInputs.protocolPilotDefaults());
+            ArmedFaultRecord armed = controller.arm(FaultArmRequest.from(trial));
+            assertThat(armed.faultProfileId()).isEqualTo(profile);
+            assertThat(controller.verify(armed, trial).ok()).isTrue();
+            controller.disarm("t-" + profile);
+        }
+        assertThat(f1.get()).isEqualTo(1);
+        assertThat(f2.get()).isEqualTo(1);
+        assertThat(f3r.get()).isEqualTo(1);
+        assertThat(f3u.get()).isEqualTo(1);
+    }
+
+    @Test
+    void disarm_removesArmedState_idempotent_andInactiveControllersUnaffected() {
+        F0FaultController f0 = new F0FaultController(CLOCK);
+        F1PFaultController f1 = new F1PFaultController(
+                CLOCK, () -> PaymentInjectionCheckResult.enabled("ok"));
+        var map = new java.util.LinkedHashMap<String, FaultController>();
+        map.put(F0FaultController.PROFILE_F0, f0);
+        map.put(F1PFaultController.PROFILE_F1_P, f1);
+        CompositeFaultController composite = new CompositeFaultController(map);
+
+        UUID orderId = UUID.randomUUID();
+        TrialSpec f1Trial = TrialSpec.forVariantA(
+                "exp", "t-f1", "F1-P", 0, orderId, BusinessInputs.protocolPilotDefaults());
+        composite.arm(FaultArmRequest.from(f1Trial));
+        assertThat(f1.isArmed("t-f1")).isTrue();
+        assertThat(f0.isArmed("t-f1")).isFalse();
+
+        TrialSpec f0Other = TrialSpec.forVariantA(
+                "exp", "t-f0-other", "F0", 0, UUID.randomUUID(), BusinessInputs.protocolPilotDefaults());
+        f0.arm(FaultArmRequest.from(f0Other));
+        assertThat(f0.isArmed("t-f0-other")).isTrue();
+
+        composite.disarm("t-f1");
+        assertThat(f1.isArmed("t-f1")).isFalse();
+        assertThat(f0.isArmed("t-f0-other")).isTrue();
+
+        composite.disarm("t-f1"); // second disarm is safe
+        assertThat(f1.isArmed("t-f1")).isFalse();
+        assertThat(f0.isArmed("t-f0-other")).isTrue();
+    }
 }

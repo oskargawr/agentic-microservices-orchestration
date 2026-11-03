@@ -2,73 +2,71 @@
 
 **Data:** 2026-11-03  
 **Od:** Cursor Agent  
-**Tryb:** IMPLEMENTATION — TH-400 S3 docs sync after review remediation (merge **NOT** authorized)  
-**Branch:** `feature/th-400-s3-f3`
+**Tryb:** REVIEW REMEDIATION — TH-400 S4 / PR #15; merge **NOT** authorized  
+**Branch:** `feature/th-400-s4-matrix-readiness`
 
 ---
 
-## HEAD / commits (clean S3-only, Scenario B)
+## Authorization
 
 | | |
 | --- | --- |
-| Tip (review remediation) | `1a853631ce9b4c5fbc34dc943da05056cc0f1feb` |
-| Prior HIGH remediacja | `57d5439b97edd35a8af215e277f51f7ab2b6ec6e` |
-| S3 impl | `244075e033a0e9a1e7126d361cc8d8f0ab6daf66` |
-| `c16e1f0` | **excluded** (rebase `--onto origin/main c16e1f0`) |
-| Merge-base / `origin/main` | `f3ac351289f1cc7836904d98b3146872f2e62c4f` |
-| **PR** | [#14](https://github.com/oskargawr/agentic-microservices-orchestration/pull/14) · **OPEN** · merge **NOT** authorized |
+| Decision | **D-AUTH-S4** (immutable) — A/B/C only |
+| This turn | Owner review remediation on PR #15 |
+| Deferred / excluded | **S4-D** · Variant C · Oracle · protocol · #68 · #35/#37 Done · **merge** |
 
-```text
-origin/main (f3ac351)
-  └─ 244075e feat(th-400-s3): implement F3-Recovered and F3-Unresolved …
-  └─ a13e916 docs(th-400-s3): record S3 implementation HEAD in handoff
-  └─ 57d5439 fix(th-400-s3): narrow opacity ActivityFailure catch and tighten gate
-  └─ 6fafd11 docs(th-400-s3): record remediation HEAD in handoff
-  └─ ff97831 docs(th-400-s3): record clean-history tip and push/PR authorization
-  └─ 8448b5b docs(th-400-s3): record PR #14 OPEN in handoff
-  └─ 1a85363 test(th-400-s3): tighten gate/disarm coverage and align D-AUTH-S3 auth wording
-  └─ (this docs tip: sync PR #14 handoff / PROJECT_STATE after review remediation)
-```
+## Remediation summary (PR #15)
 
-## Scope shipped
+### P1 — Matrix planned-cell accounting
+- `MatrixSummary.plannedCells` = `faultProfileIds().size() * n` (not `trials.size()`)
+- Separate counters: `matched` / `mismatched` / `excluded` / `notExecuted` / `executedCells`
+- `allMatched` false when any planned cell missing, excluded, or mismatched
+- No synthetic successful `TrialRecord`s for never-executed cells
 
-- Dual profiles **F3-Recovered** + **F3-Unresolved**
-- Payment `RESOLVE_TRANSPORT_OPAQUE` → HTTP **503**, header-presence, no DB mutation
-- Variant A: fault hint on resolve **and** `getPayment`; leave-dangling CAPTURED+HELD for Unresolved
-- Harness `F3UnresolvedAcceptanceGate` (Oracle classifier **unchanged**)
-- HIGH remediacja: `ActivityFailure` → opacity only when hint + cause-chain `HTTP_503`
-- Review remediacja (`1a85363`): gate negatives, lifecycle disarm assertions, CompIT without-opacity-hint 503, D-AUTH-S3 auth wording
+### P1 — Quantitative retry evidence
+- `ActivityPolicies.lostIdRecoveryOptions()` public (moved from workflow impl)
+- `RecordingActivities`: `forwardChargeInvocations` vs `recoveryChargeInvocations`
+- S4-C CompIT asserts forward **5**, recovery **1**, `maximumAttempts=1` on recovery, no SUCCESS/consume
+- Documented: Temporal `maximumAttempts=5` = five **total** executions; evidence under `TestWorkflowEnvironment` only
 
-## Tests (post review remediation)
+### P1 — Lifecycle ordering
+- Mocked matrix test records reset/arm/verify/disarm/start/awaitStop/oracle
+- Asserts cell1 reset→arm; disarm:end before cell2 reset; no overlapping workflows; abort still blocks
+
+### P2 — Schedule-aware CLI
+- Multi-profile → full concurrent registration (both URLs)
+- Single F2 → shipping only; single F1-P/F3 → payment only; F0 → none
+- Fail-closed verify for selected profiles unchanged
+
+### Disarm regression
+- Composite disarm clears relevant armed map; double-disarm safe; inactive map unaffected
+- Existing matrix abort-on-disarm-failure retained (+ planned/notExecuted asserts)
+
+## Tests (rerun)
 
 ```text
 java -jar gradle/wrapper/gradle-wrapper.jar \
   :orchestration:variant-a:test :experiment:runner:test :services:payment:test --rerun-tasks
-→ BUILD SUCCESSFUL · exit 0
-variant-a 38 passed / 0 failed / 0 skipped
-runner 78 passed / 0 failed / 0 skipped
-payment 14 passed / 0 failed / 0 skipped
+→ BUILD SUCCESSFUL
+variant-a 39 / 0 / 0
+runner 98 / 0 / 0
+payment 14 / 0 / 0
 ```
 
-CompIT: real Postgres + Boot jars + `TestWorkflowEnvironment` — **not** live Temporal (S3-E not performed).  
-Retry: behavioral verification only (not quantitative attempt-budget counts).
+### New / renamed tests (selected)
+- `MatrixSummaryTest.*` (complete / early abort / exclusion / mismatch / empty)
+- `MatrixExperimentDriverTest.lifecycleOrdering_betweenTwoCells_isSerial_resetArmDisarm`
+- `RunnerMainFaultControllerTest.*`
+- `CompositeFaultControllerTest.disarm_removesArmedState_idempotent_andInactiveControllersUnaffected`
+- `OrderFulfillmentRetryTimeoutTest.s4c_defaultOptions_exhaustedRetryableCharge_forwardFive_recoveryOne`
 
-## Remaining limitations
+**Layers:** unit · CompIT (`TestWorkflowEnvironment`) · mocked lifecycle — **no** live Temporal cluster.
 
-- No live Temporal S3-E
-- Nested unrelated `HTTP_503` in an exotic cause chain remains a theoretical residual
-- Retry verification is behavioral, not quantitative
+## Scope confirmation
 
-## Authorization boundary
-
-| | |
-| --- | --- |
-| Clean rebase / push / open PR | **authorized** (Owner) |
-| **Merge / auto-merge** | **NOT authorized** |
-| Taiga #35 / #37 Done | **NOT** |
+Unchanged: Oracle semantics · protocol constants · S4-D · Variant C · #68 · Taiga #35/#37 Done status · D-AUTH-S4 text.  
+**No merge / auto-merge performed.**
 
 ## Ask
 
-Review PR [#14](https://github.com/oskargawr/agentic-microservices-orchestration/pull/14); merge only after separate Owner auth. Do not mark #35 Done.
-
-**Confirmation:** PR **OPEN**, **NOT MERGED**; auto-merge **not** enabled.
+Owner: re-review PR #15 → separate **merge** auth if accepted.

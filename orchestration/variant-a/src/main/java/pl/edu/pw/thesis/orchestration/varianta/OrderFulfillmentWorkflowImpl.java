@@ -1,13 +1,10 @@
 package pl.edu.pw.thesis.orchestration.varianta;
 
-import io.temporal.activity.ActivityOptions;
-import io.temporal.common.RetryOptions;
 import io.temporal.failure.ActivityFailure;
 import io.temporal.failure.ApplicationFailure;
 import io.temporal.failure.CanceledFailure;
 import io.temporal.workflow.CancellationScope;
 import io.temporal.workflow.Workflow;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -44,20 +41,8 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
             Workflow.newActivityStub(OrderFulfillmentActivities.class, ActivityPolicies.compensationOptions());
     /** D-208 B: exactly one attempt per missing create id (no nested Temporal retry storm). */
     private final OrderFulfillmentActivities recoveryActivities =
-            Workflow.newActivityStub(OrderFulfillmentActivities.class, lostIdRecoveryOptions());
-
-    private static ActivityOptions lostIdRecoveryOptions() {
-        return ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofSeconds(10))
-                .setScheduleToCloseTimeout(Duration.ofSeconds(30))
-                .setRetryOptions(RetryOptions.newBuilder()
-                        .setMaximumAttempts(1)
-                        .setDoNotRetry(
-                                ActivityPolicies.BUSINESS_FAILURE_TYPE,
-                                ActivityPolicies.COMPENSATION_INCOMPLETE_TYPE)
-                        .build())
-                .build();
-    }
+            Workflow.newActivityStub(
+                    OrderFulfillmentActivities.class, ActivityPolicies.lostIdRecoveryOptions());
 
     @Override
     public OrderFulfillmentResult fulfill(OrderFulfillmentInput input) {

@@ -68,6 +68,13 @@ public class FileResultStore {
         atomicWriteJson(experimentDir.resolve("experiment.json"), experiment);
     }
 
+    /** S4-B: durable matrix expected-vs-actual summary (not Oracle classifier state). */
+    public void saveMatrixSummary(pl.edu.pw.thesis.experiment.runner.accept.MatrixSummary summary)
+            throws IOException {
+        Files.createDirectories(experimentDir);
+        atomicWriteJson(experimentDir.resolve("matrix-summary.json"), summary);
+    }
+
     /** Experiment-level status (OWN-P3) — separate from trial JSON. */
     public void saveExperimentStatus(ExperimentStatusRecord status) throws IOException {
         Files.createDirectories(experimentDir);

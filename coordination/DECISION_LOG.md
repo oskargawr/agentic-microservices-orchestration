@@ -8,16 +8,70 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-AUTH-S4 — TH-400 S4 (matrix readiness A/B/C) implementation authorization
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-03 |
+| **Status** | **approved** (Owner D-AUTH-S4); **merge / auto-merge NOT authorized** |
+| **Decision-maker** | Project Owner |
+| **Context** | Post-S3 merge `bcc38c7` · discovery `TH_400_S4_DISCOVERY.md` |
+| **Evidence** | Owner message „TH-400 S4 — Owner Authorization & Implementation” (D-AUTH-S4 APPROVED) |
+| **Related** | D-407 · D-404 · D-AUTH-S3 · TH-400 · Taiga #35 · TH-402 |
+| **SP** | S4-A…C (est. ~6–10); **S4-D deferred** |
+
+### Authorized
+
+1. **S4-A** — Unified multi-profile `FaultController` wiring + Variant A experiment matrix driver (serial under env lock).  
+2. **S4-B** — ResultStore / CLI expected-vs-actual reporting polish (Oracle classifier **unchanged**).  
+3. **S4-C** — Thesis evidence / limitation register + **one** bounded quantitative retry measurement.
+
+### Explicitly NOT authorized
+
+- **S4-D** live Temporal lab (deferred)  
+- Variant C / TH-303  
+- Oracle classifier / API changes  
+- Protocol-v0 timing constants (`T_observe`, `T_run_max`) / protocol semantics changes  
+- Toxiproxy / F1-I  
+- Java cleanup (#68)  
+- Taiga #35 / #37 **Done**  
+- **Merge / auto-merge** of the resulting PR (push/open PR requires separate auth if not already granted with this task)
+
+### Binding notes
+
+- Owner table shorthand **SUCCESS** for F0 / F3-Recovered means Oracle label **`CONFIRMED_SUCCESS`**.  
+- Push/open PR for this implementation branch is in-scope for the authorized workstream; **merge remains separate**.
+
+---
+
+## D-407 — TH-400 S3 (F3) merged to main (status)
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-03 |
+| **Status** | **recorded** (factual merge status — not a new design decision) |
+| **Decision-maker** | Project Owner (merge authorization) |
+| **Context** | D-AUTH-S3 granted; PR #14 merged after audit + review remediation |
+| **Evidence** | PR [#14](https://github.com/oskargawr/agentic-microservices-orchestration/pull/14) · tip `c3f03e4` · remediation `1a85363` · merge `bcc38c7` · tests on `main`: variant-a 38 / runner 78 / payment 14 |
+| **Related** | D-AUTH-S3 · D-404 · OQ-F3U-1/2 · TH-400 · Taiga #35 |
+| **Does NOT** | Complete TH-400 · mark #35/#37 Done · authorize S4 / S3-E · change classifier / protocol |
+
+### Limitations carried forward
+
+No live Temporal S3-E · nested unrelated `HTTP_503` cause-chain residual · retry verification behavioral (not quantitative) · earlier S1/S2 carry-forwards (probe residue / forge-URL class · CLI no Oracle-outcome exit gate · F1/F2 live E2E absent).
+
+---
+
 ## D-AUTH-S3 — TH-400 S3 (F3-Recovered + F3-Unresolved) implementation authorization
 
 | Field | Value |
 | --- | --- |
 | **Date** | 2026-11-03 |
-| **Status** | **approved** (Owner D-AUTH-S3); **push / open PR authorized**; **merge / auto-merge NOT authorized** |
+| **Status** | **approved** (Owner D-AUTH-S3); **completed via merge** (see D-407) |
 | **Decision-maker** | Project Owner |
 | **Context** | After S2 merge + `TH_400_S3_READINESS.md` discovery |
-| **Evidence** | Owner D-AUTH-S3 impl auth; later Owner auth for clean history + push + open PR #14 (merge still excluded) |
-| **Related** | D-404 · OQ-F3U-1/2 · D-016 · D-201 · D-R4/R5/R7 · TH-400 · Taiga #35 · PR #14 |
+| **Evidence** | Owner D-AUTH-S3 impl auth; clean history + push + open PR #14; merge → `bcc38c7` |
+| **Related** | D-404 · OQ-F3U-1/2 · D-016 · D-201 · D-R4/R5/R7 · TH-400 · Taiga #35 · PR #14 · D-407 |
 | **SP** | **9** (S3-A…D); S3-E live E2E optional **1 SP** separate |
 
 ### Authorized (D-AUTH-S3-1…5)
@@ -31,11 +85,11 @@ Canonical research narrative also lives in Obsidian
 ### Authorization boundary (push vs merge)
 
 - Implementation + clean S3-only history + **push** + **open PR**: authorized (Owner).  
-- **Merge** and **auto-merge**: **NOT** authorized — push/open-PR permission does **not** imply merge.
+- **Merge** required **separate** Owner auth (push ≠ merge); completed → D-407 / PR #14 @ `bcc38c7`.
 
-### Explicitly excluded
+### Explicitly excluded (unchanged by merge)
 
-Variant C / TH-303 · Oracle changes · protocol semantic rewrite · Java cleanup (#68) · **merge / auto-merge** · Taiga #35/#37 **Done**.
+Variant C / TH-303 · Oracle changes · protocol semantic rewrite · Java cleanup (#68) · Taiga #35/#37 **Done** · S4 / S3-E without new D-AUTH.
 
 ---
 

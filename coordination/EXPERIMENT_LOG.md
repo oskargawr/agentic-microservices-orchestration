@@ -10,7 +10,16 @@ Raw outputs must live in the future code/data repository (immutable). Vault link
 
 | Exp ID | Date | Protocol ver. | Code commit | Variant | Scenario | Model / config | Artifact path | Status | Integrity notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| — | — | — | — | — | — | — | — | **none yet** | No application repo; no harness |
+| — | — | — | — | — | — | — | — | **none yet** | Harness F0–F3 on `main` (merge `bcc38c7`) exists; **no** protocol pilot/confirmatory trial artifacts recorded yet |
+
+## Harness readiness note (not a run)
+
+| Item | Fact |
+| --- | --- |
+| TH-400 S0–S3 | On `main` @ `bcc38c7` (PR #14 merge) |
+| Profiles | F0, F1-P, F2, F3-Recovered, F3-Unresolved (Variant A) |
+| Live Temporal lab E2E for F1–F3 | **Not** performed (S3-E optional; G5 pre-pilot still open for full runner) |
+| This log | Remains empty of EXP-* until an actual harness experiment is executed and archived |
 
 ## Protocol versions (index)
 
