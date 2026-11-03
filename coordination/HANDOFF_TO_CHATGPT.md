@@ -1,72 +1,47 @@
 # HANDOFF_TO_CHATGPT
 
-**Data:** 2026-11-03  
-**Od:** Cursor Agent  
-**Tryb:** ANALYSIS / DOCUMENTATION — post-merge S4 reconciliation + G5 discovery  
-**Branch:** `main` @ `5982c1a`
+**Date:** 2026-11-03  
+**From:** Cursor (executor)  
+**MODE:** IMPLEMENTATION  
+**Topic:** TH-402 G5 live Temporal runner pre-pilot — implementation delivery (D-AUTH-G5)
 
----
+## Summary
 
-## Merge verification
+Owner authorized **D-AUTH-G5**: implement G5-1…G5-4 as **opt-in test/lab** wiring per `coordination/TH_402_G5_DISCOVERY.md`. Production `TrialRunner` / timings / R6/R14 / Oracle / OWN-P1 / ActivityPolicies were **not** modified. Live G5 execution and PR merge remain **unauthorized**.
 
-| | |
+## Branch
+
+- **Branch:** `feature/th-402-g5-live-temporal-runner`  
+- **Base `main` SHA:** `563c8a0db52d9c55b7fddb96073cf6c861ccafa0`  
+- **Decision record:** `coordination/DECISION_LOG.md` → **D-AUTH-G5**
+
+## What was delivered
+
+| Area | Content |
 | --- | --- |
-| PR #15 | **MERGED** 2026-11-03T12:22:52Z |
-| Merge commit | `5982c1a0d30929cfbaaa9e1e0c45700521e961b3` |
-| `main` HEAD | identical to merge commit |
-| Decision record | **D-408** (factual; D-AUTH-S4 left immutable) |
+| G5-1/2/3/4 IT | `RunnerLiveTemporalG5IT` — opt-in (`THESIS_RUN_G5`); separate G5-2 (worker) vs G5-3 (no-poller) |
+| History gate | `G5HistoryGate` using SDK `EventType.EVENT_TYPE_WORKFLOW_TASK_STARTED` / `EVENT_TYPE_WORKFLOW_EXECUTION_TERMINATED` + `eventId` |
+| Acceptance | `G5AcceptanceWriter` → `g5-3-acceptance.json` without mutating `TrialRecord` |
+| Preflight | `G5IsolationPreflight` + `EnvFlagG5QueuePollerProbe` |
+| Docs | `experiment/runner/README.md` G5 section |
+| Non-live tests | History / acceptance / preflight / opt-in / scenario contracts |
 
-## Post-merge CI (run #65 — this SHA only)
+## Explicit non-events
 
-| | |
-| --- | --- |
-| Run number | **65** |
-| Database id | `41635218917` |
-| URL | https://github.com/oskargawr/agentic-microservices-orchestration/actions/runs/41635218917 |
-| Event | `push` to `main` |
-| headSha | `5982c1a0d30929cfbaaa9e1e0c45700521e961b3` |
-| Conclusion | **success** (completed) |
-| Workflow | CI · job `build` |
+- **No** `THESIS_RUN_G5=true` / live G5 scenario execution in this delivery  
+- **No** `EXPERIMENT_LOG.md` edits  
+- **No** Taiga #37 Done  
+- **No** S4-D / Variant C / Oracle classifier / protocol changes  
+- **No** merge / auto-merge  
 
-### `ConsoleRealTemporalE2EIT` (not silently skipped)
+## Ask for ChatGPT (advisor)
 
-- Step “Assert ConsoleRealTemporalE2EIT executed (no silent skip)” → **success**
-- JUnit: `tests="1" skipped="0" failures="0" errors="0"`
-- Case: `happyPathThroughRealTemporalAndDuplicateStartRejected()`
-- Script: `OK: ConsoleRealTemporalE2EIT executed with skipped=0`
+1. Review whether the test/lab surface matches the discovery contract (esp. G5-3 immutability + history gate).  
+2. Flag any residual risk that ordinary CI could accidentally enable live G5.  
+3. Advise Owner on readiness criteria for a **separate** live-execution authorization (not merge advice alone).
 
-**Distinction:** this is **TH-206 console** happy-path against Compose Temporal + HTTP services. It is **not**:
-- TH-402 **G5** runner live Temporal pre-pilot (start/terminate/natural/Oracle via experiment runner)
-- TH-400 **S4-D** live F1–F3 fault-profile experiments
+## Owner decisions still needed
 
-Do not treat CI #65 (or prior PR runs #63/#64) as S4-D or G5 evidence.
-
-## Scope after merge
-
-| Done on `main` | Still open / unauthorized |
-| --- | --- |
-| S4-A/B/C | S4-D |
-| Matrix driver + summary + schedule-aware CLI | EXP-* campaign |
-| Bounded retry CompIT evidence | Variant C · Oracle/protocol changes |
-| | Taiga #35/#37 Done · #68 |
-
-TH-400 = **In Progress**. TH-402 = **not Done** (G5 open per OWN-P4).
-
-## Files reconciled
-
-- `coordination/NEXT_TASK.md` → `awaiting_owner` (G5 proposal)
-- `coordination/PROJECT_STATE.md`
-- `coordination/HANDOFF_TO_CHATGPT.md` (this file)
-- `coordination/EXPERIMENT_LOG.md` (still no EXP-*)
-- `coordination/DECISION_LOG.md` (+ **D-408**)
-- `docs/architecture/TH_400_EVIDENCE_AND_LIMITATIONS.md`
-- `coordination/TH_402_G5_DISCOVERY.md` (new proposal)
-
-## Proposed next milestone
-
-**TH-402 G5** live Temporal **runner** pre-pilot — see `TH_402_G5_DISCOVERY.md`.  
-Requires **new Owner D-AUTH** (excluded from D-AUTH-1.1). Separated from S4-D.
-
-## Ask
-
-Owner: accept post-merge record D-408; decide whether to authorize G5 discovery→impl next. No impl started in this handoff.
+1. PR merge authorization (or further remediation)  
+2. Live G5 execution authorization  
+3. Whether CI should ever grow a long-running G5 job (explicitly **out** of D-AUTH-G5)  
