@@ -2,43 +2,69 @@
 
 **Data:** 2026-11-03  
 **Od:** Cursor Agent  
-**Tryb:** IMPLEMENTATION — S3 targeted remediation after independent audit  
-**Branch:** `feature/th-400-s3-f3`  
-**Push / PR / merge / rebase:** **NOT performed / NOT authorized**
+**Tryb:** IMPLEMENTATION — TH-400 S3 clean history + push + PR (merge **NOT** authorized)  
+**Branch:** `feature/th-400-s3-f3`
 
 ---
 
-## HEAD / commits (post-remediation)
+## HEAD / commits (clean S3-only, Scenario B)
 
 | | |
 | --- | --- |
-| Tip | `f6e53a7c9ed8c7adc80c0d7afc54debab2084a84` |
-| Prior audit tip | `8c5b1a12dd46a60d1360ec25aef20ab4c9cb9610` |
-| S3 impl | `ba81686eafeba0db1b57594a1ecef45e8250d329` |
-| Unpushed EOD docs (unchanged) | `c16e1f0` — **not** modified in remediation |
-| `origin/main` | `f3ac351` |
+| Tip | `6fafd1109c149b5e7a3b3e9bd7b40df20077138a` (+ docs tip after this handoff if amended) |
+| Remediacja | `57d5439b97edd35a8af215e277f51f7ab2b6ec6e` |
+| S3 impl | `244075e033a0e9a1e7126d361cc8d8f0ab6daf66` |
+| Docs after impl | `a13e916a926a68e4e45cc17b0cd0df677bdad604` |
+| `c16e1f0` | **excluded** (rebase `--onto origin/main c16e1f0`) |
+| Merge-base / `origin/main` | `f3ac351289f1cc7836904d98b3146872f2e62c4f` |
 
-## Remediation summary
+```text
+origin/main
+  └─ 244075e feat(th-400-s3): implement F3-Recovered and F3-Unresolved …
+  └─ a13e916 docs(th-400-s3): record S3 implementation HEAD in handoff
+  └─ 57d5439 fix(th-400-s3): narrow opacity ActivityFailure catch and tighten gate
+  └─ 6fafd11 docs(th-400-s3): record remediation HEAD in handoff
+  └─ (this docs tip: clean-history / push-PR handoff)
+```
 
-1. **HIGH:** `handleUnresolvedPayment` catches `ActivityFailure` only when resolve hint is `RESOLVE_TRANSPORT_OPAQUE` **and** cause chain contains `ApplicationFailure` type `HTTP_503`; otherwise rethrows.  
-2. **MEDIUM gate:** F3-Unresolved acceptance requires shipment absent or `NONE` (CANCELLED rejected).  
-3. **MEDIUM lifecycle:** `TrialRunnerF3LifecycleTest` (mocked adapter/oracle; arm/verify/`effectiveConfig`/gate/verify-fail). No live Temporal.
+## Scope shipped
 
-## Tests
+- Dual profiles **F3-Recovered** + **F3-Unresolved**
+- Payment `RESOLVE_TRANSPORT_OPAQUE` → HTTP **503**, header-presence, no DB mutation
+- Variant A: fault hint on resolve **and** `getPayment`; leave-dangling CAPTURED+HELD for Unresolved
+- Harness `F3UnresolvedAcceptanceGate` (Oracle classifier **unchanged**)
+- HIGH remediacja: `ActivityFailure` → opacity only when hint + cause-chain `HTTP_503`
+
+## Tests (post-rebase)
 
 ```text
 java -jar gradle/wrapper/gradle-wrapper.jar \
   :orchestration:variant-a:test :experiment:runner:test :services:payment:test --rerun-tasks
-→ BUILD SUCCESSFUL
-variant-a 37/0/0 · runner 72/0/0 · payment 14/0/0
+→ BUILD SUCCESSFUL · exit 0
+variant-a 37 passed / 0 failed / 0 skipped
+runner 72 passed / 0 failed / 0 skipped
+payment 14 passed / 0 failed / 0 skipped
 ```
 
-CompIT uses real Postgres + Boot jars + `TestWorkflowEnvironment` (not live Temporal cluster). Retry behavior: behavioral (exhausted 503 → leave-dangling); not quantitative attempt counts.
+CompIT: real Postgres + Boot jars + `TestWorkflowEnvironment` — **not** live Temporal (S3-E not performed).  
+Retry: behavioral verification only (not quantitative attempt-budget counts).
 
-## Re-audit verdict (this session)
+## Limitations / LOW notes for reviewers
 
-**PASS WITH LIMITATIONS** — HIGH addressed; CANCELLED gate tightened; lifecycle mock coverage added. Remaining: `c16e1f0` still in branch history; no S3-E live Temporal; quantitative retry counts not asserted.
+- No live Temporal S3-E
+- Nested `HTTP_503` in cause chain is theoretical residual
+- Gate unit gaps: payment≠CAPTURED / HELD / invariants (logic present)
+- F3 lifecycle disarm path not explicitly asserted (mocked runner)
+- `stash@{0}` preserved locally (`b925bb3692c0d87ea713f86288147db3bb1b5cf9`)
+
+## Authorization boundary
+
+| | |
+| --- | --- |
+| Clean rebase / push / open PR | **authorized** (Owner) |
+| **Merge / auto-merge** | **NOT authorized** |
+| Taiga #35 / #37 Done | **NOT** |
 
 ## Ask
 
-Owner: review remediation → separate auth for push/PR (and decide fate of `c16e1f0`). Do not mark #35 Done.
+Review PR; merge only after separate Owner auth. Do not mark #35 Done.

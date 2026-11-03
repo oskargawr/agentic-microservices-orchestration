@@ -1,9 +1,9 @@
 # NEXT_TASK
 
-**Status:** `approved` (implementation complete on branch — awaiting Owner audit)  
-**Last updated:** 2026-11-03 (D-AUTH-S3 impl done locally)  
-**Authorized by:** Owner — **D-AUTH-S3** (TH-400 S3 F3-Recovered + F3-Unresolved)  
-**Push / PR / merge:** **NOT authorized**  
+**Status:** `approved` (S3 on branch; clean history; push/PR authorized — **merge NOT**)  
+**Last updated:** 2026-11-03 (Scenario B rebase + push/PR auth)  
+**Authorized by:** Owner — **D-AUTH-S3** + clean-history/push/PR auth  
+**Push / PR:** authorized · **Merge / auto-merge:** **NOT authorized**  
 **Branch:** `feature/th-400-s3-f3`
 
 ## Scope (approved)
@@ -29,7 +29,7 @@ Implement TH-400 **S3** per Owner D-AUTH-S3-1…5 and `coordination/TH_400_S3_RE
 
 ## Out of scope
 
-Variant C / TH-303 · Oracle changes · protocol semantic rewrite · Java cleanup (#68) · push/PR/merge · Taiga #35/#37 Done
+Variant C / TH-303 · Oracle changes · protocol semantic rewrite · Java cleanup (#68) · **merge/auto-merge** · Taiga #35/#37 Done
 
 ## Status history
 
