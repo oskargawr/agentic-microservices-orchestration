@@ -265,6 +265,27 @@ class OrderFulfillmentCompensationIT {
     }
 
     @Test
+    void f3_forcedHttp503Resolve_withoutOpacityHint_doesNotLeaveDangling() throws Exception {
+        // Boundary: HTTP_503 alone is insufficient — RESOLVE_TRANSPORT_OPAQUE hint required.
+        HttpOrderFulfillmentActivities http = http();
+        RecordingActivities activities = new RecordingActivities(http);
+        activities.failResolveAlwaysHttp503("503 without opacity hint");
+        try (TestWorkflowEnvironment testEnv = newEnv(activities)) {
+            OrderFulfillmentResult result = stub(testEnv).fulfill(new OrderFulfillmentInput(
+                    UUID.randomUUID(), "SKU-MVP-1", 1, Money.plnMinor(2599),
+                    "F3_CAPTURE_LOST_RESPONSE", null, 1));
+
+            assertThat(result.compensationLog())
+                    .doesNotContain("experimental-opacity-unconfirmed");
+            assertThat(queryOps("payment")).contains("refund");
+            assertThat(queryOps("inventory")).contains("release");
+            assertThat(http.getPayment(result.paymentId(), null).state()).isEqualTo(PaymentState.REFUNDED);
+            assertThat(http.getReservation(result.reservationId()).state())
+                    .isEqualTo(ReservationState.RELEASED);
+        }
+    }
+
+    @Test
     void f3Unresolved_opacityLeavesCapturedHeld_noRefundNoArrange() throws Exception {
         HttpOrderFulfillmentActivities http = http();
         try (TestWorkflowEnvironment testEnv = newEnv(http)) {

@@ -80,6 +80,113 @@ class F3UnresolvedAcceptanceGateTest {
                 .isEmpty();
     }
 
+    @Test
+    void f3Unresolved_rejectsNonCapturedPayment() {
+        UUID orderId = UUID.randomUUID();
+        BusinessSnapshot snap = new BusinessSnapshot(
+                orderId,
+                "SKU-MVP-1",
+                List.of(new ReservationView(
+                        UUID.randomUUID(), orderId, "SKU-MVP-1", 1, ReservationState.HELD)),
+                Optional.of(new PaymentView(
+                        UUID.randomUUID(), orderId, 100, "PLN", PaymentState.PENDING)),
+                Optional.empty(),
+                Optional.empty(),
+                List.of());
+        assertThat(F3UnresolvedAcceptanceGate.rejectReason(
+                        "F3-Unresolved", oracleAmbiguous(snap)))
+                .isPresent()
+                .get()
+                .asString()
+                .contains("payment CAPTURED");
+    }
+
+    @Test
+    void f3Unresolved_rejectsNonHeldReservation() {
+        UUID orderId = UUID.randomUUID();
+        BusinessSnapshot snap = new BusinessSnapshot(
+                orderId,
+                "SKU-MVP-1",
+                List.of(new ReservationView(
+                        UUID.randomUUID(), orderId, "SKU-MVP-1", 1, ReservationState.CONSUMED)),
+                Optional.of(new PaymentView(
+                        UUID.randomUUID(), orderId, 100, "PLN", PaymentState.CAPTURED)),
+                Optional.empty(),
+                Optional.empty(),
+                List.of());
+        assertThat(F3UnresolvedAcceptanceGate.rejectReason(
+                        "F3-Unresolved", oracleAmbiguous(snap)))
+                .isPresent()
+                .get()
+                .asString()
+                .contains("reservation HELD");
+    }
+
+    @Test
+    void f3Unresolved_rejectsMissingReservation() {
+        UUID orderId = UUID.randomUUID();
+        BusinessSnapshot snap = new BusinessSnapshot(
+                orderId,
+                "SKU-MVP-1",
+                List.of(),
+                Optional.of(new PaymentView(
+                        UUID.randomUUID(), orderId, 100, "PLN", PaymentState.CAPTURED)),
+                Optional.empty(),
+                Optional.empty(),
+                List.of());
+        assertThat(F3UnresolvedAcceptanceGate.rejectReason(
+                        "F3-Unresolved", oracleAmbiguous(snap)))
+                .isPresent()
+                .get()
+                .asString()
+                .contains("reservation HELD");
+    }
+
+    @Test
+    void f3Unresolved_rejectsWhenMultipleReservations() {
+        UUID orderId = UUID.randomUUID();
+        BusinessSnapshot snap = new BusinessSnapshot(
+                orderId,
+                "SKU-MVP-1",
+                List.of(
+                        new ReservationView(
+                                UUID.randomUUID(), orderId, "SKU-MVP-1", 1, ReservationState.HELD),
+                        new ReservationView(
+                                UUID.randomUUID(), orderId, "SKU-MVP-1", 1, ReservationState.HELD)),
+                Optional.of(new PaymentView(
+                        UUID.randomUUID(), orderId, 100, "PLN", PaymentState.CAPTURED)),
+                Optional.empty(),
+                Optional.empty(),
+                List.of());
+        assertThat(F3UnresolvedAcceptanceGate.rejectReason(
+                        "F3-Unresolved", oracleAmbiguous(snap)))
+                .isPresent()
+                .get()
+                .asString()
+                .contains("reservation HELD");
+    }
+
+    @Test
+    void f3Unresolved_rejectsNonEmptyViolatedInvariants() {
+        OracleResult withViolation = new OracleResult(
+                BusinessOutcome.AMBIGUOUS,
+                OraclePattern.NONE,
+                OracleReasonCode.COMPENSATION_INCOMPLETE,
+                List.of("I4"),
+                List.of(),
+                ambiguousCapturedHeld().snapshot(),
+                "wf",
+                "t",
+                OracleResult.EVALUATOR_VERSION,
+                Instant.parse("2026-11-03T00:00:00Z"));
+        assertThat(F3UnresolvedAcceptanceGate.rejectReason("F3-Unresolved", withViolation))
+                .isPresent()
+                .get()
+                .asString()
+                .contains("invariant")
+                .contains("I4");
+    }
+
     private static OracleResult ambiguousCapturedHeld() {
         UUID orderId = UUID.randomUUID();
         BusinessSnapshot snap = new BusinessSnapshot(

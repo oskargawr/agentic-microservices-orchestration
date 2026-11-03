@@ -38,6 +38,10 @@ import pl.edu.pw.thesis.experiment.runner.fault.ArmedFaultRecord;
 import pl.edu.pw.thesis.experiment.runner.fault.CompositeFaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.F3RecoveredFaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.F3UnresolvedFaultController;
+import pl.edu.pw.thesis.experiment.runner.fault.FaultArmRequest;
+import pl.edu.pw.thesis.experiment.runner.fault.FaultController;
+import pl.edu.pw.thesis.experiment.runner.fault.FaultProfileDescriptor;
+import pl.edu.pw.thesis.experiment.runner.fault.FaultVerifyResult;
 import pl.edu.pw.thesis.experiment.runner.fault.PaymentF3FaultInjectionVerifier;
 import pl.edu.pw.thesis.experiment.runner.fault.PaymentInjectionCheckResult;
 import pl.edu.pw.thesis.experiment.runner.model.BusinessInputs;
@@ -70,12 +74,14 @@ class TrialRunnerF3LifecycleTest {
     FileResultStore store;
     AtomicInteger recoveredChecks;
     AtomicInteger unresolvedChecks;
+    DisarmTrackingFaultController disarmTracker;
 
     @BeforeEach
     void setUp() throws Exception {
         clock = new FakeClock(Instant.parse("2026-11-03T12:00:00Z"));
         recoveredChecks = new AtomicInteger();
         unresolvedChecks = new AtomicInteger();
+        disarmTracker = null;
         lenient()
                 .when(stateReset.resetToProtocolBaseline(anyString()))
                 .thenReturn(new StateReset.BaselineSnapshot("SKU-MVP-1", 100, 0));
@@ -113,6 +119,10 @@ class TrialRunnerF3LifecycleTest {
         verify(variantAdapter).start(any(), armedCaptor.capture());
         assertThat(armedCaptor.getValue().effectiveConfig())
                 .containsEntry("chargeCode", "F3_CAPTURE_LOST_RESPONSE");
+        // TrialRunner finally: exactly one disarm when arm succeeded
+        assertThat(disarmTracker.disarmCount.get()).isEqualTo(1);
+        assertThat(disarmTracker.lastDisarmedTrialId).isEqualTo("t-f3r");
+        assertThat(runner.isFurtherTrialsBlocked()).isFalse();
     }
 
     @Test
@@ -144,6 +154,8 @@ class TrialRunnerF3LifecycleTest {
                 .containsEntry("opacityMode", "header-presence");
         assertThat(record.oracle().classification()).isEqualTo("AMBIGUOUS");
         assertThat(unresolvedChecks.get()).isEqualTo(1);
+        assertThat(disarmTracker.disarmCount.get()).isEqualTo(1);
+        assertThat(disarmTracker.lastDisarmedTrialId).isEqualTo("t-f3u");
     }
 
     @Test
@@ -169,6 +181,9 @@ class TrialRunnerF3LifecycleTest {
         assertThat(record.harnessStatus()).isEqualTo(HarnessStatus.EXCLUDED);
         assertThat(record.exclusionReason()).isEqualTo("F3_UNRESOLVED_ACCEPTANCE_FAILED");
         assertThat(record.infraError()).contains("CANCELLED");
+        // Exclusion after arm still runs finally disarm once
+        assertThat(disarmTracker.disarmCount.get()).isEqualTo(1);
+        assertThat(disarmTracker.lastDisarmedTrialId).isEqualTo("t-bad-ship");
     }
 
     @Test
@@ -189,6 +204,35 @@ class TrialRunnerF3LifecycleTest {
         assertThat(record.exclusionReason()).isEqualTo("FAULT_VERIFY_FAILED");
         assertThat(record.infraError()).contains("PAYMENT_F3_RECOVERED_NOT_CONFIRMED");
         verify(variantAdapter, never()).start(any(), any());
+        // Arm succeeded before verify fail → finally still disarms once
+        assertThat(disarmTracker.disarmCount.get()).isEqualTo(1);
+        assertThat(disarmTracker.lastDisarmedTrialId).isEqualTo("t-nov");
+    }
+
+    @Test
+    void f3Recovered_disarmFailure_blocksFurtherTrials() throws Exception {
+        ExperimentDefinition experiment = experimentWithProfiles(List.of("F3-Recovered"));
+        store = new FileResultStore(tmp, experiment);
+        store.saveExperiment(experiment);
+        TrialRunner runner = newRunner(experiment, f3Verifier(true, true));
+        disarmTracker.failDisarm = true;
+
+        UUID orderId = UUID.randomUUID();
+        TrialSpec spec = TrialSpec.forVariantA(
+                experiment.experimentId(), "t-disarm-fail", "F3-Recovered", 0, orderId,
+                experiment.businessDefaults());
+        ExecutionHandle handle = new ExecutionHandle(spec.workflowId(), "run-df");
+        when(variantAdapter.start(any(), any())).thenReturn(handle);
+        when(variantAdapter.awaitStop(any(), any()))
+                .thenReturn(new WorkflowStopInfo(
+                        "COMPLETED", true, Instant.parse("2026-11-03T12:00:10Z"), "SUCCESS"));
+        when(oracle.evaluate(any())).thenReturn(oracleSuccess(orderId, "t-disarm-fail"));
+
+        TrialRecord record = runner.run(spec);
+
+        assertThat(record.harnessStatus()).isEqualTo(HarnessStatus.COMPLETED);
+        assertThat(disarmTracker.disarmCount.get()).isEqualTo(1);
+        assertThat(runner.isFurtherTrialsBlocked()).isTrue();
     }
 
     private TrialRunner newRunner(ExperimentDefinition experiment, PaymentF3FaultInjectionVerifier verifier) {
@@ -201,15 +245,16 @@ class TrialRunnerF3LifecycleTest {
                 tmp,
                 new TemporalSettings("localhost:7233", "default"),
                 experiment.timing());
-        var map = new java.util.LinkedHashMap<String, pl.edu.pw.thesis.experiment.runner.fault.FaultController>();
+        var map = new java.util.LinkedHashMap<String, FaultController>();
         map.put("F0", new pl.edu.pw.thesis.experiment.runner.fault.F0FaultController(clock));
         map.put(F3RecoveredFaultController.PROFILE, new F3RecoveredFaultController(clock, verifier));
         map.put(F3UnresolvedFaultController.PROFILE, new F3UnresolvedFaultController(clock, verifier));
+        disarmTracker = new DisarmTrackingFaultController(new CompositeFaultController(map));
         return new TrialRunner(
                 experiment,
                 environment,
                 stateReset,
-                new CompositeFaultController(map),
+                disarmTracker,
                 variantAdapter,
                 oracle,
                 store,
@@ -323,6 +368,46 @@ class TrialRunnerF3LifecycleTest {
                 trialId,
                 OracleResult.EVALUATOR_VERSION,
                 Instant.parse("2026-11-03T12:00:40Z"));
+    }
+
+    /**
+     * Observes TrialRunner's single {@code finally} disarm call without changing FaultController
+     * semantics. Shared for F3-Recovered and F3-Unresolved (same lifecycle path).
+     */
+    static final class DisarmTrackingFaultController implements FaultController {
+        private final FaultController delegate;
+        final AtomicInteger disarmCount = new AtomicInteger();
+        volatile String lastDisarmedTrialId;
+        volatile boolean failDisarm;
+
+        DisarmTrackingFaultController(FaultController delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public ArmedFaultRecord arm(FaultArmRequest request) {
+            return delegate.arm(request);
+        }
+
+        @Override
+        public FaultVerifyResult verify(ArmedFaultRecord armed, TrialSpec trial) {
+            return delegate.verify(armed, trial);
+        }
+
+        @Override
+        public void disarm(String trialId) {
+            disarmCount.incrementAndGet();
+            lastDisarmedTrialId = trialId;
+            if (failDisarm) {
+                throw new IllegalStateException("controlled disarm failure");
+            }
+            delegate.disarm(trialId);
+        }
+
+        @Override
+        public FaultProfileDescriptor describe(String faultProfileId) {
+            return delegate.describe(faultProfileId);
+        }
     }
 
     static final class FakeClock implements RunnerClock {

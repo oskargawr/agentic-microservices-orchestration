@@ -13,11 +13,11 @@ Canonical research narrative also lives in Obsidian
 | Field | Value |
 | --- | --- |
 | **Date** | 2026-11-03 |
-| **Status** | **approved** (Owner D-AUTH-S3); **push/PR/merge NOT authorized** |
+| **Status** | **approved** (Owner D-AUTH-S3); **push / open PR authorized**; **merge / auto-merge NOT authorized** |
 | **Decision-maker** | Project Owner |
 | **Context** | After S2 merge + `TH_400_S3_READINESS.md` discovery |
-| **Evidence** | Owner message „D-AUTH-S3 — Owner Authorization: TH-400 F3 Implementation” |
-| **Related** | D-404 · OQ-F3U-1/2 · D-016 · D-201 · D-R4/R5/R7 · TH-400 · Taiga #35 |
+| **Evidence** | Owner D-AUTH-S3 impl auth; later Owner auth for clean history + push + open PR #14 (merge still excluded) |
+| **Related** | D-404 · OQ-F3U-1/2 · D-016 · D-201 · D-R4/R5/R7 · TH-400 · Taiga #35 · PR #14 |
 | **SP** | **9** (S3-A…D); S3-E live E2E optional **1 SP** separate |
 
 ### Authorized (D-AUTH-S3-1…5)
@@ -28,9 +28,14 @@ Canonical research narrative also lives in Obsidian
 4. Propagate fault hint on resolve **and** fallback `getPayment`.  
 5. Compensation safety: experimental path must not be defeated by unhinted GET; preserve D-201; Unresolved cell leaves CAPTURED+HELD.
 
+### Authorization boundary (push vs merge)
+
+- Implementation + clean S3-only history + **push** + **open PR**: authorized (Owner).  
+- **Merge** and **auto-merge**: **NOT** authorized — push/open-PR permission does **not** imply merge.
+
 ### Explicitly excluded
 
-Variant C / TH-303 · Oracle changes · protocol semantic rewrite · Java cleanup (#68) · push/PR/merge · Taiga #35/#37 **Done**.
+Variant C / TH-303 · Oracle changes · protocol semantic rewrite · Java cleanup (#68) · **merge / auto-merge** · Taiga #35/#37 **Done**.
 
 ---
 
