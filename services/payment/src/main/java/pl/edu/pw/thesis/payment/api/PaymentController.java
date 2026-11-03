@@ -50,7 +50,9 @@ public class PaymentController {
     }
 
     @GetMapping("/payments/{paymentId}")
-    public PaymentSnapshot getPayment(@PathVariable UUID paymentId) {
-        return service.getPayment(paymentId);
+    public PaymentSnapshot getPayment(
+            @PathVariable UUID paymentId,
+            @RequestHeader(value = ThesisFault.HEADER, required = false) String fault) {
+        return service.getPayment(paymentId, fault);
     }
 }

@@ -190,6 +190,41 @@ class PaymentIntegrationTest {
     }
 
     @Test
+    void f3UnresolvedOpacityReturns503WithoutDbMutationOnResolveAndGet() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        String paymentId = chargeReturningId(
+                orderId, orderId + ":charge", ThesisFault.F3_CAPTURE_LOST_RESPONSE.name());
+
+        long logCountBefore = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM operation_log WHERE payment_id = ?::uuid", Long.class, paymentId);
+
+        mockMvc.perform(post("/api/v1/payments/" + paymentId + "/resolve")
+                        .header(ThesisFault.HEADER, ThesisFault.RESOLVE_TRANSPORT_OPAQUE.name()))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"));
+
+        mockMvc.perform(get("/api/v1/payments/" + paymentId)
+                        .header(ThesisFault.HEADER, ThesisFault.RESOLVE_TRANSPORT_OPAQUE.name()))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"));
+
+        assertThat(jdbc.queryForObject(
+                        "SELECT state FROM payments WHERE payment_id = ?::uuid", String.class, paymentId))
+                .isEqualTo("CAPTURED");
+        long logCountAfter = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM operation_log WHERE payment_id = ?::uuid", Long.class, paymentId);
+        assertThat(logCountAfter).isEqualTo(logCountBefore);
+
+        // Without opacity header, D-016 exposure of CAPTURED remains intact
+        mockMvc.perform(get("/api/v1/payments/" + paymentId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("CAPTURED"));
+        mockMvc.perform(post("/api/v1/payments/" + paymentId + "/resolve"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("CAPTURED"));
+    }
+
+    @Test
     void noRefundBasedOnTimeoutObservationAlone() throws Exception {
         // Caller saw UNKNOWN from F3 but must use CAPTURED business state for refund.
         // Refunding UNKNOWN-without-capture is refused (CHARGE_UNKNOWN case already covered).

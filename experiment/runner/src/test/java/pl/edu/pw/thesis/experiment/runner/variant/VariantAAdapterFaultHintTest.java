@@ -11,7 +11,10 @@ import pl.edu.pw.thesis.experiment.runner.fault.ArmedFaultRecord;
 import pl.edu.pw.thesis.experiment.runner.fault.F0FaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.F1PFaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.F2FaultController;
+import pl.edu.pw.thesis.experiment.runner.fault.F3RecoveredFaultController;
+import pl.edu.pw.thesis.experiment.runner.fault.F3UnresolvedFaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.FaultArmRequest;
+import pl.edu.pw.thesis.experiment.runner.fault.PaymentF3FaultInjectionVerifier;
 import pl.edu.pw.thesis.experiment.runner.fault.PaymentInjectionCheckResult;
 import pl.edu.pw.thesis.experiment.runner.model.BusinessInputs;
 import pl.edu.pw.thesis.experiment.runner.model.TrialSpec;
@@ -64,6 +67,45 @@ class VariantAAdapterFaultHintTest {
         ArmedFaultRecord armed = f2.arm(FaultArmRequest.from(trial));
         assertThat(VariantAAdapter.resolveChargeFaultHint(armed)).isNull();
         assertThat(VariantAAdapter.resolveArrangeFaultHint(armed)).isEqualTo("ARRANGE_REJECTED");
+        assertThat(VariantAAdapter.resolveResolveFaultHint(armed)).isNull();
+    }
+
+    @Test
+    void f3Recovered_chargeOnly() {
+        F3RecoveredFaultController c = new F3RecoveredFaultController(CLOCK, okF3Verifier());
+        UUID orderId = UUID.randomUUID();
+        TrialSpec trial = TrialSpec.forVariantA(
+                "exp", "t3r", "F3-Recovered", 0, orderId, BusinessInputs.protocolPilotDefaults());
+        ArmedFaultRecord armed = c.arm(FaultArmRequest.from(trial));
+        assertThat(VariantAAdapter.resolveChargeFaultHint(armed)).isEqualTo("F3_CAPTURE_LOST_RESPONSE");
+        assertThat(VariantAAdapter.resolveResolveFaultHint(armed)).isNull();
+        assertThat(VariantAAdapter.resolveArrangeFaultHint(armed)).isNull();
+    }
+
+    @Test
+    void f3Unresolved_chargeAndResolveOpacity() {
+        F3UnresolvedFaultController c = new F3UnresolvedFaultController(CLOCK, okF3Verifier());
+        UUID orderId = UUID.randomUUID();
+        TrialSpec trial = TrialSpec.forVariantA(
+                "exp", "t3u", "F3-Unresolved", 0, orderId, BusinessInputs.protocolPilotDefaults());
+        ArmedFaultRecord armed = c.arm(FaultArmRequest.from(trial));
+        assertThat(VariantAAdapter.resolveChargeFaultHint(armed)).isEqualTo("F3_CAPTURE_LOST_RESPONSE");
+        assertThat(VariantAAdapter.resolveResolveFaultHint(armed)).isEqualTo("RESOLVE_TRANSPORT_OPAQUE");
+        assertThat(VariantAAdapter.resolveArrangeFaultHint(armed)).isNull();
+    }
+
+    private static PaymentF3FaultInjectionVerifier okF3Verifier() {
+        return new PaymentF3FaultInjectionVerifier() {
+            @Override
+            public PaymentInjectionCheckResult checkRecovered() {
+                return PaymentInjectionCheckResult.enabled("ok");
+            }
+
+            @Override
+            public PaymentInjectionCheckResult checkUnresolved() {
+                return PaymentInjectionCheckResult.enabled("ok");
+            }
+        };
     }
 
     @Test

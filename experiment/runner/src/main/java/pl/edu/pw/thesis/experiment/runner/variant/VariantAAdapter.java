@@ -55,6 +55,7 @@ public final class VariantAAdapter implements VariantAdapter {
             throw new IllegalArgumentException("VariantAAdapter only supports variant A");
         }
         String chargeFaultHint = resolveChargeFaultHint(armed);
+        String resolveFaultHint = resolveResolveFaultHint(armed);
         String arrangeFaultHint = resolveArrangeFaultHint(armed);
         OrderFulfillmentInput input = new OrderFulfillmentInput(
                 trial.orderId(),
@@ -62,7 +63,7 @@ public final class VariantAAdapter implements VariantAdapter {
                 trial.businessInputs().qty(),
                 new Money(trial.businessInputs().amountMinor(), trial.businessInputs().currency()),
                 chargeFaultHint,
-                null,
+                resolveFaultHint,
                 arrangeFaultHint,
                 null);
 
@@ -136,7 +137,8 @@ public final class VariantAAdapter implements VariantAdapter {
     }
 
     /**
-     * F0 / missing / NONE / F2 → null charge hint. F1-P HEADER + CHARGE_FAIL → {@code CHARGE_FAIL}.
+     * F0 / missing / NONE / F2 → null charge hint. F1-P → {@code CHARGE_FAIL}. F3-* →
+     * {@code F3_CAPTURE_LOST_RESPONSE}.
      */
     static String resolveChargeFaultHint(ArmedFaultRecord armed) {
         if (armed == null || "NONE".equals(armed.mechanism())) {
@@ -156,20 +158,64 @@ public final class VariantAAdapter implements VariantAdapter {
             }
             return "CHARGE_FAIL";
         }
+        if ("F3-Recovered".equals(armed.faultProfileId())
+                || "F3-Unresolved".equals(armed.faultProfileId())) {
+            if (!"HEADER".equals(armed.mechanism())) {
+                throw new IllegalArgumentException(armed.faultProfileId() + " mechanism must be HEADER");
+            }
+            String code = armed.effectiveConfig() == null
+                    ? null
+                    : armed.effectiveConfig().get("chargeCode");
+            if (!"F3_CAPTURE_LOST_RESPONSE".equals(code)) {
+                throw new IllegalArgumentException(
+                        armed.faultProfileId()
+                                + " effectiveConfig.chargeCode must be F3_CAPTURE_LOST_RESPONSE, got "
+                                + code);
+            }
+            return "F3_CAPTURE_LOST_RESPONSE";
+        }
         throw new IllegalArgumentException(
                 "VariantAAdapter unsupported armed fault profile for charge hint: "
                         + armed.faultProfileId());
     }
 
     /**
-     * F0 / missing / NONE / F1-P → null arrange hint. F2 HEADER + ARRANGE_REJECTED →
+     * F3-Unresolved → {@code RESOLVE_TRANSPORT_OPAQUE}. Other profiles → null (including
+     * F3-Recovered, which must expose CAPTURED on resolve/GET).
+     */
+    static String resolveResolveFaultHint(ArmedFaultRecord armed) {
+        if (armed == null || "NONE".equals(armed.mechanism())) {
+            return null;
+        }
+        if (!"F3-Unresolved".equals(armed.faultProfileId())) {
+            return null;
+        }
+        if (!"HEADER".equals(armed.mechanism())) {
+            throw new IllegalArgumentException("F3-Unresolved mechanism must be HEADER");
+        }
+        String code = armed.effectiveConfig() == null
+                ? null
+                : armed.effectiveConfig().get("resolveCode");
+        if (!"RESOLVE_TRANSPORT_OPAQUE".equals(code)) {
+            throw new IllegalArgumentException(
+                    "F3-Unresolved effectiveConfig.resolveCode must be RESOLVE_TRANSPORT_OPAQUE, got "
+                            + code);
+        }
+        return "RESOLVE_TRANSPORT_OPAQUE";
+    }
+
+    /**
+     * F0 / missing / NONE / F1-P / F3-* → null arrange hint. F2 HEADER + ARRANGE_REJECTED →
      * {@code ARRANGE_REJECTED}.
      */
     static String resolveArrangeFaultHint(ArmedFaultRecord armed) {
         if (armed == null || "NONE".equals(armed.mechanism())) {
             return null;
         }
-        if ("F0".equals(armed.faultProfileId()) || "F1-P".equals(armed.faultProfileId())) {
+        if ("F0".equals(armed.faultProfileId())
+                || "F1-P".equals(armed.faultProfileId())
+                || "F3-Recovered".equals(armed.faultProfileId())
+                || "F3-Unresolved".equals(armed.faultProfileId())) {
             return null;
         }
         if ("F2".equals(armed.faultProfileId())) {

@@ -49,8 +49,12 @@ public interface OrderFulfillmentActivities {
     @ActivityMethod
     ReservationSnapshot getReservation(UUID reservationId);
 
+    /**
+     * {@code faultHint} maps to payment {@code X-Thesis-Fault} when non-null/blank (F3-Unresolved
+     * opacity on GET). Pass {@code null} for normal reads (compensation / refresh).
+     */
     @ActivityMethod
-    PaymentSnapshot getPayment(UUID paymentId);
+    PaymentSnapshot getPayment(UUID paymentId, String faultHint);
 
     @ActivityMethod
     ShipmentSnapshot getShipment(UUID shipmentId);

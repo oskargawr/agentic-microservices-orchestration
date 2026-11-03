@@ -50,6 +50,17 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public PaymentSnapshot getPayment(UUID paymentId) {
+        return getPayment(paymentId, null);
+    }
+
+    /**
+     * Read payment. When fault injection is enabled and {@code faultHeader} is
+     * {@link ThesisFault#RESOLVE_TRANSPORT_OPAQUE}, returns HTTP 503 without reading a
+     * mutating path — caller must not observe CAPTURED over this channel (F3-Unresolved).
+     */
+    @Transactional(readOnly = true)
+    public PaymentSnapshot getPayment(UUID paymentId, String faultHeader) {
+        assertNoTransportOpacity(faultHeader, "GET");
         return toSnapshot(requirePayment(paymentId));
     }
 
@@ -153,6 +164,9 @@ public class PaymentService {
 
     @Transactional
     public PaymentSnapshot resolve(UUID paymentId, String faultHeader) {
+        // Opacity must short-circuit before any lock / FOR UPDATE / operation_log write.
+        assertNoTransportOpacity(faultHeader, "resolve");
+
         repo.advisoryLockPayment(paymentId);
         PaymentRow payment = repo.findByIdForUpdate(paymentId)
                 .orElseThrow(() -> new PaymentException(
@@ -186,6 +200,34 @@ public class PaymentService {
                 payment.paymentId(), payment.orderId(), payment.amountMinor(), payment.currency(), next));
     }
 
+    /**
+     * F3-Unresolved: while {@link ThesisFault#RESOLVE_TRANSPORT_OPAQUE} is present and fault
+     * injection is enabled, refuse resolve/GET with HTTP 503 and <strong>no</strong> DB mutation.
+     */
+    private void assertNoTransportOpacity(String faultHeader, String operation) {
+        if (!properties.isFaultInjectionEnabled()) {
+            return;
+        }
+        if (faultHeader == null || faultHeader.isBlank()) {
+            return;
+        }
+        final ThesisFault fault;
+        try {
+            fault = ThesisFault.valueOf(faultHeader.trim());
+        } catch (IllegalArgumentException e) {
+            throw new PaymentException(
+                    ErrorCode.VALIDATION_ERROR,
+                    HttpStatus.BAD_REQUEST,
+                    "Unknown fault header: " + faultHeader);
+        }
+        if (fault == ThesisFault.RESOLVE_TRANSPORT_OPAQUE) {
+            throw new PaymentException(
+                    ErrorCode.SERVICE_UNAVAILABLE,
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Transport opacity on " + operation + " (RESOLVE_TRANSPORT_OPAQUE); no DB mutation");
+        }
+    }
+
     private ThesisFault resolveChargeFault(String faultHeader) {
         if (!properties.isFaultInjectionEnabled()) {
             return ThesisFault.CHARGE_CAPTURE;
@@ -202,6 +244,10 @@ public class PaymentService {
             case RESOLVE_CAPTURE -> ResolveProbeOutcome.CAPTURE_CONFIRMED;
             case RESOLVE_FAIL -> ResolveProbeOutcome.CAPTURE_DID_NOT_OCCUR;
             case RESOLVE_INCONCLUSIVE -> ResolveProbeOutcome.INCONCLUSIVE;
+            case RESOLVE_TRANSPORT_OPAQUE -> throw new PaymentException(
+                    ErrorCode.SERVICE_UNAVAILABLE,
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Transport opacity on resolve (RESOLVE_TRANSPORT_OPAQUE); no DB mutation");
             default -> throw new PaymentException(
                     ErrorCode.VALIDATION_ERROR,
                     HttpStatus.BAD_REQUEST,

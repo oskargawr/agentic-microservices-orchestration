@@ -120,16 +120,34 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
     private void handleUnresolvedPayment(OrderFulfillmentInput input, SagaState state) {
         PaymentSnapshot snap = null;
         for (int i = 0; i < input.resolveAttemptLimit(); i++) {
-            snap = activities.resolvePayment(state.paymentId, input.resolveFaultHint());
-            state.paymentState = snap.state();
-            if (state.paymentState == PaymentState.CAPTURED
-                    || state.paymentState == PaymentState.FAILED) {
-                break;
+            try {
+                snap = activities.resolvePayment(state.paymentId, input.resolveFaultHint());
+                state.paymentState = snap.state();
+                if (state.paymentState == PaymentState.CAPTURED
+                        || state.paymentState == PaymentState.FAILED) {
+                    break;
+                }
+            } catch (ActivityFailure e) {
+                // Only exhausted HTTP_503 under explicit transport-opacity hint may continue as
+                // unresolved (F3-Unresolved). BUSINESS / other failures must propagate.
+                if (!isExhaustedTransportOpacityFailure(e, input.resolveFaultHint())) {
+                    throw e;
+                }
+                snap = null;
             }
         }
-        if (snap == null) {
-            snap = activities.getPayment(state.paymentId);
-            state.paymentState = snap.state();
+        if (state.paymentState != PaymentState.CAPTURED
+                && state.paymentState != PaymentState.FAILED) {
+            // Fallback GET must carry the same resolve hint (F3-Unresolved: no unhinted escape).
+            try {
+                snap = activities.getPayment(state.paymentId, input.resolveFaultHint());
+                state.paymentState = snap.state();
+            } catch (ActivityFailure e) {
+                if (!isExhaustedTransportOpacityFailure(e, input.resolveFaultHint())) {
+                    throw e;
+                }
+                snap = null;
+            }
         }
 
         if (state.paymentState == PaymentState.CAPTURED) {
@@ -299,9 +317,17 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
             log.add("cancel-skipped:none");
         }
 
-        // 2) Refund only if CAPTURED confirmed
+        // F3-Unresolved (D-AUTH-S3-5): experimental opacity left payment unconfirmed over HTTP.
+        // Do not unhinted-GET CAPTURED and refund/release — cell expects CAPTURED + HELD.
+        if (leaveDanglingCaptureForExperimentalOpacity(state)) {
+            log.add("refund-skipped:experimental-opacity-unconfirmed");
+            log.add("release-skipped:experimental-opacity-unconfirmed");
+            return;
+        }
+
+        // 2) Refund only if CAPTURED confirmed (unhinted GET — opacity window not on this path)
         if (state.paymentId != null) {
-            PaymentSnapshot payment = compensationActivities.getPayment(state.paymentId);
+            PaymentSnapshot payment = compensationActivities.getPayment(state.paymentId, null);
             state.paymentState = payment.state();
             if (payment.state() == PaymentState.CAPTURED) {
                 RefundResponse refunded = compensationActivities.refund(state.paymentId);
@@ -338,6 +364,10 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
      * Known resources still requiring compensation after mutate attempts → incomplete (throw).
      */
     private void assertNoOutstandingCompensationRequired(SagaState state, List<String> log) {
+        if (leaveDanglingCaptureForExperimentalOpacity(state)) {
+            // Intentional CAPTURED + HELD for F3-Unresolved experimental cell.
+            return;
+        }
         if (state.shipmentId != null) {
             ShipmentSnapshot shipment = compensationActivities.getShipment(state.shipmentId);
             state.shipmentState = shipment.state();
@@ -348,7 +378,7 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
             }
         }
         if (state.paymentId != null) {
-            PaymentSnapshot payment = compensationActivities.getPayment(state.paymentId);
+            PaymentSnapshot payment = compensationActivities.getPayment(state.paymentId, null);
             state.paymentState = payment.state();
             if (payment.state() == PaymentState.CAPTURED) {
                 throw ApplicationFailure.newNonRetryableFailure(
@@ -372,11 +402,50 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
             state.reservationState = compensationActivities.getReservation(state.reservationId).state();
         }
         if (state.paymentId != null) {
-            state.paymentState = compensationActivities.getPayment(state.paymentId).state();
+            // Unhinted: after experimental resolution, refresh may observe DB CAPTURED for honesty.
+            state.paymentState = compensationActivities.getPayment(state.paymentId, null).state();
         }
         if (state.shipmentId != null) {
             state.shipmentState = compensationActivities.getShipment(state.shipmentId).state();
         }
+    }
+
+    /**
+     * D-AUTH-S3-5 / F3-Unresolved: forward path never confirmed CAPTURED over HTTP while
+     * {@code RESOLVE_TRANSPORT_OPAQUE} was armed; leave CAPTURED+HELD (no refund/release).
+     */
+    private static boolean leaveDanglingCaptureForExperimentalOpacity(SagaState state) {
+        if (state.pendingOutcome != BusinessOutcome.AMBIGUOUS) {
+            return false;
+        }
+        if (!isTransportOpacityHint(state.resolveFaultHint)) {
+            return false;
+        }
+        return state.paymentState == PaymentState.UNKNOWN
+                || state.paymentState == PaymentState.PENDING;
+    }
+
+    private static boolean isTransportOpacityHint(String hint) {
+        return hint != null && "RESOLVE_TRANSPORT_OPAQUE".equals(hint.trim());
+    }
+
+    /**
+     * True only when the armed resolve hint is transport opacity and the activity failure chain
+     * contains a retryable {@code HTTP_503} {@link ApplicationFailure} (Temporal wraps it under
+     * {@link ActivityFailure} after exhausting retries).
+     */
+    private static boolean isExhaustedTransportOpacityFailure(ActivityFailure failure, String resolveHint) {
+        if (!isTransportOpacityHint(resolveHint)) {
+            return false;
+        }
+        Throwable t = failure;
+        while (t != null) {
+            if (t instanceof ApplicationFailure af && "HTTP_503".equals(af.getType())) {
+                return true;
+            }
+            t = t.getCause();
+        }
+        return false;
     }
 
     /** D-208 Option E — honest terminal labeling. */
@@ -421,6 +490,7 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
         final int qty;
         final Money amount;
         final String chargeFaultHint;
+        final String resolveFaultHint;
         final String arrangeFaultHint;
 
         boolean reserveAttempted;
@@ -443,6 +513,7 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
             this.qty = input.qty();
             this.amount = input.amount();
             this.chargeFaultHint = input.chargeFaultHint();
+            this.resolveFaultHint = input.resolveFaultHint();
             this.arrangeFaultHint = input.arrangeFaultHint();
         }
 

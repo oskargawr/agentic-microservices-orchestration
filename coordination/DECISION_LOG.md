@@ -8,6 +8,37 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-AUTH-S3 — TH-400 S3 (F3-Recovered + F3-Unresolved) implementation authorization
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-03 |
+| **Status** | **approved** (Owner D-AUTH-S3); **push / open PR authorized**; **merge / auto-merge NOT authorized** |
+| **Decision-maker** | Project Owner |
+| **Context** | After S2 merge + `TH_400_S3_READINESS.md` discovery |
+| **Evidence** | Owner D-AUTH-S3 impl auth; later Owner auth for clean history + push + open PR #14 (merge still excluded) |
+| **Related** | D-404 · OQ-F3U-1/2 · D-016 · D-201 · D-R4/R5/R7 · TH-400 · Taiga #35 · PR #14 |
+| **SP** | **9** (S3-A…D); S3-E live E2E optional **1 SP** separate |
+
+### Authorized (D-AUTH-S3-1…5)
+
+1. Dual profiles `F3-Recovered` + `F3-Unresolved` (no Recovered-only final scope).  
+2. Oracle API/classifier **unchanged**; harness acceptance gate for Unresolved (profile + `AMBIGUOUS` + DB CAPTURED/HELD/no arranged).  
+3. `RESOLVE_TRANSPORT_OPAQUE` via `X-Thesis-Fault` → HTTP **503**; no payment DB mutation; header-presence (no shared counter).  
+4. Propagate fault hint on resolve **and** fallback `getPayment`.  
+5. Compensation safety: experimental path must not be defeated by unhinted GET; preserve D-201; Unresolved cell leaves CAPTURED+HELD.
+
+### Authorization boundary (push vs merge)
+
+- Implementation + clean S3-only history + **push** + **open PR**: authorized (Owner).  
+- **Merge** and **auto-merge**: **NOT** authorized — push/open-PR permission does **not** imply merge.
+
+### Explicitly excluded
+
+Variant C / TH-303 · Oracle changes · protocol semantic rewrite · Java cleanup (#68) · **merge / auto-merge** · Taiga #35/#37 **Done**.
+
+---
+
 ## D-406 — TH-400 S2 (F2) merged to main (status)
 
 | Field | Value |

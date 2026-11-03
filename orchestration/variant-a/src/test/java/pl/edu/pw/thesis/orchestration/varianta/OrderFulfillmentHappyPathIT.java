@@ -138,7 +138,7 @@ class OrderFulfillmentHappyPathIT {
             assertThat(result.matchesConfirmedSuccessSnapshot()).isTrue();
 
             ReservationSnapshot reservation = http.getReservation(result.reservationId());
-            PaymentSnapshot payment = http.getPayment(result.paymentId());
+            PaymentSnapshot payment = http.getPayment(result.paymentId(), null);
             ShipmentSnapshot shipment = http.getShipment(result.shipmentId());
 
             assertThat(reservation.state()).isEqualTo(ReservationState.CONSUMED);

@@ -1,47 +1,34 @@
 # PROJECT_STATE
 
-**Last updated:** 2026-11-02  
-**Updated by:** Cursor Agent (TH-400 S2 post-merge sync)  
-**MODE this session:** IMPLEMENTATION (merge + coordination sync only)
+**Last updated:** 2026-11-03 (S3 review remediation docs sync; merge NOT authorized)  
+**Updated by:** Cursor Agent  
+**MODE this session:** IMPLEMENTATION (TH-400 S3 docs sync after PR #14 review remediation)
 
 ## Current thesis scope (MVP)
 
 | | |
 | --- | --- |
-| **Runner** | TH-402 phase-1 + 1.1 on `main` (PR #11) + F2 arming on `main` (PR #13) |
-| **TH-400 S0** | **Owner-ratified (D-404)** — on `main` via PR #12 lineage |
-| **TH-400 S1 (F1-P)** | **Merged** — PR [#12](https://github.com/oskargawr/agentic-microservices-orchestration/pull/12) · merge `c732558` |
-| **TH-400 S2 (F2)** | **Merged** — PR [#13](https://github.com/oskargawr/agentic-microservices-orchestration/pull/13) · merge `b4ab3fa` · tip `17a3f79` |
-| **TH-402 overall** | Phase-1 complete on main · ticket **NOT Done** |
-| **Not authorized** | S3–S4 · Variant C · Taiga #35/#37 Done |
+| **Runner** | TH-402 phase-1 + 1.1 on `main` + F1-P/F2 on `main` + **F3 controllers on branch** |
+| **TH-400 S0** | Owner-ratified (D-404) on `main` |
+| **TH-400 S1 (F1-P)** | Merged — PR #12 · `c732558` |
+| **TH-400 S2 (F2)** | Merged — PR #13 · `b4ab3fa` |
+| **TH-400 S3 (F3)** | **On `feature/th-400-s3-f3`** — clean S3-only history; push/PR auth; **merge NOT** |
+| **TH-400 overall** | **In Progress** (≠ Done; S4 open) |
+| **TH-402 overall** | Phase-1 on main · ticket **NOT Done** |
+| **Not authorized** | **merge / auto-merge** · Variant C · Oracle changes · #35/#37 Done · #68 impl |
 
 ## Engineering
 
 | | |
 | --- | --- |
-| **`origin/main`** | `b4ab3fa966b6d749530b7ace7feef1d84f5d46c6` |
-| **S2 merge** | PR #13 → `b4ab3fa` (parents: `c732558` + `17a3f79`) |
-| **S2 tip (ancestor)** | `17a3f791f45a31b2cc9d7016be68a785ab54d56e` |
-| **Pre-merge audit** | PASS WITH LIMITATIONS (impl tip `70c4f85`; post-audit docs-only `17a3f79`) |
-| **CI on merge tip** | build SUCCESS · GitGuardian SUCCESS |
-
-## S2 on main (summary)
-
-- `ErrorCode.ARRANGE_REJECTED`; ShippingFault + `thesis.shipping.fault-injection-enabled`
-- Arrange: idempotency-first; F2 failure row HTTP 409; `noRollbackFor(ShippingException)`
-- Orchestration: `arrangeFaultHint` forward + recovery
-- Runner: `F2FaultController`, shipping preflight (409+code), adapter F2 → arrange hint; F0/F1-P unchanged
-- No Oracle classifier / Payment production / F3 / Variant C changes
-
-### Known limitations (carried)
-
-- Preflight forge-URL class; probe residue until StateReset
-- No live Temporal F1-P/F2 E2E in lab this session
-- CLI does not exit non-zero solely on missing `CONFIRMED_FAILURE`
-- Broad `noRollbackFor(ShippingException)` on arrange (safe today; future-hazard)
+| **Branch** | `feature/th-400-s3-f3` |
+| **Merge-base** | `origin/main` `f3ac351` (`c16e1f0` **excluded**) |
+| **D-AUTH-S3** | approved · SP **9** (S3-A…D); S3-E optional not claimed |
+| **Oracle** | unchanged (harness gate for F3-Unresolved) |
+| **Tests (post review remediation)** | variant-a **38** · runner **78** · payment **14** — all green · tip `1a85363` |
 
 ## Next three actions
 
-1. Separate **D-AUTH-S3** before any F3 work (not started)  
-2. Do **not** mark Taiga #35 / #37 Done  
-3. Optional: live F2 E2E lab (does not replace D-AUTH)  
+1. Owner / CI review of open PR  
+2. Separate Owner auth required before **merge**  
+3. Do **not** mark Taiga #35 / #37 Done  
