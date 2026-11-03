@@ -12,7 +12,7 @@
 
 | | |
 | --- | --- |
-| Tip (after remediation commits) | see `git rev-parse HEAD` on branch |
+| Tip | `f6e53a7c9ed8c7adc80c0d7afc54debab2084a84` |
 | Prior audit tip | `8c5b1a12dd46a60d1360ec25aef20ab4c9cb9610` |
 | S3 impl | `ba81686eafeba0db1b57594a1ecef45e8250d329` |
 | Unpushed EOD docs (unchanged) | `c16e1f0` — **not** modified in remediation |
