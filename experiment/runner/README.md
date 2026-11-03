@@ -181,6 +181,7 @@ G5-2 and G5-3 are **independent** scenarios. A worker-down G5-2 accident is **no
 | `THESIS_RUN_G5=true` | Opt-in gate (required) |
 | `THESIS_RUN_G5_SCENARIO` | `G5-2` · `G5-3` · `ALL` (default) |
 | `THESIS_G5_DEDICATED_ENV=true` | Operator **ack** of a dedicated Temporal lab (required, but **not** poller proof) |
+| `THESIS_G5_RESULTS_DIR` | **Required absolute, writable, durable directory** for G5 trial JSON, history export, and acceptance artifacts |
 | `TEMPORAL_TARGET` / `TEMPORAL_NAMESPACE` | Temporal client |
 | `VARIANT_A_TEST_JDBC_URL` (+ user/password) | Allowlisted business DB |
 | `GIT_SHA` | Recorded on trial / acceptance |
@@ -211,6 +212,7 @@ cd infra && docker compose up -d && cd ..
 
 export THESIS_RUN_G5=true
 export THESIS_G5_DEDICATED_ENV=true
+export THESIS_G5_RESULTS_DIR="$HOME/thesis-evidence/g5"  # durable location; not /tmp or JUnit @TempDir
 export TEMPORAL_TARGET=localhost:7233
 export VARIANT_A_TEST_JDBC_URL=jdbc:postgresql://localhost:5433/business
 export GIT_SHA=$(git rev-parse HEAD)
@@ -220,7 +222,7 @@ export THESIS_RUN_G5_SCENARIO=G5-2   # or G5-3 or ALL
 ./gradlew :experiment:runner:test --tests '*RunnerLiveTemporalG5IT*'
 ```
 
-Approximate wall clock: G5-2 ~40–90s; G5-3 ~160–200s. Retain trial JSON, history export, and acceptance artifact; distinguish any post-evidence cleanup terminate (`g5-cleanup`) from measured R6 (`T_run_max`).
+Approximate wall clock: G5-2 ~40–90s; G5-3 ~160–200s. `THESIS_G5_RESULTS_DIR` is mandatory, must be absolute, and is created if absent; live G5 fails before connecting to the lab if it is missing or relative. Each scenario writes into a unique experiment subdirectory beneath it. Retain trial JSON, history export, and acceptance artifact; distinguish any post-evidence cleanup terminate (`g5-cleanup`) from measured R6 (`T_run_max`).
 
 ## Tests
 
