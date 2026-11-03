@@ -2,6 +2,7 @@ package pl.edu.pw.thesis.experiment.runner.model;
 
 import java.time.Instant;
 import java.util.UUID;
+import pl.edu.pw.thesis.experiment.runner.fault.ArmedFaultRecord;
 
 /** Durable trial artifact (design §4.1 buckets, phase-1 subset). */
 public record TrialRecord(
@@ -33,7 +34,8 @@ public record TrialRecord(
         String exclusionReason,
         OracleSummary oracle,
         String workflowOutcome,
-        Object faultArmedRecord,
+        /** Typed so Jackson round-trip preserves {@link #equals} for G5 durable equality. */
+        ArmedFaultRecord faultArmedRecord,
         Integer baselineOnHand,
         String infraError) {
 

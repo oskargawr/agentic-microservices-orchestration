@@ -108,7 +108,7 @@ class TrialRunnerF3LifecycleTest {
         TrialRecord record = runner.run(spec);
 
         assertThat(record.harnessStatus()).isEqualTo(HarnessStatus.COMPLETED);
-        ArmedFaultRecord persisted = (ArmedFaultRecord) record.faultArmedRecord();
+        ArmedFaultRecord persisted = record.faultArmedRecord();
         assertThat(persisted.effectiveConfig())
                 .containsEntry("faultProfileId", "F3-Recovered")
                 .containsEntry("chargeCode", "F3_CAPTURE_LOST_RESPONSE")
@@ -146,7 +146,7 @@ class TrialRunnerF3LifecycleTest {
         TrialRecord record = runner.run(spec);
 
         assertThat(record.harnessStatus()).isEqualTo(HarnessStatus.COMPLETED);
-        ArmedFaultRecord persisted = (ArmedFaultRecord) record.faultArmedRecord();
+        ArmedFaultRecord persisted = record.faultArmedRecord();
         assertThat(persisted.effectiveConfig())
                 .containsEntry("faultProfileId", "F3-Unresolved")
                 .containsEntry("chargeCode", "F3_CAPTURE_LOST_RESPONSE")

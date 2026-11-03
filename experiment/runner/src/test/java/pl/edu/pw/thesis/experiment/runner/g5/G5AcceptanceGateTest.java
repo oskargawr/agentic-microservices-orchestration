@@ -7,9 +7,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import pl.edu.pw.thesis.experiment.runner.fault.ArmedFaultRecord;
 import pl.edu.pw.thesis.experiment.runner.model.BusinessInputs;
 import pl.edu.pw.thesis.experiment.runner.model.ExperimentDefinition;
 import pl.edu.pw.thesis.experiment.runner.model.HarnessStatus;
@@ -352,7 +354,11 @@ class G5AcceptanceGateTest {
                 harness == HarnessStatus.EXCLUDED ? "WORKFLOW_NOT_QUIESCED" : null,
                 oracle,
                 null,
-                null,
+                new ArmedFaultRecord(
+                        "F0",
+                        "NONE",
+                        Map.of("injection", "none"),
+                        Instant.parse("2026-11-03T12:00:01Z")),
                 100,
                 null);
     }
