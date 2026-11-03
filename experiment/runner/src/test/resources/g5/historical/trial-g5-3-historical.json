@@ -1,0 +1,53 @@
+{
+  "schemaVersion" : "th-402-phase1-1",
+  "experimentId" : "g5-3-1793720014374",
+  "trialId" : "trial-g5-3",
+  "protocolId" : "protocol-v0",
+  "phase" : "pre-pilot",
+  "variant" : "A",
+  "faultProfileId" : "F0",
+  "repetitionIndex" : 0,
+  "orderId" : "f5a0d000-59eb-4184-8b3f-db2ac84ca28e",
+  "businessInputs" : {
+    "sku" : "SKU-MVP-1",
+    "qty" : 1,
+    "amountMinor" : 2599,
+    "currency" : "PLN"
+  },
+  "gitSha" : "55a84fbe9b795ce3137b4a6831800d35f21670e0",
+  "t0" : "2026-11-03T15:33:34.955632Z",
+  "faultTriggeredAt" : "2026-11-03T15:33:34.984134Z",
+  "faultObservedAt" : null,
+  "tWorkflowStop" : "2026-11-03T15:35:35.093686Z",
+  "tTerminal" : "2026-11-03T15:36:05.098367Z",
+  "tOracle" : "2026-11-03T15:36:05.123066Z",
+  "terminatedBy" : "T_RUN_MAX",
+  "workflowQuiesced" : true,
+  "workflowId" : "order-f5a0d000-59eb-4184-8b3f-db2ac84ca28e",
+  "runId" : "882c0f0a-b766-4632-9f67-f591fb803cc6",
+  "temporalStatus" : "TERMINATED",
+  "harnessStatus" : "COMPLETED",
+  "includeInRqRates" : true,
+  "exclusionCategory" : null,
+  "exclusionReason" : null,
+  "oracle" : {
+    "classification" : "CONFIRMED_FAILURE",
+    "pattern" : "F0",
+    "reasonCode" : "NONE",
+    "violatedInvariants" : [ ],
+    "warnings" : [ ],
+    "evaluatorVersion" : "th-401-a-1",
+    "evaluatedAt" : "2026-11-03T15:36:05.123066Z"
+  },
+  "workflowOutcome" : null,
+  "faultArmedRecord" : {
+    "faultProfileId" : "F0",
+    "mechanism" : "NONE",
+    "effectiveConfig" : {
+      "injection" : "none"
+    },
+    "armedAt" : "2026-11-03T15:33:34.984134Z"
+  },
+  "baselineOnHand" : 100,
+  "infraError" : null
+}
