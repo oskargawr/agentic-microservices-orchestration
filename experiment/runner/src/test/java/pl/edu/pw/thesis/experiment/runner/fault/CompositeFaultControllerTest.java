@@ -87,4 +87,52 @@ class CompositeFaultControllerTest {
         assertThat(checks.get()).isEqualTo(1);
         controller.disarm("t2");
     }
+
+    @Test
+    void variantAAllProfiles_registersCanonicalSet_andRoutesIndependently() {
+        AtomicInteger f1 = new AtomicInteger();
+        AtomicInteger f2 = new AtomicInteger();
+        AtomicInteger f3r = new AtomicInteger();
+        AtomicInteger f3u = new AtomicInteger();
+        CompositeFaultController controller = CompositeFaultController.variantAAllProfiles(
+                CLOCK,
+                () -> {
+                    f1.incrementAndGet();
+                    return PaymentInjectionCheckResult.enabled("ok");
+                },
+                () -> {
+                    f2.incrementAndGet();
+                    return PaymentInjectionCheckResult.enabled("ok");
+                },
+                new PaymentF3FaultInjectionVerifier() {
+                    @Override
+                    public PaymentInjectionCheckResult checkRecovered() {
+                        f3r.incrementAndGet();
+                        return PaymentInjectionCheckResult.enabled("ok");
+                    }
+
+                    @Override
+                    public PaymentInjectionCheckResult checkUnresolved() {
+                        f3u.incrementAndGet();
+                        return PaymentInjectionCheckResult.enabled("ok");
+                    }
+                });
+
+        assertThat(controller.registeredProfiles())
+                .containsExactly("F0", "F1-P", "F2", "F3-Recovered", "F3-Unresolved");
+
+        for (String profile : CanonicalFaultProfiles.ALL) {
+            UUID orderId = UUID.randomUUID();
+            TrialSpec trial = TrialSpec.forVariantA(
+                    "exp", "t-" + profile, profile, 0, orderId, BusinessInputs.protocolPilotDefaults());
+            ArmedFaultRecord armed = controller.arm(FaultArmRequest.from(trial));
+            assertThat(armed.faultProfileId()).isEqualTo(profile);
+            assertThat(controller.verify(armed, trial).ok()).isTrue();
+            controller.disarm("t-" + profile);
+        }
+        assertThat(f1.get()).isEqualTo(1);
+        assertThat(f2.get()).isEqualTo(1);
+        assertThat(f3r.get()).isEqualTo(1);
+        assertThat(f3u.get()).isEqualTo(1);
+    }
 }

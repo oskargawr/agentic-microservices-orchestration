@@ -1,42 +1,29 @@
 # NEXT_TASK
 
-**Status:** `awaiting_owner`  
-**Last updated:** 2026-11-03 (post-S3 merge reconciliation + S4 discovery)  
-**Awaiting:** Owner direction / **D-AUTH-S4** (or other next slice); **S4 not approved / not implemented**
+**Status:** `approved`  
+**Last updated:** 2026-11-03 (D-AUTH-S4)  
+**Authorized by:** Owner — **D-AUTH-S4** (TH-400 S4-A / S4-B / S4-C)  
+**Implementation:** authorized · **Merge / auto-merge:** **NOT authorized**  
+**Branch:** `feature/th-400-s4-matrix-readiness`
 
-## Important
+## Scope (approved)
 
-- **TH-400 S3 (F3) is merged** — PR [#14](https://github.com/oskargawr/agentic-microservices-orchestration/pull/14) → merge `bcc38c7`; impl tip `c3f03e4` / remediation `1a85363`.  
-- **This file is NOT `approved` for S4.**  
-- **Do not start S4 / S3-E / Variant C / #68** until Owner issues explicit D-AUTH and sets status to `approved`.  
-- **Do not** mark Taiga #35 / #37 Done.
+| Slice | Content | Auth |
+| --- | --- | --- |
+| **S4-A** | Unified multi-profile FaultController + Variant A matrix driver | **authorized** |
+| **S4-B** | Expected-vs-actual reporting / CLI polish (Oracle unchanged) | **authorized** |
+| **S4-C** | Limitation register + one bounded quantitative retry measurement | **authorized** |
+| **S4-D** | Live Temporal lab | **NOT authorized** (deferred) |
 
-## Completed (verified on main)
+Basis: `coordination/TH_400_S4_DISCOVERY.md` · Decision **D-AUTH-S4**.
 
-| Item | Evidence |
-| --- | --- |
-| TH-402 phase-1 + 1.1 | PR #11 lineage on `main` |
-| TH-400 S0 docs | Ratified D-404 |
-| TH-400 S1 F1-P | PR #12 · merge `c732558` |
-| TH-400 S2 F2 | PR #13 · merge `b4ab3fa` |
-| TH-400 S3 F3 | PR #14 · merge `bcc38c7` · tip `c3f03e4` · tests on `main`: variant-a 38 · runner 78 · payment 14 |
+## Explicit exclusions
 
-## Candidate next (proposal only — not approved)
-
-| Candidate | Notes |
-| --- | --- |
-| **S4 — TH-400 closure / matrix readiness (Variant A)** | See `coordination/TH_400_S4_DISCOVERY.md` |
-| Optional **S3-E** live Temporal lab | Separate 1 SP; not assumed = S4 |
-| Live F1/F2 E2E (carried limitations) | Lab verification |
-| Doc / thesis limitation disclosure | Non-code |
-
-## Out of scope until separate auth
-
-Variant C / TH-303 · Oracle classifier changes · protocol rewrites · Java cleanup (#68) · Taiga #35/#37 Done
+S4-D · Variant C / TH-303 · Oracle classifier/API changes · protocol timing/semantics changes · Toxiproxy / F1-I · Java cleanup (#68) · Taiga #35/#37 Done · merge/auto-merge without separate Owner auth
 
 ## Status history
 
 | Date | Status | By |
 | --- | --- | --- |
-| 2026-11-03 | S3 merged; NEXT_TASK → `awaiting_owner` (S4 discovery) | Cursor |
-| 2026-11-03 | D-AUTH-S3 complete via merge | Owner / PR #14 |
+| 2026-11-03 | S3 merged; `awaiting_owner` (S4 discovery) | Cursor |
+| 2026-11-03 | **D-AUTH-S4 APPROVED** → `approved` (A/B/C only) | Owner |

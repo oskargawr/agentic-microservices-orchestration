@@ -8,6 +8,42 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-AUTH-S4 — TH-400 S4 (matrix readiness A/B/C) implementation authorization
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-03 |
+| **Status** | **approved** (Owner D-AUTH-S4); **merge / auto-merge NOT authorized** |
+| **Decision-maker** | Project Owner |
+| **Context** | Post-S3 merge `bcc38c7` · discovery `TH_400_S4_DISCOVERY.md` |
+| **Evidence** | Owner message „TH-400 S4 — Owner Authorization & Implementation” (D-AUTH-S4 APPROVED) |
+| **Related** | D-407 · D-404 · D-AUTH-S3 · TH-400 · Taiga #35 · TH-402 |
+| **SP** | S4-A…C (est. ~6–10); **S4-D deferred** |
+
+### Authorized
+
+1. **S4-A** — Unified multi-profile `FaultController` wiring + Variant A experiment matrix driver (serial under env lock).  
+2. **S4-B** — ResultStore / CLI expected-vs-actual reporting polish (Oracle classifier **unchanged**).  
+3. **S4-C** — Thesis evidence / limitation register + **one** bounded quantitative retry measurement.
+
+### Explicitly NOT authorized
+
+- **S4-D** live Temporal lab (deferred)  
+- Variant C / TH-303  
+- Oracle classifier / API changes  
+- Protocol-v0 timing constants (`T_observe`, `T_run_max`) / protocol semantics changes  
+- Toxiproxy / F1-I  
+- Java cleanup (#68)  
+- Taiga #35 / #37 **Done**  
+- **Merge / auto-merge** of the resulting PR (push/open PR requires separate auth if not already granted with this task)
+
+### Binding notes
+
+- Owner table shorthand **SUCCESS** for F0 / F3-Recovered means Oracle label **`CONFIRMED_SUCCESS`**.  
+- Push/open PR for this implementation branch is in-scope for the authorized workstream; **merge remains separate**.
+
+---
+
 ## D-407 — TH-400 S3 (F3) merged to main (status)
 
 | Field | Value |
