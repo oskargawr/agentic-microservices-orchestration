@@ -8,6 +8,41 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-AUTH-G5 — TH-402 G5 live Temporal runner pre-pilot (implementation authorization)
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-03 |
+| **Status** | **approved** (Owner D-AUTH-G5); **live G5 execution NOT authorized**; **merge / auto-merge NOT authorized** |
+| **Decision-maker** | Project Owner |
+| **Context** | OWN-P4 · D-AUTH-1.1 (G5 excluded) · discovery `coordination/TH_402_G5_DISCOVERY.md` (closed) · post-S4 `main` |
+| **Evidence** | Owner message „TH-402 G5 — Implementation Authorization & Delivery” |
+| **Related** | OWN-P4 · D-AUTH-1.1 · D-402 R6/R14 · D-012 · OWN-P1 · D-408 · Taiga #37 |
+| **Does NOT** | Authorize live G5 runs · authorize merge · mark #37 Done · authorize S4-D / Variant C · change Oracle / protocol · invent EXP-* · rewrite historical decisions |
+
+### Authorized
+
+1. **G5-1…G5-4** test/lab implementation per discovery SoT.  
+2. G5-3 **no-poller** technique: operational isolation preflight + Temporal history validation (`eventId` ordering vs `WorkflowExecutionTerminated`) + separate durable `g5-3-acceptance.json`.  
+3. Opt-in local tests (`THESIS_RUN_G5`); **no** long-running CI job in this authorization.  
+4. Open a PR for review.
+
+### Explicitly NOT authorized
+
+- **Live execution** of G5-1…G5-4 / `THESIS_RUN_G5=true` runs as part of this delivery  
+- Merge / auto-merge of the resulting PR  
+- Editing `EXPERIMENT_LOG.md` until a separately authorized experiment  
+- Production lifecycle / `T_*` / R6/R14 / Oracle / OWN-P1 / ActivityPolicies changes  
+- S4-D · F1–F3 live fault campaigns · Variant C / TH-303 · Taiga #37 Done  
+
+### Binding notes
+
+- G5 is a **pre-pilot** gate (OWN-P4), **not** a merge gate.  
+- Discovery document remains the approved contract; do not rewrite its historical decisions.  
+- Live G5 and merge require **separate** Owner authorization after PR review.
+
+---
+
 ## D-408 — TH-400 S4 (A/B/C) merged to main (status)
 
 | Field | Value |

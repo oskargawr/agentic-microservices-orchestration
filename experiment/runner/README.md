@@ -158,9 +158,74 @@ Requires Temporal + Variant A worker + business services against the allowlisted
 
 Evidence / limitations: [`docs/architecture/TH_400_EVIDENCE_AND_LIMITATIONS.md`](../../docs/architecture/TH_400_EVIDENCE_AND_LIMITATIONS.md).
 
+## G5 — Live Temporal runner pre-pilot (OWN-P4 / D-AUTH-G5)
+
+**Status:** pre-pilot gate, **not** a merge gate. G5 is **not** S4-D and does **not** constitute an EXP-* confirmatory campaign. Spec SoT: [`coordination/TH_402_G5_DISCOVERY.md`](../../coordination/TH_402_G5_DISCOVERY.md).
+
+| Scenario | Worker on `variant-a-order-fulfillment` | Expected Temporal | `terminatedBy` |
+| --- | --- | --- | --- |
+| **G5-2** | **Yes** (dedicated stack) | natural `COMPLETED` | `WORKFLOW_STOP` |
+| **G5-3** | **No** (queue exclusivity preflight) | `TERMINATED` after real `T_run_max=120s` | `T_RUN_MAX` |
+
+G5-2 and G5-3 are **independent** scenarios. A worker-down G5-2 accident is **not** valid G5-3 evidence. An unexpected worker during G5-3 yields `g5-3-acceptance.json` = `INVALID` without mutating `TrialRecord`.
+
+### Boot order
+
+- **G5-2:** infra (Postgres + Temporal) → business services → **worker up** → opt-in IT  
+- **G5-3:** infra → business services → **no pollers** on `variant-a-order-fulfillment` → isolation preflight → opt-in IT → history export + `g5-3-acceptance.json`
+
+### Environment
+
+| Variable | Role |
+| --- | --- |
+| `THESIS_RUN_G5=true` | Opt-in gate (required) |
+| `THESIS_RUN_G5_SCENARIO` | `G5-2` · `G5-3` · `ALL` (default) |
+| `THESIS_G5_DEDICATED_ENV=true` | Operator **ack** of a dedicated Temporal lab (required, but **not** poller proof) |
+| `TEMPORAL_TARGET` / `TEMPORAL_NAMESPACE` | Temporal client |
+| `VARIANT_A_TEST_JDBC_URL` (+ user/password) | Allowlisted business DB |
+| `GIT_SHA` | Recorded on trial / acceptance |
+
+**Not evidence:** `THESIS_G5_DEDICATED_ENV` alone, or any env-flag poller override. Live G5-3 exclusivity uses Temporal **`DescribeTaskQueue`** (workflow + activity, `reportPollers=true`). API failure ⇒ preflight **FAIL** (fail closed). History `eventId` gate remains a separate post-trial check.
+
+JDBC allowlist must include the same URL used by StateReset / Independent Oracle. Protocol timings are **unmodified** (`T_run_max=120s`, `T_observe=30s`). Ordinary CI must **not** set `THESIS_RUN_G5` (no long-running G5 job).
+
+### G5-3 queue exclusivity checklist
+
+1. Operator ack: `THESIS_G5_DEDICATED_ENV=true` (dedicated lab deployment).  
+2. Stop console worker, `:orchestration:worker`, embedded factories, leftover IT workers.  
+3. Preflight: `DescribeTaskQueue` reports **zero** pollers on `variant-a-order-fulfillment` (workflow + activity); otherwise **FAIL** before `TrialRunner.run`.  
+4. Paginated history for exact `workflowId`/`runId` (`nextPageToken` until empty); incomplete retrieval ⇒ acceptance `INVALID`.  
+5. Gate: `EVENT_TYPE_WORKFLOW_TASK_STARTED` with `eventId` **before** `EVENT_TYPE_WORKFLOW_EXECUTION_TERMINATED` ⇒ `INVALID`.  
+6. Write `…/acceptance/g5-3-acceptance.json` **without** rewriting `TrialRecord`, then **fail the test** if acceptance ≠ `VALID`.  
+7. **VALID** also requires measured TrialRecord: `harnessStatus=COMPLETED`, `workflowQuiesced`, `temporalStatus=TERMINATED`, `terminatedBy=T_RUN_MAX`, Oracle summary present, Oracle evaluate exactly once, durable trial JSON equals TrialRunner result. **EXCLUDED is never acceptable G5-3 evidence.**
+
+### Local commands (execution requires **separate** Owner authorization)
+
+Default Gradle/`test` runs **must not** set `THESIS_RUN_G5` (class disabled; no Docker/worker start).
+
+```bash
+# Infra
+cd infra && docker compose up -d && cd ..
+# Build service bootJars once
+./gradlew :services:inventory:bootJar :services:payment:bootJar :services:shipping:bootJar
+
+export THESIS_RUN_G5=true
+export THESIS_G5_DEDICATED_ENV=true
+export TEMPORAL_TARGET=localhost:7233
+export VARIANT_A_TEST_JDBC_URL=jdbc:postgresql://localhost:5433/business
+export GIT_SHA=$(git rev-parse HEAD)
+
+# Independently selectable:
+export THESIS_RUN_G5_SCENARIO=G5-2   # or G5-3 or ALL
+./gradlew :experiment:runner:test --tests '*RunnerLiveTemporalG5IT*'
+```
+
+Approximate wall clock: G5-2 ~40–90s; G5-3 ~160–200s. Retain trial JSON, history export, and acceptance artifact; distinguish any post-evidence cleanup terminate (`g5-cleanup`) from measured R6 (`T_run_max`).
+
 ## Tests
 
 ```bash
+# Ordinary non-live runner tests (G5 live IT stays disabled without THESIS_RUN_G5)
 ./gradlew :experiment:runner:test \
   :services:payment:test \
   :orchestration:variant-a:test --tests '*OrderFulfillmentCompensationIT.f3*' \

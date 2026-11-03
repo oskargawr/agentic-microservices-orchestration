@@ -1,33 +1,37 @@
 # PROJECT_STATE
 
-**Last updated:** 2026-11-03 (post-merge S4 reconciliation)  
+**Last updated:** 2026-11-03 (PR #16 G5-3 TrialRecord acceptance remediation)  
 **Updated by:** Cursor Agent  
-**MODE this session:** ANALYSIS / DOCUMENTATION (no implementation)
+**MODE this session:** IMPLEMENTATION (G5 test/lab remediation; no live G5; no production lifecycle edits)
 
 ## Current thesis scope (MVP)
 
 | | |
 | --- | --- |
 | **Runner** | TH-402 phase-1 + 1.1 + F0–F3 **matrix driver** on `main` |
-| **TH-400 S0–S4-A/B/C** | On `main` (S4 merge `5982c1a` / PR #15) |
-| **TH-400 S4-D** | **Deferred / unauthorized** (live Temporal fault-profile lab) |
-| **TH-400 overall** | **In Progress** (≠ Done) — harness ready; **no** EXP-* campaign |
-| **TH-402 overall** | Phase-1 + 1.1 on main · G5 pre-pilot **open** · ticket **NOT Done** |
-| **Not authorized now** | G5 impl · S4-D · Variant C · Oracle changes · #35/#37 Done · #68 |
+| **TH-400 S0–S4-A/B/C** | On `main` |
+| **TH-400 S4-D** | **Deferred / unauthorized** |
+| **TH-402 G5** | PR #16 remediation in flight — **live execution** and **merge** still unauthorized |
+| **Not authorized now** | Live G5 · G5 PR merge · S4-D · Variant C · Oracle/protocol prod changes · #35/#37 Done |
 
 ## Engineering
 
 | | |
 | --- | --- |
-| **Branch** | `main` @ `5982c1a0d30929cfbaaa9e1e0c45700521e961b3` |
-| **Last merge** | PR #15 → D-408 |
-| **Post-merge CI** | Run **#65** success on `5982c1a` (incl. `ConsoleRealTemporalE2EIT` skipped=0) |
-| **D-AUTH-S4** | Immutable (impl auth; merge-not-authorized at decision time) |
-| **Oracle / protocol** | Unchanged |
-| **EXP-*** | **None** |
+| **Feature branch** | `feature/th-402-g5-live-temporal-runner` |
+| **PR** | [#16](https://github.com/oskargawr/agentic-microservices-orchestration/pull/16) |
+| **D-AUTH-G5** | Impl authorized; live + merge **not** |
+| **Oracle / protocol / R6/R14 / OWN-P1** | Unchanged (production) |
+| **EXPERIMENT_LOG** | Unchanged |
+
+## Remediation focus (this session)
+
+- G5-3 `VALID` requires COMPLETED TrialRecord outcome (not EXCLUDED) + Oracle once + durable JSON + history + preflight  
+- Prior: DescribeTaskQueue isolation, paginated history, acceptance write-then-fail  
+
 
 ## Next three actions
 
-1. Owner: review `coordination/TH_402_G5_DISCOVERY.md`  
-2. Separate D-AUTH if G5 pre-pilot is next  
-3. Do **not** mark Taiga #35/#37 Done; do **not** claim S4-D done  
+1. Owner: re-review PR #16 after remediation  
+2. Separate auth for merge  
+3. Separate auth for live `THESIS_RUN_G5` — do **not** mark #37 Done  
