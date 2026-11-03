@@ -143,10 +143,13 @@ class G5OracleExactlyOnceViaTrialRunnerTest {
         assertThat(observeBeforeOracle).contains(Duration.ofSeconds(30));
 
         // Acceptance / history layer must not re-invoke Oracle
-        G5AcceptanceRecord acceptance = G5AcceptanceRecord.fromValidation(
-                record.workflowId(),
-                record.runId(),
-                record.gitSha(),
+        Path durable = store.trialJsonPath(spec.trialId());
+        TrialRecord durableRead = store.readTrial(spec.trialId());
+        G5AcceptanceRecord acceptance = G5AcceptanceEvaluator.evaluate(
+                record,
+                durable,
+                durableRead,
+                evaluateCalls.get(),
                 "PASS",
                 "unit",
                 "GetWorkflowExecutionHistory",
@@ -157,6 +160,8 @@ class G5OracleExactlyOnceViaTrialRunnerTest {
                 Instant.parse("2026-11-02T12:01:00Z"));
         new G5AcceptanceWriter().write(tmp, acceptance);
         assertThat(evaluateCalls.get()).isEqualTo(1);
+        // Natural COMPLETED path is not a G5-3 TERMINATED evidence package — acceptance INVALID is OK
+        assertThat(acceptance.acceptanceResult()).isEqualTo(G5AcceptanceRecord.INVALID);
     }
 
     @Test

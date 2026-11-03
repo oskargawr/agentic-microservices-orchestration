@@ -1,6 +1,6 @@
 # PROJECT_STATE
 
-**Last updated:** 2026-11-03 (PR #16 G5 remediation)  
+**Last updated:** 2026-11-03 (PR #16 G5-3 TrialRecord acceptance remediation)  
 **Updated by:** Cursor Agent  
 **MODE this session:** IMPLEMENTATION (G5 test/lab remediation; no live G5; no production lifecycle edits)
 
@@ -26,10 +26,9 @@
 
 ## Remediation focus (this session)
 
-- G5-3 isolation via Temporal `DescribeTaskQueue` (fail closed); env flags ≠ proof  
-- Paginated history fetch (`nextPageToken`)  
-- Acceptance `VALID` required after durable write  
-- Oracle exactly-once evidence on `TrialRunner` path  
+- G5-3 `VALID` requires COMPLETED TrialRecord outcome (not EXCLUDED) + Oracle once + durable JSON + history + preflight  
+- Prior: DescribeTaskQueue isolation, paginated history, acceptance write-then-fail  
+
 
 ## Next three actions
 

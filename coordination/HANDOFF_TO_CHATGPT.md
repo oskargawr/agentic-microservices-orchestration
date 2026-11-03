@@ -7,14 +7,13 @@
 
 ## Summary
 
-Remediated PR #16 findings without production lifecycle / Oracle / protocol changes and without live G5 execution.
+PR #16 follow-up: G5-3 acceptance now requires measured **COMPLETED** TrialRecord (quiesced, TERMINATED, T_RUN_MAX, Oracle once, durable JSON match) in addition to preflight + paginated history. EXCLUDED is never VALID. Artifact remains separate; TrialRecord immutable.
 
 | Finding | Remediation |
 | --- | --- |
-| Env-flag “isolation” | Live G5-3 uses `DescribeTaskQueueG5QueuePollerProbe` (workflow+activity pollers). `THESIS_G5_DEDICATED_ENV` = operator ack only. Env-flag probe = unit-test double only. API failure ⇒ FAIL. |
-| History completeness | `G5HistoryFetcher.fetchAll` paginates via `nextPageToken`; incomplete ⇒ `historyComplete=false` / acceptance INVALID |
-| INVALID accepted as pass | Write `g5-3-acceptance.json` then `requireValidForG5Evidence()` — INVALID fails test; TrialRecord untouched |
-| Oracle once | `G5OracleExactlyOnceViaTrialRunnerTest` + live IT `G5OracleCallCounter.wrap` on TrialRunner path |
+| EXCLUDED / incomplete trial treated as soft-ok | `G5AcceptanceEvaluator` — EXCLUDED / missing Oracle / wrong oracle count / missing durable JSON ⇒ INVALID |
+| History+preflight alone | Insufficient; deprecated `fromValidation` always INVALID without trial outcome |
+| DescribeTaskQueue | Focused unit tests via injectable client seam |
 
 ## Ask
 

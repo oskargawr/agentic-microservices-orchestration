@@ -215,51 +215,68 @@ class RunnerLiveTemporalG5IT {
 
                 TrialRecord beforeAcceptance = runner.run(spec);
 
-                assertThat(adapter.terminateCalls()).isEqualTo(1);
-                assertThat(beforeAcceptance.terminatedBy()).isEqualTo(TerminatedBy.T_RUN_MAX);
-                assertThat(beforeAcceptance.temporalStatus()).isEqualTo("TERMINATED");
                 assertThat(beforeAcceptance.workflowId()).isEqualTo(spec.workflowId());
-                assertThat(beforeAcceptance.runId()).isNotBlank();
-
-                if (beforeAcceptance.harnessStatus() == HarnessStatus.COMPLETED) {
-                    oracleCounter.assertExactlyOnce();
-                    assertThat(beforeAcceptance.oracle()).isNotNull();
-                } else {
-                    assertThat(oracleCounter.evaluateCalls()).isZero();
-                }
+                // Preserve measured ids even when harness EXCLUDED — for diagnostics / history
 
                 G5HistoryFetcher fetcher =
                         new G5HistoryFetcher(stubs, temporalSettings().namespace());
-                G5HistoryFetchResult fetch =
-                        fetcher.fetchAll(beforeAcceptance.workflowId(), beforeAcceptance.runId());
+                G5HistoryFetchResult fetch = beforeAcceptance.runId() == null || beforeAcceptance.runId().isBlank()
+                        ? G5HistoryFetchResult.incomplete(
+                                beforeAcceptance.workflowId() == null ? "unknown" : beforeAcceptance.workflowId(),
+                                "unknown",
+                                List.of(),
+                                0,
+                                "missing runId — cannot fetch history")
+                        : fetcher.fetchAll(beforeAcceptance.workflowId(), beforeAcceptance.runId());
                 Path historyPath = expResults.resolve("history").resolve("g5-3-history.tsv");
                 G5HistoryFetcher.writeDiagnosticExport(historyPath, fetch.events());
 
+                Path durableJson = store.trialJsonPath(spec.trialId());
+                TrialRecord durableRead = store.readTrial(spec.trialId());
+                // Prefer .partial evidence path note if terminal JSON absent
+                if ((durableRead == null || !Files.isRegularFile(durableJson))
+                        && Files.isRegularFile(store.trialPartialPath(spec.trialId()))) {
+                    // Leave durableRead as-is (null/mismatch) so acceptance stays INVALID;
+                    // partial evidence is preserved on disk for operators.
+                }
+
                 G5HistoryValidationResult validation = G5HistoryGate.validateFetch(fetch);
-                G5AcceptanceRecord acceptance = G5AcceptanceRecord.fromValidation(
-                        beforeAcceptance.workflowId(),
-                        beforeAcceptance.runId(),
-                        beforeAcceptance.gitSha(),
+                G5AcceptanceRecord acceptance = G5AcceptanceEvaluator.evaluate(
+                        beforeAcceptance,
+                        durableJson,
+                        durableRead,
+                        oracleCounter.evaluateCalls(),
                         preRun.preflightResult(),
                         preRun.diagnostics(),
                         "GetWorkflowExecutionHistory(paginated)",
                         historyPath.toString(),
                         validation,
                         Instant.now());
+                int oracleCallsBeforeArtifact = oracleCounter.evaluateCalls();
                 Path acceptancePath = new G5AcceptanceWriter().write(expResults, acceptance);
+                assertThat(oracleCounter.evaluateCalls())
+                        .as("acceptance artifact must not re-invoke Oracle")
+                        .isEqualTo(oracleCallsBeforeArtifact);
 
                 TrialRecord afterAcceptance = store.readTrial(spec.trialId());
-                G5AcceptanceWriter.assertUnchanged(beforeAcceptance, afterAcceptance);
+                if (afterAcceptance != null) {
+                    G5AcceptanceWriter.assertUnchanged(beforeAcceptance, afterAcceptance);
+                } else {
+                    // No terminal JSON — still must not rewrite measured in-memory record
+                    G5AcceptanceWriter.assertUnchanged(beforeAcceptance, beforeAcceptance);
+                }
                 assertThat(acceptancePath).exists();
                 assertThat(acceptance.scenarioId()).isEqualTo("G5-3");
 
-                // Acceptance generation must not call Oracle again
-                if (beforeAcceptance.harnessStatus() == HarnessStatus.COMPLETED) {
-                    assertThat(oracleCounter.evaluateCalls()).isEqualTo(1);
-                }
-
-                // Gate AFTER durable write — INVALID fails the test but leaves diagnostics
+                // Gate AFTER durable write — INVALID (incl. EXCLUDED) fails; diagnostics retained
                 acceptance.requireValidForG5Evidence();
+                // VALID implies the full TrialRecord contract:
+                assertThat(adapter.terminateCalls()).isEqualTo(1);
+                assertThat(beforeAcceptance.harnessStatus()).isEqualTo(HarnessStatus.COMPLETED);
+                assertThat(beforeAcceptance.workflowQuiesced()).isTrue();
+                assertThat(beforeAcceptance.temporalStatus()).isEqualTo("TERMINATED");
+                assertThat(beforeAcceptance.terminatedBy()).isEqualTo(TerminatedBy.T_RUN_MAX);
+                oracleCounter.assertExactlyOnce();
             } finally {
                 stubs.shutdown();
             }

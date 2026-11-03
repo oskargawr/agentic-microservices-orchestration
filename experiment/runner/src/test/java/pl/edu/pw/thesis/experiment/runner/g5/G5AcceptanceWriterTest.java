@@ -3,6 +3,7 @@ package pl.edu.pw.thesis.experiment.runner.g5;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import pl.edu.pw.thesis.experiment.runner.model.HarnessStatus;
+import pl.edu.pw.thesis.experiment.runner.model.OracleSummary;
 import pl.edu.pw.thesis.experiment.runner.model.TerminatedBy;
 import pl.edu.pw.thesis.experiment.runner.model.TrialRecord;
 
@@ -19,17 +21,20 @@ class G5AcceptanceWriterTest {
 
     @Test
     void writesAndReadsAcceptanceJson_withoutMutatingTrialRecord() throws Exception {
-        TrialRecord trial = sampleTrial(HarnessStatus.COMPLETED, TerminatedBy.T_RUN_MAX, "TERMINATED");
+        TrialRecord trial = sampleTrial(HarnessStatus.COMPLETED, TerminatedBy.T_RUN_MAX, "TERMINATED", true);
         TrialRecord snapshot = trial;
+        Path durable = tmp.resolve("trial.json");
+        Files.writeString(durable, "{}");
 
         G5HistoryValidationResult validation = G5HistoryGate.validate(List.of(
                 new G5HistoryEventView(1, G5HistoryEventKind.OTHER),
                 new G5HistoryEventView(4, G5HistoryEventKind.WORKFLOW_EXECUTION_TERMINATED)));
 
-        G5AcceptanceRecord acceptance = G5AcceptanceRecord.fromValidation(
-                trial.workflowId(),
-                trial.runId(),
-                trial.gitSha(),
+        G5AcceptanceRecord acceptance = G5AcceptanceEvaluator.evaluate(
+                trial,
+                durable,
+                trial,
+                1,
                 "PASS",
                 "taskQueue=variant-a-order-fulfillment; pollerDetected=false",
                 "GetWorkflowExecutionHistory",
@@ -45,6 +50,7 @@ class G5AcceptanceWriterTest {
         assertThat(roundTrip.acceptanceResult()).isEqualTo("VALID");
         assertThat(roundTrip.scenarioId()).isEqualTo("G5-3");
         assertThat(roundTrip.workflowId()).isEqualTo(trial.workflowId());
+        assertThat(roundTrip.trialHarnessStatus()).isEqualTo("COMPLETED");
 
         G5AcceptanceWriter.assertUnchanged(snapshot, trial);
         assertThat(trial.harnessStatus()).isEqualTo(HarnessStatus.COMPLETED);
@@ -53,14 +59,18 @@ class G5AcceptanceWriterTest {
     }
 
     @Test
-    void completedTrialMayHaveInvalidAcceptance() {
+    void completedTrialMayHaveInvalidAcceptance() throws Exception {
+        TrialRecord trial = sampleTrial(HarnessStatus.COMPLETED, TerminatedBy.T_RUN_MAX, "TERMINATED", true);
+        Path durable = tmp.resolve("trial.json");
+        Files.writeString(durable, "{}");
         G5HistoryValidationResult bad = G5HistoryGate.validate(List.of(
                 new G5HistoryEventView(2, G5HistoryEventKind.WORKFLOW_TASK_STARTED),
                 new G5HistoryEventView(8, G5HistoryEventKind.WORKFLOW_EXECUTION_TERMINATED)));
-        G5AcceptanceRecord acceptance = G5AcceptanceRecord.fromValidation(
-                "order-1",
-                "run-1",
-                "sha",
+        G5AcceptanceRecord acceptance = G5AcceptanceEvaluator.evaluate(
+                trial,
+                durable,
+                trial,
+                1,
                 "PASS",
                 "ok",
                 "GetWorkflowExecutionHistory",
@@ -73,16 +83,26 @@ class G5AcceptanceWriterTest {
 
     @Test
     void assertUnchanged_detectsMutation() {
-        TrialRecord a = sampleTrial(HarnessStatus.COMPLETED, TerminatedBy.T_RUN_MAX, "TERMINATED");
-        TrialRecord b = sampleTrial(HarnessStatus.EXCLUDED, TerminatedBy.T_RUN_MAX, "TERMINATED");
+        TrialRecord a = sampleTrial(HarnessStatus.COMPLETED, TerminatedBy.T_RUN_MAX, "TERMINATED", true);
+        TrialRecord b = sampleTrial(HarnessStatus.EXCLUDED, TerminatedBy.T_RUN_MAX, "TERMINATED", false);
         assertThatThrownBy(() -> G5AcceptanceWriter.assertUnchanged(a, b))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("immutable");
     }
 
     private static TrialRecord sampleTrial(
-            HarnessStatus harness, TerminatedBy terminatedBy, String temporalStatus) {
+            HarnessStatus harness, TerminatedBy terminatedBy, String temporalStatus, boolean quiesced) {
         UUID orderId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        OracleSummary oracle = harness == HarnessStatus.COMPLETED
+                ? new OracleSummary(
+                        "CONFIRMED_FAILURE",
+                        null,
+                        null,
+                        List.of(),
+                        List.of(),
+                        "th-401-a-1",
+                        Instant.parse("2026-11-03T12:02:32Z"))
+                : null;
         return new TrialRecord(
                 TrialRecord.SCHEMA_VERSION,
                 "exp-g5",
@@ -102,7 +122,7 @@ class G5AcceptanceWriterTest {
                 Instant.parse("2026-11-03T12:02:31Z"),
                 Instant.parse("2026-11-03T12:02:32Z"),
                 terminatedBy,
-                true,
+                quiesced,
                 "order-" + orderId,
                 "run-abc",
                 temporalStatus,
@@ -110,7 +130,7 @@ class G5AcceptanceWriterTest {
                 harness == HarnessStatus.COMPLETED,
                 null,
                 null,
-                null,
+                oracle,
                 null,
                 null,
                 100,

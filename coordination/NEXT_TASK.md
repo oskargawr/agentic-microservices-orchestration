@@ -1,19 +1,14 @@
 # NEXT_TASK
 
 **Status:** `awaiting_owner`  
-**Last updated:** 2026-11-03 (PR #16 remediation pushed)  
+**Last updated:** 2026-11-03 (PR #16 G5-3 TrialRecord acceptance remediation)  
 **Authorized by:** Owner **D-AUTH-G5** (implementation / remediation only)  
 **Live G5 execution:** **NOT** authorized  
 **Merge / auto-merge:** **NOT** authorized  
 
 ## Current gate
 
-Owner re-review of PR [#16](https://github.com/oskargawr/agentic-microservices-orchestration/pull/16) after remediation of:
-
-1. DescribeTaskQueue isolation (not env-flag proof)  
-2. Paginated history completeness  
-3. INVALID acceptance fails G5-3 after artifact write  
-4. Oracle exactly-once via TrialRunner instrumentation  
+Owner re-review of PR [#16](https://github.com/oskargawr/agentic-microservices-orchestration/pull/16) after G5-3 VALID requires COMPLETED TrialRecord + Oracle once + durable JSON + history + preflight (EXCLUDED never VALID).
 
 ## Explicit exclusions
 

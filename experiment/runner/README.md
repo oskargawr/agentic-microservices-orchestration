@@ -196,7 +196,8 @@ JDBC allowlist must include the same URL used by StateReset / Independent Oracle
 3. Preflight: `DescribeTaskQueue` reports **zero** pollers on `variant-a-order-fulfillment` (workflow + activity); otherwise **FAIL** before `TrialRunner.run`.  
 4. Paginated history for exact `workflowId`/`runId` (`nextPageToken` until empty); incomplete retrieval ⇒ acceptance `INVALID`.  
 5. Gate: `EVENT_TYPE_WORKFLOW_TASK_STARTED` with `eventId` **before** `EVENT_TYPE_WORKFLOW_EXECUTION_TERMINATED` ⇒ `INVALID`.  
-6. Write `…/acceptance/g5-3-acceptance.json` **without** rewriting `TrialRecord`, then **fail the test** if acceptance ≠ `VALID`.
+6. Write `…/acceptance/g5-3-acceptance.json` **without** rewriting `TrialRecord`, then **fail the test** if acceptance ≠ `VALID`.  
+7. **VALID** also requires measured TrialRecord: `harnessStatus=COMPLETED`, `workflowQuiesced`, `temporalStatus=TERMINATED`, `terminatedBy=T_RUN_MAX`, Oracle summary present, Oracle evaluate exactly once, durable trial JSON equals TrialRunner result. **EXCLUDED is never acceptable G5-3 evidence.**
 
 ### Local commands (execution requires **separate** Owner authorization)
 

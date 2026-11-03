@@ -19,19 +19,26 @@ import java.util.stream.Collectors;
  * TaskQueueType#TASK_QUEUE_TYPE_ACTIVITY}. API errors / unreachable server ⇒ treated as pollers
  * present (fail closed).
  *
- * <p><b>Limitations (not independent proofs):</b> does not use {@code THESIS_G5_DEDICATED_ENV} or
- * {@code THESIS_G5_POLLER_DETECTED}; does not prove no poller will appear mid-trial; stale poller
- * entries may linger briefly after worker shutdown; history gate remains a separate post-trial
- * check.
+ * <p><b>Limitations:</b> does not use env-flag “proof”; does not prove no poller will appear
+ * mid-trial; stale poller entries may linger briefly after worker shutdown; history gate remains a
+ * separate post-trial check.
  */
 public final class DescribeTaskQueueG5QueuePollerProbe implements G5QueuePollerProbe {
 
-    private final WorkflowServiceStubs stubs;
+    private final G5DescribeTaskQueueClient client;
     private final String namespace;
     private ProbeSnapshot lastSnapshot;
 
     public DescribeTaskQueueG5QueuePollerProbe(WorkflowServiceStubs stubs, String namespace) {
-        this.stubs = Objects.requireNonNull(stubs, "stubs");
+        this(
+                request -> Objects.requireNonNull(stubs, "stubs")
+                        .blockingStub()
+                        .describeTaskQueue(request),
+                namespace);
+    }
+
+    public DescribeTaskQueueG5QueuePollerProbe(G5DescribeTaskQueueClient client, String namespace) {
+        this.client = Objects.requireNonNull(client, "client");
         this.namespace = Objects.requireNonNull(namespace, "namespace");
     }
 
@@ -57,13 +64,12 @@ public final class DescribeTaskQueueG5QueuePollerProbe implements G5QueuePollerP
         try {
             for (TaskQueueType type :
                     List.of(TaskQueueType.TASK_QUEUE_TYPE_WORKFLOW, TaskQueueType.TASK_QUEUE_TYPE_ACTIVITY)) {
-                DescribeTaskQueueResponse response = stubs.blockingStub()
-                        .describeTaskQueue(DescribeTaskQueueRequest.newBuilder()
-                                .setNamespace(namespace)
-                                .setTaskQueue(TaskQueue.newBuilder().setName(taskQueue).build())
-                                .setTaskQueueType(type)
-                                .setReportPollers(true)
-                                .build());
+                DescribeTaskQueueResponse response = client.describe(DescribeTaskQueueRequest.newBuilder()
+                        .setNamespace(namespace)
+                        .setTaskQueue(TaskQueue.newBuilder().setName(taskQueue).build())
+                        .setTaskQueueType(type)
+                        .setReportPollers(true)
+                        .build());
                 List<PollerInfo> pollers = response.getPollersList();
                 diag.append("; ")
                         .append(type.name())
@@ -76,21 +82,15 @@ public final class DescribeTaskQueueG5QueuePollerProbe implements G5QueuePollerP
             }
             boolean detected = !identities.isEmpty();
             diag.append("; identities=")
-                    .append(identities.isEmpty() ? "[]" : identities.stream().collect(Collectors.joining(",")));
+                    .append(identities.isEmpty() ? "[]" : String.join(",", identities));
             return new ProbeSnapshot(true, detected, List.copyOf(identities), diag.toString(), null);
         } catch (RuntimeException e) {
             String fail = "DescribeTaskQueue failed: " + e.getMessage();
             diag.append("; error=").append(e.getMessage());
-            // Fail closed: cannot establish exclusivity
             return new ProbeSnapshot(false, true, List.of(), diag.toString(), fail);
         }
     }
 
-    /**
-     * @param probeSucceeded false when the Temporal API could not be queried successfully
-     * @param pollerDetected true when at least one poller identity was reported, or when the probe
-     *     failed closed
-     */
     public record ProbeSnapshot(
             boolean probeSucceeded,
             boolean pollerDetected,

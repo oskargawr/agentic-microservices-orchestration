@@ -20,6 +20,15 @@ public record G5AcceptanceRecord(
         String eventOrderingValidation,
         Long terminationEventId,
         List<Long> workflowTaskStartedEventIdsBeforeTermination,
+        String trialHarnessStatus,
+        boolean trialWorkflowQuiesced,
+        String trialTemporalStatus,
+        String trialTerminatedBy,
+        boolean trialOraclePresent,
+        int oracleEvaluateCalls,
+        boolean durableTrialJsonPresent,
+        boolean durableTrialMatchesRunner,
+        String trialOutcomeValidation,
         String acceptanceResult,
         String invalidationReason,
         Instant evaluatedAt) {
@@ -42,6 +51,8 @@ public record G5AcceptanceRecord(
                 workflowTaskStartedEventIdsBeforeTermination == null
                         ? List.of()
                         : List.copyOf(workflowTaskStartedEventIdsBeforeTermination);
+        trialHarnessStatus = trialHarnessStatus == null ? "unknown" : trialHarnessStatus;
+        trialOutcomeValidation = trialOutcomeValidation == null ? "FAIL" : trialOutcomeValidation;
         Objects.requireNonNull(acceptanceResult, "acceptanceResult");
         Objects.requireNonNull(evaluatedAt, "evaluatedAt");
         if (!VALID.equals(acceptanceResult) && !INVALID.equals(acceptanceResult)) {
@@ -49,6 +60,11 @@ public record G5AcceptanceRecord(
         }
     }
 
+    /**
+     * @deprecated Prefer {@link G5AcceptanceEvaluator#evaluate} which includes TrialRecord outcome.
+     *     History+preflight alone is insufficient for G5-3 VALID.
+     */
+    @Deprecated
     public static G5AcceptanceRecord fromValidation(
             String workflowId,
             String runId,
@@ -59,9 +75,10 @@ public record G5AcceptanceRecord(
             String historyArtifactPath,
             G5HistoryValidationResult validation,
             Instant evaluatedAt) {
-        boolean valid = "PASS".equalsIgnoreCase(preflightResult) && validation.passesAcceptanceGate();
-        String reason = valid
-                ? null
+        // Intentionally INVALID: TrialRecord outcome was not supplied.
+        boolean historyOk = "PASS".equalsIgnoreCase(preflightResult) && validation.passesAcceptanceGate();
+        String reason = historyOk
+                ? "TrialRecord outcome not evaluated (use G5AcceptanceEvaluator)"
                 : (!"PASS".equalsIgnoreCase(preflightResult)
                         ? "preflight=" + preflightResult
                         : validation.detail());
@@ -80,7 +97,16 @@ public record G5AcceptanceRecord(
                 validation.passesAcceptanceGate() ? "PASS" : "FAIL",
                 validation.terminationEventId().orElse(null),
                 validation.workflowTaskStartedEventIdsBeforeTermination(),
-                valid ? VALID : INVALID,
+                "unevaluated",
+                false,
+                null,
+                null,
+                false,
+                -1,
+                false,
+                false,
+                "FAIL",
+                INVALID,
                 reason,
                 evaluatedAt);
     }
@@ -102,6 +128,30 @@ public record G5AcceptanceRecord(
         }
         if (workflowTaskStartedBeforeTermination) {
             throw new AssertionError("G5-3 requires no WorkflowTaskStarted before termination");
+        }
+        if (!"PASS".equalsIgnoreCase(trialOutcomeValidation)) {
+            throw new AssertionError("G5-3 requires TrialRecord outcome PASS, got " + trialOutcomeValidation);
+        }
+        if (!"COMPLETED".equals(trialHarnessStatus)) {
+            throw new AssertionError("G5-3 requires harnessStatus=COMPLETED, got " + trialHarnessStatus);
+        }
+        if (!trialWorkflowQuiesced) {
+            throw new AssertionError("G5-3 requires workflowQuiesced=true");
+        }
+        if (!"TERMINATED".equals(trialTemporalStatus)) {
+            throw new AssertionError("G5-3 requires temporalStatus=TERMINATED, got " + trialTemporalStatus);
+        }
+        if (!"T_RUN_MAX".equals(trialTerminatedBy)) {
+            throw new AssertionError("G5-3 requires terminatedBy=T_RUN_MAX, got " + trialTerminatedBy);
+        }
+        if (!trialOraclePresent) {
+            throw new AssertionError("G5-3 requires non-null Oracle summary on TrialRecord");
+        }
+        if (oracleEvaluateCalls != 1) {
+            throw new AssertionError("G5-3 requires Oracle evaluate exactly once, got " + oracleEvaluateCalls);
+        }
+        if (!durableTrialJsonPresent || !durableTrialMatchesRunner) {
+            throw new AssertionError("G5-3 requires durable TrialRecord JSON equal to TrialRunner result");
         }
     }
 }
