@@ -11,20 +11,21 @@
 
 | | |
 | --- | --- |
-| Tip | `6fafd1109c149b5e7a3b3e9bd7b40df20077138a` (+ docs tip after this handoff if amended) |
+| Tip | `ff97831e3c7e6825bf04a2070a6af61a728a13d4` |
 | Remediacja | `57d5439b97edd35a8af215e277f51f7ab2b6ec6e` |
 | S3 impl | `244075e033a0e9a1e7126d361cc8d8f0ab6daf66` |
 | Docs after impl | `a13e916a926a68e4e45cc17b0cd0df677bdad604` |
 | `c16e1f0` | **excluded** (rebase `--onto origin/main c16e1f0`) |
 | Merge-base / `origin/main` | `f3ac351289f1cc7836904d98b3146872f2e62c4f` |
+| **PR** | [#14](https://github.com/oskargawr/agentic-microservices-orchestration/pull/14) · **OPEN** · merge **NOT** authorized |
 
 ```text
-origin/main
+origin/main (f3ac351)
   └─ 244075e feat(th-400-s3): implement F3-Recovered and F3-Unresolved …
   └─ a13e916 docs(th-400-s3): record S3 implementation HEAD in handoff
   └─ 57d5439 fix(th-400-s3): narrow opacity ActivityFailure catch and tighten gate
   └─ 6fafd11 docs(th-400-s3): record remediation HEAD in handoff
-  └─ (this docs tip: clean-history / push-PR handoff)
+  └─ ff97831 docs(th-400-s3): record clean-history tip and push/PR authorization
 ```
 
 ## Scope shipped
@@ -67,4 +68,6 @@ Retry: behavioral verification only (not quantitative attempt-budget counts).
 
 ## Ask
 
-Review PR; merge only after separate Owner auth. Do not mark #35 Done.
+Review PR [#14](https://github.com/oskargawr/agentic-microservices-orchestration/pull/14); merge only after separate Owner auth. Do not mark #35 Done.
+
+**Confirmation:** PR **OPEN**, **NOT MERGED**; auto-merge **not** enabled.
