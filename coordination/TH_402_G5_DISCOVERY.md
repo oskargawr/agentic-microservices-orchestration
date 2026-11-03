@@ -2,13 +2,15 @@
 
 | Field | Value |
 | --- | --- |
-| **Status** | **accepted contract** — implementation authorized by **D-AUTH-G5** (2026-11-03); **live G5 execution** and **merge** still require separate Owner auth |
+| **Status** | **accepted contract** — implementation authorized by **D-AUTH-G5** (2026-11-03); **merged** to `main` via PR #16 / **D-409** (`801e343`); **live G5 execution** still requires separate Owner auth |
 | **Date** | 2026-11-03 (discovery closure: history eventId ordering + `g5-3-acceptance.json`) |
 | **Mode** | ANALYSIS / DOCUMENTATION only |
-| **Related** | OWN-P4 · D-AUTH-1.1 · D-402 / R6 / R14 · D-012 · OWN-P1 · D-408 · Taiga #37 |
+| **Related** | OWN-P4 · D-AUTH-1.1 · D-402 / R6 / R14 · D-012 · OWN-P1 · D-408 · D-409 · Taiga #37 |
 | **Does not include** | S4-D · F1–F3 live fault campaigns · Variant C · EXP-* confirmatory · protocol/Oracle edits |
 
-**Authorization required:** new Owner **D-AUTH-G5**. OWN-P4 defines the gate; it is **not** an implementation grant (D-AUTH-1.1 explicitly excluded G5).
+**Implementation status (factual, non-binding on acceptance criteria):** PR [#16](https://github.com/oskargawr/agentic-microservices-orchestration/pull/16) merged as `801e343b36058094a91c5f89bcc57c945a860b0a` (D-409). Binding acceptance criteria in this document are unchanged. Live G5 scenarios remain unexecuted / unauthorized.
+
+**Historical note:** D-AUTH-G5 was the implementation authorization (OWN-P4 gate; D-AUTH-1.1 had excluded G5). Its original authorization boundary remains immutable in `DECISION_LOG`.
 
 ---
 

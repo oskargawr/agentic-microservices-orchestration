@@ -8,6 +8,29 @@ Canonical research narrative also lives in Obsidian
 
 ---
 
+## D-409 — TH-402 G5 implementation merged to main (status)
+
+| Field | Value |
+| --- | --- |
+| **Date** | 2026-11-03 |
+| **Status** | **recorded** (factual merge status — not a new design decision; does **not** rewrite D-AUTH-G5) |
+| **Decision-maker** | Project Owner (separate merge authorization after PR #16 review) |
+| **Context** | D-AUTH-G5 authorized G5-1…G5-4 **test/lab** implementation with live execution and merge **not** authorized at decision time; Owner later merged PR #16 |
+| **Evidence** | PR [#16](https://github.com/oskargawr/agentic-microservices-orchestration/pull/16) MERGED · merge commit `801e343b36058094a91c5f89bcc57c945a860b0a` · PR-head CI run **#70** (`41653193573`) **success** on `b6a04233233fc233459566a1441d75b0d737f105` · post-merge CI run **#71** (`41654212598`) **success** on merge SHA `801e343` |
+| **Related** | D-AUTH-G5 · OWN-P4 · D-408 · TH-402 · Taiga #37 |
+| **Does NOT** | Authorize live G5 (`THESIS_RUN_G5`) · mark #37 Done · authorize S4-D / Variant C · change Oracle / protocol · invent EXP-* · rewrite D-AUTH-G5 |
+
+### Completed via this merge
+
+- TH-402 **G5-1…G5-4** opt-in live Temporal **runner** pre-pilot **implementation** on `main` (test/lab: history gate, DescribeTaskQueue isolation, acceptance evaluator, `RunnerLiveTemporalG5IT`)
+
+### Still deferred / unchanged
+
+- **Live G5** scenario execution (G5-2 / G5-3 independent; not performed)  
+- S4-D · Variant C / TH-303 · Taiga #37 Done · EXP-* campaigns  
+
+---
+
 ## D-AUTH-G5 — TH-402 G5 live Temporal runner pre-pilot (implementation authorization)
 
 | Field | Value |

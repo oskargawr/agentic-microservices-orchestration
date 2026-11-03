@@ -10,7 +10,7 @@ Raw outputs must live in the future code/data repository (immutable). Vault link
 
 | Exp ID | Date | Protocol ver. | Code commit | Variant | Scenario | Model / config | Artifact path | Status | Integrity notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| — | — | — | — | — | — | — | — | **none yet** | Harness F0–F3 + matrix driver on `main` (merge `5982c1a`) exist; **no** protocol pilot/confirmatory trial artifacts recorded yet |
+| — | — | — | — | — | — | — | — | **none yet** | Harness F0–F3 + matrix driver + G5 **implementation** on `main` (merge `801e343`) exist; **no** protocol pilot/confirmatory / live G5 trial artifacts recorded yet |
 
 ## Harness readiness note (not a run)
 
@@ -21,7 +21,8 @@ Raw outputs must live in the future code/data repository (immutable). Vault link
 | Matrix driver | Implemented (`MatrixExperimentDriver`); **≠** completed experiment campaign |
 | Live Temporal lab E2E for F1–F3 (S4-D) | **Not** performed / **not** authorized |
 | CI `ConsoleRealTemporalE2EIT` | Console happy-path against Compose Temporal (TH-206) — **≠** runner G5 / **≠** S4-D |
-| TH-402 G5 runner pre-pilot | Still open (OWN-P4) |
+| TH-402 G5 runner pre-pilot **implementation** | On `main` @ `801e343` (PR #16 / D-409); opt-in `RunnerLiveTemporalG5IT` |
+| TH-402 G5 **live** scenarios | **Not** executed · **not** authorized · implementation readiness **≠** live evidence |
 | This log | Remains empty of EXP-* until an actual harness experiment is executed and archived |
 
 ## Protocol versions (index)
