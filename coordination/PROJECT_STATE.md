@@ -1,8 +1,8 @@
 # PROJECT_STATE
 
-**Last updated:** 2026-11-03 (S3 clean history + push/PR; merge NOT authorized)  
+**Last updated:** 2026-11-03 (S3 review remediation docs sync; merge NOT authorized)  
 **Updated by:** Cursor Agent  
-**MODE this session:** IMPLEMENTATION (TH-400 S3 Scenario B rebase → push → open PR)
+**MODE this session:** IMPLEMENTATION (TH-400 S3 docs sync after PR #14 review remediation)
 
 ## Current thesis scope (MVP)
 
@@ -25,7 +25,7 @@
 | **Merge-base** | `origin/main` `f3ac351` (`c16e1f0` **excluded**) |
 | **D-AUTH-S3** | approved · SP **9** (S3-A…D); S3-E optional not claimed |
 | **Oracle** | unchanged (harness gate for F3-Unresolved) |
-| **Tests (post-rebase)** | variant-a 37 · runner 72 · payment 14 — all green |
+| **Tests (post review remediation)** | variant-a **38** · runner **78** · payment **14** — all green · tip `1a85363` |
 
 ## Next three actions
 
