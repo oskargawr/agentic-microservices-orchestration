@@ -108,10 +108,117 @@ class MatrixExperimentDriverTest {
                 .containsExactly("F0", "F1-P");
         assertThat(result.trials()).allMatch(t -> t.harnessStatus() == HarnessStatus.COMPLETED);
         assertThat(resets.get()).isEqualTo(2);
+        assertThat(result.summary().plannedCells()).isEqualTo(2);
+        assertThat(result.summary().notExecuted()).isZero();
         assertThat(result.summary().allMatched()).isTrue();
         assertThat(result.summary().suggestedExitCode()).isEqualTo(0);
         assertThat(CanonicalFaultProfiles.ALL)
                 .containsExactly("F0", "F1-P", "F2", "F3-Recovered", "F3-Unresolved");
+    }
+
+    @Test
+    void lifecycleOrdering_betweenTwoCells_isSerial_resetArmDisarm() throws Exception {
+        ExperimentDefinition experiment = experiment(List.of("F0", "F1-P"), 1);
+        FileResultStore store = new FileResultStore(tmp, experiment);
+        store.saveExperiment(experiment);
+
+        java.util.concurrent.CopyOnWriteArrayList<String> events =
+                new java.util.concurrent.CopyOnWriteArrayList<>();
+        AtomicInteger openWorkflows = new AtomicInteger();
+
+        when(stateReset.resetToProtocolBaseline(anyString())).thenAnswer(inv -> {
+            events.add("reset:begin");
+            resets.incrementAndGet();
+            events.add("reset:end");
+            return new StateReset.BaselineSnapshot("SKU-MVP-1", 100, 0);
+        });
+
+        CompositeFaultController base = CompositeFaultController.variantAAllProfiles(
+                clock,
+                () -> PaymentInjectionCheckResult.enabled("ok"),
+                () -> PaymentInjectionCheckResult.enabled("ok"),
+                alwaysOkF3());
+        FaultController recordingFault = new FaultController() {
+            @Override
+            public ArmedFaultRecord arm(FaultArmRequest request) {
+                events.add("arm:" + request.faultProfileId());
+                return base.arm(request);
+            }
+
+            @Override
+            public FaultVerifyResult verify(ArmedFaultRecord armed, TrialSpec trial) {
+                events.add("verify:" + armed.faultProfileId());
+                return base.verify(armed, trial);
+            }
+
+            @Override
+            public void disarm(String trialId) {
+                events.add("disarm:begin");
+                base.disarm(trialId);
+                events.add("disarm:end");
+            }
+
+            @Override
+            public FaultProfileDescriptor describe(String faultProfileId) {
+                return base.describe(faultProfileId);
+            }
+        };
+
+        when(variantAdapter.start(any(), any())).thenAnswer(inv -> {
+            assertThat(openWorkflows.incrementAndGet())
+                    .as("no overlapping workflow executions")
+                    .isEqualTo(1);
+            events.add("start");
+            return new ExecutionHandle(
+                    inv.getArgument(0, TrialSpec.class).workflowId(), "run");
+        });
+        when(variantAdapter.awaitStop(any(), any())).thenAnswer(inv -> {
+            events.add("awaitStop");
+            // TrialRunner awaits twice (stop + quiesce); close the in-flight window once.
+            openWorkflows.compareAndSet(1, 0);
+            return new WorkflowStopInfo(
+                    "COMPLETED", true, Instant.parse("2026-11-03T12:00:10Z"), "ok");
+        });
+        when(oracle.evaluate(any())).thenAnswer(inv -> {
+            var req = inv.getArgument(0, pl.edu.pw.thesis.experiment.oracle.OracleEvaluationRequest.class);
+            events.add("oracle:" + (req.trialId().contains("F0") ? "F0" : "F1-P"));
+            if (req.trialId().contains("F0")) {
+                return oracleResult(req.orderId(), req.trialId(), BusinessOutcome.CONFIRMED_SUCCESS);
+            }
+            return oracleResult(req.orderId(), req.trialId(), BusinessOutcome.CONFIRMED_FAILURE);
+        });
+
+        TrialRunner runner = new TrialRunner(
+                experiment,
+                env(experiment),
+                stateReset,
+                recordingFault,
+                variantAdapter,
+                oracle,
+                store,
+                clock);
+
+        MatrixExperimentDriver.MatrixRunResult result =
+                new MatrixExperimentDriver(experiment, runner, clock).runAll();
+
+        assertThat(result.trials()).hasSize(2);
+        assertThat(result.summary().plannedCells()).isEqualTo(2);
+        assertThat(openWorkflows.get()).isZero();
+
+        int firstResetBegin = events.indexOf("reset:begin");
+        int firstArm = events.indexOf("arm:F0");
+        int firstDisarmEnd = events.indexOf("disarm:end");
+        int secondResetBegin = indexOfAfter(events, "reset:begin", firstDisarmEnd);
+        int secondResetEnd = indexOfAfter(events, "reset:end", secondResetBegin);
+        int secondArm = events.indexOf("arm:F1-P");
+
+        assertThat(firstResetBegin).isGreaterThanOrEqualTo(0);
+        assertThat(firstArm).isGreaterThan(firstResetBegin);
+        assertThat(firstDisarmEnd).isGreaterThan(firstArm);
+        assertThat(secondResetBegin).isGreaterThan(firstDisarmEnd);
+        assertThat(secondArm).isGreaterThan(secondResetEnd);
+        assertThat(events).containsSubsequence("start", "awaitStop", "oracle:F0", "disarm:begin", "disarm:end");
+        assertThat(events).containsSubsequence("disarm:end", "reset:begin", "reset:end", "arm:F1-P");
     }
 
     @Test
@@ -183,6 +290,19 @@ class MatrixExperimentDriverTest {
         assertThat(result.trials()).hasSize(1);
         assertThat(result.aborted()).isTrue();
         assertThat(runner.isFurtherTrialsBlocked()).isTrue();
+        assertThat(result.summary().plannedCells()).isEqualTo(2);
+        assertThat(result.summary().executedCells()).isEqualTo(1);
+        assertThat(result.summary().notExecuted()).isEqualTo(1);
+        assertThat(result.summary().allMatched()).isFalse();
+    }
+
+    private static int indexOfAfter(List<String> events, String needle, int afterExclusive) {
+        for (int i = afterExclusive + 1; i < events.size(); i++) {
+            if (needle.equals(events.get(i))) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private TrialRunner newRunner(ExperimentDefinition experiment) {

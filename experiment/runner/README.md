@@ -2,7 +2,7 @@
 
 Bounded harness library + CLI (`RunnerMain`). **Not** a Spring Boot HTTP service.
 
-**S4-A/B:** multi-profile matrix (`MatrixExperimentDriver`), concurrent F0–F3 registration, expected-vs-actual `matrix-summary.json`, CLI exit codes `0/1/3`.  
+**S4-A/B:** multi-profile matrix (`MatrixExperimentDriver`), schedule-aware FaultController registration, expected-vs-actual `matrix-summary.json` (planned cells from definition × n), CLI exit codes `0/1/3`.  
 **S4-D** live Temporal lab: **not** authorized.
 
 ## Module
@@ -124,7 +124,6 @@ F3-Unresolved:
   --allowlist=jdbc:postgresql://localhost:5433/business \
   --fault-profile=F3-Unresolved \
   --payment-base-url=http://127.0.0.1:8082 \
-  --shipping-base-url=http://127.0.0.1:8083 \
   --results-dir=experiment/results'
 ```
 
@@ -142,9 +141,18 @@ S4 matrix (serial F0→… under one env lock; writes `matrix-summary.json`):
   --git-sha=$(git rev-parse HEAD)'
 ```
 
-Non-F0 / matrix schedules register **all** canonical controllers concurrently and therefore require **both** payment and shipping base URLs.
+URL requirements are **schedule-aware**:
 
-Exit codes: `0` all cells matched · `1` harness exclusion/blocked · `3` classification mismatch · `130` operator abort.
+| Schedule | Controllers registered | Required URLs |
+| --- | --- | --- |
+| F0 only | F0 | none |
+| single F1-P / F3-* | F0 + that profile | payment only |
+| single F2 | F0 + F2 | shipping only |
+| multi-profile matrix | full F0–F3 concurrent map | payment **and** shipping |
+
+Fail-closed verify for the selected profile(s) is unchanged. `MatrixSummary.plannedCells` = `|profiles| × n` even if the run aborts early (`notExecuted` counted separately).
+
+Exit codes: `0` all planned cells matched · `1` harness exclusion / incomplete / empty · `3` classification mismatch · `130` operator abort.
 
 Requires Temporal + Variant A worker + business services against the allowlisted DB. For F1-P/F3, Payment must have injection enabled. For F2, Shipping must have injection enabled.
 

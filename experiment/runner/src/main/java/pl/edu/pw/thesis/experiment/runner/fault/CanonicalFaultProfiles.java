@@ -62,9 +62,12 @@ public final class CanonicalFaultProfiles {
         return profileIds.contains(F2FaultController.PROFILE_F2);
     }
 
-    /** True when the schedule needs the full concurrent F0–F3 registration map. */
+    /**
+     * True when the schedule is a genuine multi-profile matrix and should register the full
+     * concurrent F0–F3 map. A single non-F0 profile uses only the controllers required for that
+     * profile (plus F0 where the factory pairs it).
+     */
     public static boolean needsAllProfileRegistration(List<String> profileIds) {
-        return profileIds.size() > 1
-                || (!profileIds.isEmpty() && !F0FaultController.PROFILE_F0.equals(profileIds.getFirst()));
+        return normalizeSchedule(profileIds).size() > 1;
     }
 }

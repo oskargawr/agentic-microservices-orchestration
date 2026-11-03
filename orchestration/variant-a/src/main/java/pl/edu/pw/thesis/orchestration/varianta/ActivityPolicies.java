@@ -44,4 +44,20 @@ public final class ActivityPolicies {
                         .build())
                 .build();
     }
+
+    /**
+     * D-208 B: at most one idempotent re-POST per missing create id (no nested Temporal retry
+     * storm). Separate from {@link #defaultOptions()} — {@code maximumAttempts=1} means a single
+     * recovery execution, not “one retry after an initial attempt.”
+     */
+    public static ActivityOptions lostIdRecoveryOptions() {
+        return ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(10))
+                .setScheduleToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setMaximumAttempts(1)
+                        .setDoNotRetry(BUSINESS_FAILURE_TYPE, COMPENSATION_INCOMPLETE_TYPE)
+                        .build())
+                .build();
+    }
 }

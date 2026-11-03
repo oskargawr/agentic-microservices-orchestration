@@ -19,6 +19,10 @@ import pl.edu.pw.thesis.experiment.runner.config.RunnerEnvironment;
 import pl.edu.pw.thesis.experiment.runner.fault.CanonicalFaultProfiles;
 import pl.edu.pw.thesis.experiment.runner.fault.CompositeFaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.F0FaultController;
+import pl.edu.pw.thesis.experiment.runner.fault.F1PFaultController;
+import pl.edu.pw.thesis.experiment.runner.fault.F2FaultController;
+import pl.edu.pw.thesis.experiment.runner.fault.F3RecoveredFaultController;
+import pl.edu.pw.thesis.experiment.runner.fault.F3UnresolvedFaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.FaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.HttpPaymentF3FaultInjectionVerifier;
 import pl.edu.pw.thesis.experiment.runner.fault.HttpPaymentFaultInjectionVerifier;
@@ -49,11 +53,11 @@ import pl.edu.pw.thesis.orchestration.varianta.runtime.TemporalSettings;
  *   --fault-profile=F0                 (repeatable; default single F0)
  *   --fault-profiles=F0,F1-P,F2,...    (comma list; S4 matrix)
  *   --n=1                              (repetitions per profile)
- *   --payment-base-url=...             (required for F1-P / F3-*)
- *   --shipping-base-url=...            (required for F2)
+ *   --payment-base-url=...             (required for F1-P / F3-* / multi-profile matrix)
+ *   --shipping-base-url=...            (required for F2 / multi-profile matrix)
  * Exit codes (S4-B):
- *   0 = all cells COMPLETED and matched expected Oracle classification
- *   1 = harness exclusion / empty / blocked / incomplete
+ *   0 = all planned cells COMPLETED and matched expected Oracle classification
+ *   1 = harness exclusion / empty / blocked / incomplete / not-executed
  *   3 = COMPLETED cell with classification mismatch
  *  130 = operator interrupt
  * </pre>
@@ -153,10 +157,16 @@ public final class RunnerMain {
                 System.out.println(
                         "matrix planned="
                                 + summary.plannedCells()
+                                + " executed="
+                                + summary.executedCells()
                                 + " matched="
-                                + summary.completedMatched()
-                                + " mismatchedOrExcluded="
-                                + summary.mismatchedOrExcluded()
+                                + summary.matched()
+                                + " mismatched="
+                                + summary.mismatched()
+                                + " excluded="
+                                + summary.excluded()
+                                + " notExecuted="
+                                + summary.notExecuted()
                                 + " allMatched="
                                 + summary.allMatched());
                 for (CellOutcomeValidation cell : summary.cells()) {
@@ -193,33 +203,56 @@ public final class RunnerMain {
         }
     }
 
+    /**
+     * Schedule-aware controller construction: multi-profile matrix → full concurrent registration;
+     * single profile → only the controllers required for that profile (plus F0 pairing).
+     * Fail-closed verification for selected profiles is preserved.
+     */
     static FaultController buildFaultController(List<String> schedule, Args a, RunnerClock clock) {
-        if (schedule.size() == 1 && F0FaultController.PROFILE_F0.equals(schedule.getFirst())) {
+        List<String> normalized = CanonicalFaultProfiles.normalizeSchedule(schedule);
+        if (normalized.size() == 1 && F0FaultController.PROFILE_F0.equals(normalized.getFirst())) {
             return CompositeFaultController.f0Only(clock);
         }
-        // S4-A: register all canonical profiles concurrently (OD-FC). Needs payment+shipping URLs
-        // for verifiers even if the schedule omits some profiles.
-        String payment = requirePayment(a);
-        String shipping = requireShipping(a);
-        return CompositeFaultController.variantAAllProfiles(
-                clock,
-                HttpPaymentFaultInjectionVerifier.forBaseUrl(payment),
-                HttpShippingFaultInjectionVerifier.forBaseUrl(shipping),
-                HttpPaymentF3FaultInjectionVerifier.forBaseUrl(payment));
+        if (CanonicalFaultProfiles.needsAllProfileRegistration(normalized)) {
+            // Genuine multi-profile matrix: full F0–F3 registration (OD-FC). Both verifier URL
+            // families may be required even if a given cell omits one profile.
+            String payment = requirePayment(a, "multi-profile matrix");
+            String shipping = requireShipping(a, "multi-profile matrix");
+            return CompositeFaultController.variantAAllProfiles(
+                    clock,
+                    HttpPaymentFaultInjectionVerifier.forBaseUrl(payment),
+                    HttpShippingFaultInjectionVerifier.forBaseUrl(shipping),
+                    HttpPaymentF3FaultInjectionVerifier.forBaseUrl(payment));
+        }
+        String only = normalized.getFirst();
+        return switch (only) {
+            case F0FaultController.PROFILE_F0 -> CompositeFaultController.f0Only(clock);
+            case F1PFaultController.PROFILE_F1_P -> CompositeFaultController.f0AndF1P(
+                    clock, HttpPaymentFaultInjectionVerifier.forBaseUrl(requirePayment(a, only)));
+            case F2FaultController.PROFILE_F2 -> CompositeFaultController.f0AndF2(
+                    clock, HttpShippingFaultInjectionVerifier.forBaseUrl(requireShipping(a, only)));
+            case F3RecoveredFaultController.PROFILE -> CompositeFaultController.f0AndF3Recovered(
+                    clock, HttpPaymentF3FaultInjectionVerifier.forBaseUrl(requirePayment(a, only)));
+            case F3UnresolvedFaultController.PROFILE -> CompositeFaultController.f0AndF3Unresolved(
+                    clock, HttpPaymentF3FaultInjectionVerifier.forBaseUrl(requirePayment(a, only)));
+            default -> throw new IllegalArgumentException("unsupported fault profile '" + only + "'");
+        };
     }
 
-    private static String requirePayment(Args a) {
+    private static String requirePayment(Args a, String context) {
         if (a.paymentBaseUrl == null || a.paymentBaseUrl.isBlank()) {
             throw new IllegalArgumentException(
-                    "non-F0 / matrix requires --payment-base-url=... (or THESIS_PAYMENT_BASE_URL)");
+                    context
+                            + " requires --payment-base-url=... (or THESIS_PAYMENT_BASE_URL)");
         }
         return a.paymentBaseUrl.trim();
     }
 
-    private static String requireShipping(Args a) {
+    private static String requireShipping(Args a, String context) {
         if (a.shippingBaseUrl == null || a.shippingBaseUrl.isBlank()) {
             throw new IllegalArgumentException(
-                    "non-F0 / matrix requires --shipping-base-url=... (or THESIS_SHIPPING_BASE_URL)");
+                    context
+                            + " requires --shipping-base-url=... (or THESIS_SHIPPING_BASE_URL)");
         }
         return a.shippingBaseUrl.trim();
     }

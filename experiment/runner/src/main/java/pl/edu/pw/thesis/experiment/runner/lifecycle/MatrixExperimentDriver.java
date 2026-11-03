@@ -67,11 +67,13 @@ public final class MatrixExperimentDriver {
             }
         }
 
+        int plannedCells = profiles.size() * experiment.n();
         MatrixSummary summary = MatrixSummary.fromTrials(
                 experiment.experimentId(),
                 experiment.protocolId(),
                 experiment.gitSha(),
                 clock.now(),
+                plannedCells,
                 records);
         return new MatrixRunResult(records, summary, aborted, abortReason);
     }

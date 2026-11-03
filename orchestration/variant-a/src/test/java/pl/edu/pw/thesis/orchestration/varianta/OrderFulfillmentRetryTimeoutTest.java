@@ -119,22 +119,27 @@ class OrderFulfillmentRetryTimeoutTest {
     }
 
     /**
-     * S4-C: quantitative measurement for forward {@link ActivityPolicies#defaultOptions()}
-     * {@code maximumAttempts=5} plus the documented single-shot lost-id recovery stub
-     * ({@code maximumAttempts=1}). Exhausted retryable charge → 5 forward + 1 recovery = 6
-     * charge activity executions. BUSINESS non-retry path remains covered by
+     * S4-C: quantitative measurement under {@link TestWorkflowEnvironment} (not a live Temporal
+     * cluster). Temporal {@code maximumAttempts=5} means up to <strong>five total</strong> forward
+     * activity executions (not five retries after an initial attempt). Exhausted retryable charge
+     * then triggers a separate lost-id recovery stub with {@code maximumAttempts=1} → exactly one
+     * recovery execution. BUSINESS non-retry path remains covered by
      * {@link #t202_3_businessFailureIsNotRetried_attemptCountIsOne}.
      */
     @Test
-    void s4c_defaultOptions_exhaustedRetryableCharge_attemptsEqualForwardMaxPlusRecovery() {
+    void s4c_defaultOptions_exhaustedRetryableCharge_forwardFive_recoveryOne() {
         int forwardMax = ActivityPolicies.defaultOptions().getRetryOptions().getMaximumAttempts();
         assertThat(forwardMax).isEqualTo(5);
+        assertThat(ActivityPolicies.lostIdRecoveryOptions().getRetryOptions().getMaximumAttempts())
+                .isEqualTo(1);
         activities.failChargeRetryableTimes(forwardMax + 5);
 
         OrderFulfillmentResult result = stub().fulfill(new OrderFulfillmentInput(
                 UUID.randomUUID(), "SKU-MVP-1", 1, Money.plnMinor(2599)));
 
-        assertThat(activities.chargeInvocations()).isEqualTo(forwardMax + 1);
+        assertThat(activities.forwardChargeInvocations()).isEqualTo(5);
+        assertThat(activities.recoveryChargeInvocations()).isEqualTo(1);
+        assertThat(activities.chargeInvocations()).isEqualTo(6);
         assertThat(result.outcome()).isNotEqualTo(BusinessOutcome.SUCCESS);
         assertThat(activities.operations()).doesNotContain("consume");
     }

@@ -82,6 +82,7 @@ class ExpectedCellOutcomeTest {
                 "protocol-v0",
                 "sha",
                 Instant.parse("2026-11-03T12:00:00Z"),
+                1,
                 List.of(completed("t0", "F0", "CONFIRMED_SUCCESS")));
         assertThat(ok.allMatched()).isTrue();
         assertThat(ok.suggestedExitCode()).isEqualTo(0);
@@ -91,6 +92,7 @@ class ExpectedCellOutcomeTest {
                 "protocol-v0",
                 "sha",
                 Instant.parse("2026-11-03T12:00:00Z"),
+                1,
                 List.of(completed("t0", "F0", "AMBIGUOUS")));
         assertThat(badClass.suggestedExitCode()).isEqualTo(3);
     }

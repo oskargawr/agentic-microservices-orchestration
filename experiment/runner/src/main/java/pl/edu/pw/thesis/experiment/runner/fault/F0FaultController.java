@@ -52,6 +52,11 @@ public final class F0FaultController implements FaultController {
         armed.remove(trialId);
     }
 
+    /** Package-visible for focused disarm / isolation tests. */
+    boolean isArmed(String trialId) {
+        return armed.containsKey(trialId);
+    }
+
     @Override
     public FaultProfileDescriptor describe(String faultProfileId) {
         if (!PROFILE_F0.equals(faultProfileId)) {

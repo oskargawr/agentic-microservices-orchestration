@@ -2,9 +2,9 @@
 
 | Field | Value |
 | --- | --- |
-| **Status** | Documentation (D-AUTH-S4 / S4-C) |
-| **Code tip base** | `main` @ S3 merge `bcc38c7` + S4 branch |
-| **Does not change** | Protocol-v0 timings · Oracle four-label set · profile semantics |
+| **Status** | Documentation (D-AUTH-S4 / S4-C + PR #15 review remediation) |
+| **Code tip base** | `main` @ S3 merge `bcc38c7` + S4 branch `feature/th-400-s4-matrix-readiness` |
+| **Does not change** | Protocol-v0 timings · Oracle four-label set · profile semantics · D-AUTH-S4 |
 
 ## 1. Evidence correlation (artifact identity)
 
@@ -28,16 +28,20 @@ Every durable trial JSON should allow reconstruction of:
 | Profile arm/verify/disarm routing | Yes | — | Yes | No (S4-D deferred) |
 | Service header injection semantics | Payment/Shipping IT | Variant A CompIT | — | No |
 | Saga compensation / leave-dangling | — | Yes | — | No |
-| Matrix serial schedule + isolation | Yes (driver) | — | Yes | No |
-| Expected-vs-actual cell reporting | Yes | — | Yes | No |
-| Temporal `maxAttempts=5` quantitative | Policy unit + S4-C retry test | arrange exhaustion CompIT (related) | — | No |
+| Matrix serial schedule + isolation | Yes (driver) | — | Yes (incl. lifecycle event order) | No |
+| Expected-vs-actual cell reporting | Yes (`MatrixSummaryTest`) | — | Yes | No |
+| Planned vs executed cell accounting | Yes | — | Abort / exclusion paths | No |
+| Temporal forward `maximumAttempts=5` + recovery `1` | Policy unit + S4-C CompIT counters | arrange exhaustion CompIT (related) | — | **No** (not claimed) |
+| Schedule-aware CLI controller URLs | Yes (`RunnerMainFaultControllerTest`) | — | — | No |
+
+**Live Temporal cluster tests were not performed** (S4-D not authorized).
 
 ## 3. Limitation register (carried + current)
 
 | ID | Limitation | Origin | Disclosure |
 | --- | --- | --- | --- |
 | L-S3E | No live Temporal S3-E / F1–F2 lab E2E | S1–S3 / S4-D deferred | Do not claim production Temporal ops from CompIT alone |
-| L-RETRY-Q | Until S4-C test: retry often behavioral only | S3 audit | S4-C adds **one** bounded quantitative check: `defaultOptions` maxAttempts=5 on exhausted charge |
+| L-RETRY-Q | Retry often behavioral only | S3 audit | **Mitigated (bounded):** S4-C separates forward charge (5) vs recovery (1) under `TestWorkflowEnvironment` |
 | L-503-NEST | Nested unrelated `HTTP_503` in exotic cause chain | S3 residual | Theoretical; no classification framework |
 | L-PROBE | Preflight probe residue / forge-URL class | S1/S2 | StateReset required; forged base URL can false-positive verify |
 | L-CLI-ORACLE | Historical: CLI did not gate on expected Oracle | S1/S2 | **Mitigated in S4-B** via matrix expected-vs-actual + exit codes |
@@ -49,16 +53,27 @@ Every durable trial JSON should allow reconstruction of:
 
 | Item | Value |
 | --- | --- |
-| Policy | `ActivityPolicies.defaultOptions()` forward retries |
-| `maximumAttempts` (forward) | **5** |
-| Recovery stub | `lostIdRecoveryOptions()` `maximumAttempts=1` (D-208 B) |
-| Observable | `RecordingActivities.chargeInvocations()` under `TestWorkflowEnvironment` |
-| Test | `…s4c_defaultOptions_exhaustedRetryableCharge_attemptsEqualForwardMaxPlusRecovery` |
-| Exhausted behavior | **6** charge executions (5 forward + 1 recovery); not SUCCESS/consume |
-| Non-goal | Generic retry observability framework; live-cluster attempt accounting |
+| Forward policy | `ActivityPolicies.defaultOptions()` |
+| Forward `maximumAttempts` | **5** = up to **five total** activity executions (not five retries after the first attempt) |
+| Recovery policy | `ActivityPolicies.lostIdRecoveryOptions()` |
+| Recovery `maximumAttempts` | **1** = a single recovery execution (separate activity invocation) |
+| Instrumentation | `RecordingActivities.forwardChargeInvocations()` / `recoveryChargeInvocations()` |
+| Test | `OrderFulfillmentRetryTimeoutTest.s4c_defaultOptions_exhaustedRetryableCharge_forwardFive_recoveryOne` |
+| Exhausted behavior | forward **5** + recovery **1**; not SUCCESS; no `consume` |
+| Evidence scope | **`TestWorkflowEnvironment` only** — not a live-cluster measurement |
+| Non-goal | Generic retry observability framework; production/live attempt accounting |
 
-Independent: UNKNOWN resolve **loop** bound (`resolveAttemptLimit`, default 3) remains separate from Temporal activity retries (D-202 / TH-202).
+Independent: UNKNOWN resolve **loop** bound (`resolveAttemptLimit`, default 3) remains separate from Temporal activity retries (D-202 / TH-202). BUSINESS non-retry remains covered by `t202_3_businessFailureIsNotRetried_attemptCountIsOne`.
 
-## 5. Nested HTTP_503 residual
+## 5. Matrix summary accounting (PR #15 remediation)
+
+| Field | Meaning |
+| --- | --- |
+| `plannedCells` | `faultProfileIds().size() * n` from `ExperimentDefinition` |
+| `executedCells` | Observed `TrialRecord` count (never synthesize missing successes) |
+| `matched` / `mismatched` / `excluded` / `notExecuted` | Separate counters |
+| `allMatched` | False if any planned cell is missing, excluded, or mismatched |
+
+## 6. Nested HTTP_503 residual
 
 `isExhaustedTransportOpacityFailure` accepts any cause-chain `ApplicationFailure` type `HTTP_503` when hint is `RESOLVE_TRANSPORT_OPAQUE`. An exotic nested unrelated 503 remains a **theoretical** residual — documented, not generalized.
