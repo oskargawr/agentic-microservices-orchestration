@@ -1,11 +1,12 @@
 # NEXT_TASK
 
 **Status:** `awaiting_owner`  
-**Last updated:** 2026-11-03 (post-merge G5 reconciliation / D-409)  
-**Authorized by:** — (no new implementation authorized)  
+**Last updated:** 2026-11-03 (handbook docs delivered; still awaiting live-G5 auth)  
+**Authorized by:** — (no new implementation / no live G5 authorized)  
 **Live G5 execution:** **NOT** authorized  
 **Merge:** N/A (PR #16 already on `main`)  
-**Basis:** D-409 · D-AUTH-G5 (immutable) · discovery `coordination/TH_402_G5_DISCOVERY.md`
+**Basis:** D-409 · D-AUTH-G5 (immutable) · discovery `coordination/TH_402_G5_DISCOVERY.md`  
+**Docs:** `docs/implementation-guide/` + Obsidian `07 - Implementation Handbook/` (documentation only)
 
 ## Current gate
 
