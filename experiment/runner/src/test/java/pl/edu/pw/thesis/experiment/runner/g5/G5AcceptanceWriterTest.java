@@ -10,10 +10,14 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import pl.edu.pw.thesis.experiment.runner.model.BusinessInputs;
+import pl.edu.pw.thesis.experiment.runner.model.ExperimentDefinition;
 import pl.edu.pw.thesis.experiment.runner.model.HarnessStatus;
 import pl.edu.pw.thesis.experiment.runner.model.OracleSummary;
+import pl.edu.pw.thesis.experiment.runner.model.RunnerTiming;
 import pl.edu.pw.thesis.experiment.runner.model.TerminatedBy;
 import pl.edu.pw.thesis.experiment.runner.model.TrialRecord;
+import pl.edu.pw.thesis.experiment.runner.store.FileResultStore;
 
 class G5AcceptanceWriterTest {
 
@@ -23,8 +27,23 @@ class G5AcceptanceWriterTest {
     void writesAndReadsAcceptanceJson_withoutMutatingTrialRecord() throws Exception {
         TrialRecord trial = sampleTrial(HarnessStatus.COMPLETED, TerminatedBy.T_RUN_MAX, "TERMINATED", true);
         TrialRecord snapshot = trial;
-        Path durable = tmp.resolve("trial.json");
-        Files.writeString(durable, "{}");
+        ExperimentDefinition exp = new ExperimentDefinition(
+                "exp-g5",
+                "protocol-v0",
+                "pilot",
+                List.of("A"),
+                List.of("F0"),
+                1,
+                BusinessInputs.protocolPilotDefaults(),
+                RunnerTiming.protocolDefaults(),
+                "deadbeef",
+                Instant.parse("2026-11-03T12:00:00Z"));
+        FileResultStore store = new FileResultStore(tmp, exp);
+        store.saveExperiment(exp);
+        store.saveTrial(trial);
+        Path durable = store.trialJsonPath(trial.trialId());
+        TrialRecord durableRead = store.readTrial(trial.trialId());
+        assertThat(durableRead).isNotSameAs(trial).isEqualTo(trial);
 
         G5HistoryValidationResult validation = G5HistoryGate.validate(List.of(
                 new G5HistoryEventView(1, G5HistoryEventKind.OTHER),
@@ -33,7 +52,7 @@ class G5AcceptanceWriterTest {
         G5AcceptanceRecord acceptance = G5AcceptanceEvaluator.evaluate(
                 trial,
                 durable,
-                trial,
+                durableRead,
                 1,
                 "PASS",
                 "taskQueue=variant-a-order-fulfillment; pollerDetected=false",

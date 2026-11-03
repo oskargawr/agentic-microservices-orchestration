@@ -10,10 +10,14 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import pl.edu.pw.thesis.experiment.runner.model.BusinessInputs;
+import pl.edu.pw.thesis.experiment.runner.model.ExperimentDefinition;
 import pl.edu.pw.thesis.experiment.runner.model.HarnessStatus;
 import pl.edu.pw.thesis.experiment.runner.model.OracleSummary;
+import pl.edu.pw.thesis.experiment.runner.model.RunnerTiming;
 import pl.edu.pw.thesis.experiment.runner.model.TerminatedBy;
 import pl.edu.pw.thesis.experiment.runner.model.TrialRecord;
+import pl.edu.pw.thesis.experiment.runner.store.FileResultStore;
 
 /**
  * G5-3 acceptance must require COMPLETED TrialRecord outcome + history + preflight.
@@ -25,30 +29,73 @@ class G5AcceptanceGateTest {
 
     @Test
     void completedQuiescedOracleOnceDurable_andValidHistory_isValid() throws Exception {
-        TrialRecord trial = completedTerminatedTrial();
-        Path durable = tmp.resolve("trial.json");
-        Files.writeString(durable, "{\"placeholder\":true}");
-        // durableMatches uses Objects.equals(measured, durableRead) — pass same instance as read
-        G5HistoryValidationResult okHistory = validHistory();
+        TrialRecord measured = completedTerminatedTrial();
+        FileResultStore store = newStore();
+        store.saveExperiment(experiment());
+        store.saveTrial(measured);
+
+        Path durableJson = store.trialJsonPath(measured.trialId());
+        TrialRecord durableRead = store.readTrial(measured.trialId());
+        assertThat(durableRead).isNotSameAs(measured);
+        assertThat(durableRead).isEqualTo(measured);
 
         G5AcceptanceRecord acceptance = G5AcceptanceEvaluator.evaluate(
-                trial,
-                durable,
-                trial,
+                measured,
+                durableJson,
+                durableRead,
                 1,
                 "PASS",
                 "DescribeTaskQueue pollers=0",
                 "GetWorkflowExecutionHistory(paginated)",
                 tmp.resolve("history.tsv").toString(),
-                okHistory,
+                validHistory(),
                 Instant.parse("2026-11-03T14:00:00Z"));
 
         assertThat(acceptance.acceptanceResult()).isEqualTo(G5AcceptanceRecord.VALID);
         assertThat(acceptance.trialOutcomeValidation()).isEqualTo("PASS");
+        assertThat(acceptance.durableTrialJsonPresent()).isTrue();
+        assertThat(acceptance.durableTrialMatchesRunner()).isTrue();
         Path written = new G5AcceptanceWriter().write(tmp, acceptance);
         assertThat(written).exists();
-        G5AcceptanceWriter.assertUnchanged(trial, trial);
+        G5AcceptanceWriter.assertUnchanged(measured, measured);
         acceptance.requireValidForG5Evidence();
+    }
+
+    @Test
+    void durableReadMismatch_isInvalid_artifactWrittenBeforeFail() throws Exception {
+        TrialRecord measured = completedTerminatedTrial();
+        FileResultStore store = newStore();
+        store.saveExperiment(experiment());
+        store.saveTrial(measured);
+
+        Path durableJson = store.trialJsonPath(measured.trialId());
+        assertThat(Files.isRegularFile(durableJson)).isTrue();
+        // Deserialized original would match; supply a differing durable view instead.
+        TrialRecord mismatchedDurable = completedTerminatedTrialWithRunId("run-other");
+        assertThat(mismatchedDurable).isNotEqualTo(measured);
+
+        G5AcceptanceRecord acceptance = G5AcceptanceEvaluator.evaluate(
+                measured,
+                durableJson,
+                mismatchedDurable,
+                1,
+                "PASS",
+                "DescribeTaskQueue pollers=0",
+                "GetWorkflowExecutionHistory(paginated)",
+                tmp.resolve("history.tsv").toString(),
+                validHistory(),
+                Instant.parse("2026-11-03T14:00:00Z"));
+
+        assertThat(acceptance.acceptanceResult()).isEqualTo(G5AcceptanceRecord.INVALID);
+        assertThat(acceptance.invalidationReason())
+                .contains("durable TrialRecord does not equal TrialRunner return value");
+        Path written = new G5AcceptanceWriter().write(tmp, acceptance);
+        assertThat(written).exists();
+        assertThat(Files.readString(written)).contains("\"acceptanceResult\" : \"INVALID\"");
+        assertThatThrownBy(acceptance::requireValidForG5Evidence).isInstanceOf(AssertionError.class);
+        G5AcceptanceWriter.assertUnchanged(measured, measured);
+        // Original durable JSON left intact
+        assertThat(store.readTrial(measured.trialId())).isEqualTo(measured);
     }
 
     @Test
@@ -202,8 +249,43 @@ class G5AcceptanceGateTest {
                 new G5HistoryEventView(4, G5HistoryEventKind.WORKFLOW_EXECUTION_TERMINATED)));
     }
 
+    private FileResultStore newStore() {
+        return new FileResultStore(tmp, experiment());
+    }
+
+    private static ExperimentDefinition experiment() {
+        return new ExperimentDefinition(
+                "exp-g5",
+                "protocol-v0",
+                "pilot",
+                List.of("A"),
+                List.of("F0"),
+                1,
+                BusinessInputs.protocolPilotDefaults(),
+                RunnerTiming.protocolDefaults(),
+                "deadbeef",
+                Instant.parse("2026-11-03T12:00:00Z"));
+    }
+
     private static TrialRecord completedTerminatedTrial() {
         return completedTerminatedTrial(true);
+    }
+
+    private static TrialRecord completedTerminatedTrialWithRunId(String runId) {
+        return trial(
+                HarnessStatus.COMPLETED,
+                TerminatedBy.T_RUN_MAX,
+                "TERMINATED",
+                true,
+                runId,
+                new OracleSummary(
+                        "CONFIRMED_FAILURE",
+                        null,
+                        null,
+                        List.of(),
+                        List.of(),
+                        "th-401-a-1",
+                        Instant.parse("2026-11-03T12:02:32Z")));
     }
 
     private static TrialRecord completedTerminatedTrial(boolean quiesced) {
@@ -212,6 +294,7 @@ class G5AcceptanceGateTest {
                 TerminatedBy.T_RUN_MAX,
                 "TERMINATED",
                 quiesced,
+                "run-abc",
                 new OracleSummary(
                         "CONFIRMED_FAILURE",
                         null,
@@ -223,11 +306,11 @@ class G5AcceptanceGateTest {
     }
 
     private static TrialRecord completedTerminatedTrialWithoutOracle() {
-        return trial(HarnessStatus.COMPLETED, TerminatedBy.T_RUN_MAX, "TERMINATED", true, null);
+        return trial(HarnessStatus.COMPLETED, TerminatedBy.T_RUN_MAX, "TERMINATED", true, "run-abc", null);
     }
 
     private static TrialRecord excludedTrial() {
-        return trial(HarnessStatus.EXCLUDED, TerminatedBy.T_RUN_MAX, "TERMINATED", false, null);
+        return trial(HarnessStatus.EXCLUDED, TerminatedBy.T_RUN_MAX, "TERMINATED", false, "run-abc", null);
     }
 
     private static TrialRecord trial(
@@ -235,6 +318,7 @@ class G5AcceptanceGateTest {
             TerminatedBy terminatedBy,
             String temporalStatus,
             boolean quiesced,
+            String runId,
             OracleSummary oracle) {
         UUID orderId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         return new TrialRecord(
@@ -258,7 +342,7 @@ class G5AcceptanceGateTest {
                 terminatedBy,
                 quiesced,
                 "order-" + orderId,
-                "run-abc",
+                runId,
                 temporalStatus,
                 harness,
                 harness == HarnessStatus.COMPLETED,
