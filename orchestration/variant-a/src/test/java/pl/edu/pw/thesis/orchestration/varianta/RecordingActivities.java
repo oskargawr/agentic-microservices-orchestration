@@ -383,10 +383,10 @@ final class RecordingActivities implements OrderFulfillmentActivities {
     }
 
     @Override
-    public PaymentSnapshot getPayment(UUID paymentId) {
+    public PaymentSnapshot getPayment(UUID paymentId, String faultHint) {
         operations.add("getPayment");
         if (delegate != null) {
-            PaymentSnapshot r = delegate.getPayment(paymentId);
+            PaymentSnapshot r = delegate.getPayment(paymentId, faultHint);
             paymentState = r.state();
             return r;
         }

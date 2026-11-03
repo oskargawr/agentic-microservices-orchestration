@@ -117,7 +117,7 @@ class OrderFulfillmentCompensationIT {
             assertThat(result.outcome()).isEqualTo(BusinessOutcome.COMPENSATED_FAILURE);
             assertThat(http.getReservation(result.reservationId()).state())
                     .isEqualTo(ReservationState.RELEASED);
-            assertThat(http.getPayment(result.paymentId()).state()).isEqualTo(PaymentState.FAILED);
+            assertThat(http.getPayment(result.paymentId(), null).state()).isEqualTo(PaymentState.FAILED);
             assertThat(queryOps("payment")).doesNotContain("refund");
             assertThat(queryOps("inventory")).contains("release");
             assertThat(queryOps("shipping")).isEmpty();
@@ -142,7 +142,7 @@ class OrderFulfillmentCompensationIT {
                     null));
 
             assertThat(result.outcome()).isEqualTo(BusinessOutcome.COMPENSATED_FAILURE);
-            assertThat(http.getPayment(result.paymentId()).state()).isEqualTo(PaymentState.REFUNDED);
+            assertThat(http.getPayment(result.paymentId(), null).state()).isEqualTo(PaymentState.REFUNDED);
             assertThat(http.getReservation(result.reservationId()).state())
                     .isEqualTo(ReservationState.RELEASED);
             assertThat(result.shipmentId()).isNull();
@@ -164,7 +164,7 @@ class OrderFulfillmentCompensationIT {
                     orderId, "SKU-MVP-1", 1, Money.plnMinor(2599)));
 
             assertThat(result.outcome()).isEqualTo(BusinessOutcome.COMPENSATED_FAILURE);
-            assertThat(http.getPayment(result.paymentId()).state()).isEqualTo(PaymentState.REFUNDED);
+            assertThat(http.getPayment(result.paymentId(), null).state()).isEqualTo(PaymentState.REFUNDED);
             assertThat(http.getReservation(result.reservationId()).state())
                     .isEqualTo(ReservationState.RELEASED);
 
@@ -191,7 +191,7 @@ class OrderFulfillmentCompensationIT {
 
             assertThat(result.outcome()).isEqualTo(BusinessOutcome.COMPENSATED_FAILURE);
             assertThat(http.getShipment(result.shipmentId()).state()).isEqualTo(ShipmentState.CANCELLED);
-            assertThat(http.getPayment(result.paymentId()).state()).isEqualTo(PaymentState.REFUNDED);
+            assertThat(http.getPayment(result.paymentId(), null).state()).isEqualTo(PaymentState.REFUNDED);
             assertThat(http.getReservation(result.reservationId()).state())
                     .isEqualTo(ReservationState.RELEASED);
 
@@ -218,7 +218,7 @@ class OrderFulfillmentCompensationIT {
             assertThat(result.matchesConfirmedSuccessSnapshot()).isTrue();
             assertThat(http.getReservation(result.reservationId()).state())
                     .isEqualTo(ReservationState.CONSUMED);
-            assertThat(http.getPayment(result.paymentId()).state()).isEqualTo(PaymentState.CAPTURED);
+            assertThat(http.getPayment(result.paymentId(), null).state()).isEqualTo(PaymentState.CAPTURED);
             assertThat(http.getShipment(result.shipmentId()).state()).isEqualTo(ShipmentState.ARRANGED);
             assertThat(queryOps("payment")).doesNotContain("refund");
             assertThat(queryOps("inventory")).contains("consume").doesNotContain("release");
@@ -235,12 +235,58 @@ class OrderFulfillmentCompensationIT {
                     "CHARGE_UNKNOWN", "RESOLVE_INCONCLUSIVE", 2));
 
             assertThat(result.outcome()).isEqualTo(BusinessOutcome.AMBIGUOUS);
-            assertThat(http.getPayment(result.paymentId()).state()).isEqualTo(PaymentState.UNKNOWN);
+            assertThat(http.getPayment(result.paymentId(), null).state()).isEqualTo(PaymentState.UNKNOWN);
             assertThat(http.getReservation(result.reservationId()).state())
                     .isEqualTo(ReservationState.RELEASED);
             assertThat(queryOps("shipping")).isEmpty();
             assertThat(queryOps("payment")).doesNotContain("refund");
             assertThat(queryOps("inventory")).contains("release");
+        }
+    }
+
+    @Test
+    void f3Recovered_chargeLostThenResolveExposesCaptured_success() throws Exception {
+        HttpOrderFulfillmentActivities http = http();
+        try (TestWorkflowEnvironment testEnv = newEnv(http)) {
+            UUID orderId = UUID.randomUUID();
+            OrderFulfillmentResult result = stub(testEnv).fulfill(new OrderFulfillmentInput(
+                    orderId, "SKU-MVP-1", 1, Money.plnMinor(2599),
+                    "F3_CAPTURE_LOST_RESPONSE", null, 2));
+
+            assertThat(result.outcome()).isEqualTo(BusinessOutcome.SUCCESS);
+            assertThat(result.matchesConfirmedSuccessSnapshot()).isTrue();
+            assertThat(http.getPayment(result.paymentId(), null).state()).isEqualTo(PaymentState.CAPTURED);
+            assertThat(http.getReservation(result.reservationId()).state())
+                    .isEqualTo(ReservationState.CONSUMED);
+            assertThat(http.getShipment(result.shipmentId()).state()).isEqualTo(ShipmentState.ARRANGED);
+            assertThat(queryOps("payment")).doesNotContain("refund");
+            assertThat(queryOps("shipping")).isNotEmpty();
+        }
+    }
+
+    @Test
+    void f3Unresolved_opacityLeavesCapturedHeld_noRefundNoArrange() throws Exception {
+        HttpOrderFulfillmentActivities http = http();
+        try (TestWorkflowEnvironment testEnv = newEnv(http)) {
+            UUID orderId = UUID.randomUUID();
+            // resolveAttemptLimit=1 keeps Temporal 503 retry budget bounded for the test env
+            OrderFulfillmentResult result = stub(testEnv).fulfill(new OrderFulfillmentInput(
+                    orderId, "SKU-MVP-1", 1, Money.plnMinor(2599),
+                    "F3_CAPTURE_LOST_RESPONSE", "RESOLVE_TRANSPORT_OPAQUE", 1));
+
+            assertThat(result.outcome()).isEqualTo(BusinessOutcome.AMBIGUOUS);
+            assertThat(result.paymentState()).isEqualTo(PaymentState.CAPTURED);
+            assertThat(result.reservationState()).isEqualTo(ReservationState.HELD);
+            assertThat(result.shipmentId()).isNull();
+            assertThat(http.getPayment(result.paymentId(), null).state()).isEqualTo(PaymentState.CAPTURED);
+            assertThat(http.getReservation(result.reservationId()).state())
+                    .isEqualTo(ReservationState.HELD);
+            assertThat(queryOps("shipping")).isEmpty();
+            assertThat(queryOps("payment")).contains("charge").doesNotContain("refund");
+            assertThat(queryOps("inventory")).contains("reserve").doesNotContain("release");
+            assertThat(result.compensationLog())
+                    .contains("refund-skipped:experimental-opacity-unconfirmed")
+                    .contains("release-skipped:experimental-opacity-unconfirmed");
         }
     }
 

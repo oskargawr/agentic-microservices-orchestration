@@ -37,7 +37,27 @@ public final class CompositeFaultController implements FaultController {
         return new CompositeFaultController(map);
     }
 
-    /** F0-only (phase-1 / tests that never arm F1-P / F2). */
+    /** F0 + F3-Recovered (requires live payment F3 recovered preflight). */
+    public static CompositeFaultController f0AndF3Recovered(
+            RunnerClock clock, PaymentF3FaultInjectionVerifier f3Verifier) {
+        Map<String, FaultController> map = new LinkedHashMap<>();
+        map.put(F0FaultController.PROFILE_F0, new F0FaultController(clock));
+        map.put(F3RecoveredFaultController.PROFILE, new F3RecoveredFaultController(clock, f3Verifier));
+        return new CompositeFaultController(map);
+    }
+
+    /** F0 + F3-Unresolved (requires live payment F3 unresolved opacity preflight). */
+    public static CompositeFaultController f0AndF3Unresolved(
+            RunnerClock clock, PaymentF3FaultInjectionVerifier f3Verifier) {
+        Map<String, FaultController> map = new LinkedHashMap<>();
+        map.put(F0FaultController.PROFILE_F0, new F0FaultController(clock));
+        map.put(
+                F3UnresolvedFaultController.PROFILE,
+                new F3UnresolvedFaultController(clock, f3Verifier));
+        return new CompositeFaultController(map);
+    }
+
+    /** F0-only (phase-1 / tests that never arm F1-P / F2 / F3). */
     public static CompositeFaultController f0Only(RunnerClock clock) {
         return new CompositeFaultController(
                 Map.of(F0FaultController.PROFILE_F0, new F0FaultController(clock)));

@@ -134,8 +134,17 @@ public class HttpOrderFulfillmentActivities implements OrderFulfillmentActivitie
     }
 
     @Override
-    public PaymentSnapshot getPayment(UUID paymentId) {
-        return get(payment, "/api/v1/payments/" + paymentId, PaymentSnapshot.class);
+    public PaymentSnapshot getPayment(UUID paymentId, String faultHint) {
+        try {
+            RestClient.RequestHeadersSpec<?> spec = payment.get()
+                    .uri("/api/v1/payments/" + paymentId);
+            if (faultHint != null && !faultHint.isBlank()) {
+                spec = spec.header(FAULT_HEADER, faultHint.trim());
+            }
+            return spec.retrieve().body(PaymentSnapshot.class);
+        } catch (RestClientResponseException e) {
+            throw toFailure(e);
+        }
     }
 
     @Override

@@ -18,7 +18,10 @@ import pl.edu.pw.thesis.experiment.runner.fault.CompositeFaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.F0FaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.F1PFaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.F2FaultController;
+import pl.edu.pw.thesis.experiment.runner.fault.F3RecoveredFaultController;
+import pl.edu.pw.thesis.experiment.runner.fault.F3UnresolvedFaultController;
 import pl.edu.pw.thesis.experiment.runner.fault.FaultController;
+import pl.edu.pw.thesis.experiment.runner.fault.HttpPaymentF3FaultInjectionVerifier;
 import pl.edu.pw.thesis.experiment.runner.fault.HttpPaymentFaultInjectionVerifier;
 import pl.edu.pw.thesis.experiment.runner.fault.HttpShippingFaultInjectionVerifier;
 import pl.edu.pw.thesis.experiment.runner.lifecycle.ExperimentAbort;
@@ -191,9 +194,28 @@ public final class RunnerMain {
             return CompositeFaultController.f0AndF2(
                     clock, HttpShippingFaultInjectionVerifier.forBaseUrl(a.shippingBaseUrl.trim()));
         }
+        if (F3RecoveredFaultController.PROFILE.equals(a.faultProfileId)) {
+            if (a.paymentBaseUrl == null || a.paymentBaseUrl.isBlank()) {
+                throw new IllegalArgumentException(
+                        "F3-Recovered requires --payment-base-url=... (or THESIS_PAYMENT_BASE_URL) "
+                                + "for fail-closed injection preflight");
+            }
+            return CompositeFaultController.f0AndF3Recovered(
+                    clock, HttpPaymentF3FaultInjectionVerifier.forBaseUrl(a.paymentBaseUrl.trim()));
+        }
+        if (F3UnresolvedFaultController.PROFILE.equals(a.faultProfileId)) {
+            if (a.paymentBaseUrl == null || a.paymentBaseUrl.isBlank()) {
+                throw new IllegalArgumentException(
+                        "F3-Unresolved requires --payment-base-url=... (or THESIS_PAYMENT_BASE_URL) "
+                                + "for fail-closed injection preflight");
+            }
+            return CompositeFaultController.f0AndF3Unresolved(
+                    clock, HttpPaymentF3FaultInjectionVerifier.forBaseUrl(a.paymentBaseUrl.trim()));
+        }
         throw new IllegalArgumentException(
                 "unsupported --fault-profile=" + a.faultProfileId
-                        + " (supported: F0, F1-P, F2; F1 is not a canonical id)");
+                        + " (supported: F0, F1-P, F2, F3-Recovered, F3-Unresolved; "
+                        + "F1/F3 are not canonical ids)");
     }
 
     static final class Args {

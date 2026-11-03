@@ -7,6 +7,7 @@ import java.util.Objects;
 import pl.edu.pw.thesis.experiment.oracle.IndependentOracle;
 import pl.edu.pw.thesis.experiment.oracle.OracleEvaluationRequest;
 import pl.edu.pw.thesis.experiment.oracle.OracleResult;
+import pl.edu.pw.thesis.experiment.runner.accept.F3UnresolvedAcceptanceGate;
 import pl.edu.pw.thesis.experiment.runner.config.RunnerEnvironment;
 import pl.edu.pw.thesis.experiment.runner.config.UnsafeEnvironmentException;
 import pl.edu.pw.thesis.experiment.runner.fault.ArmedFaultRecord;
@@ -187,6 +188,22 @@ public final class TrialRunner {
                         baseline.onHand());
             }
             Instant tOracle = oracleResult.evaluatedAt();
+
+            var f3Reject = F3UnresolvedAcceptanceGate.rejectReason(
+                    spec.faultProfileId(), oracleResult);
+            if (f3Reject.isPresent()) {
+                return persistExcluded(
+                        spec,
+                        t0,
+                        "F3_UNRESOLVED_ACCEPTANCE_FAILED",
+                        f3Reject.get(),
+                        faultTriggeredAt,
+                        armed,
+                        handle,
+                        quiesced,
+                        terminatedBy,
+                        baseline.onHand());
+            }
 
             TrialRecord completedCandidate = new TrialRecord(
                     TrialRecord.SCHEMA_VERSION,

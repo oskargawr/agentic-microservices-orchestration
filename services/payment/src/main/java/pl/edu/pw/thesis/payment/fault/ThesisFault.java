@@ -21,7 +21,12 @@ public enum ThesisFault {
     /** Resolve probe: authoritative non-capture. */
     RESOLVE_FAIL,
     /** Resolve probe: inconclusive — keep UNKNOWN/PENDING. */
-    RESOLVE_INCONCLUSIVE;
+    RESOLVE_INCONCLUSIVE,
+    /**
+     * F3-Unresolved transport opacity: resolve/GET return HTTP 503 while header present.
+     * Must not mutate payment DB state (OQ-F3U-2 / D-AUTH-S3-3).
+     */
+    RESOLVE_TRANSPORT_OPAQUE;
 
     public static final String HEADER = "X-Thesis-Fault";
 
