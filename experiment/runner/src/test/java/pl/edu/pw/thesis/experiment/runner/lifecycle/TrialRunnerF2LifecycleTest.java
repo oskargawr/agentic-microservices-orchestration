@@ -111,8 +111,8 @@ class TrialRunnerF2LifecycleTest {
 
         assertThat(record.harnessStatus()).isEqualTo(HarnessStatus.COMPLETED);
         assertThat(record.faultProfileId()).isEqualTo("F2");
-        assertThat(record.faultArmedRecord()).isInstanceOf(ArmedFaultRecord.class);
-        ArmedFaultRecord persisted = (ArmedFaultRecord) record.faultArmedRecord();
+        assertThat(record.faultArmedRecord()).isNotNull();
+        ArmedFaultRecord persisted = record.faultArmedRecord();
         assertThat(persisted.effectiveConfig())
                 .containsEntry("faultProfileId", "F2")
                 .containsEntry("code", "ARRANGE_REJECTED")

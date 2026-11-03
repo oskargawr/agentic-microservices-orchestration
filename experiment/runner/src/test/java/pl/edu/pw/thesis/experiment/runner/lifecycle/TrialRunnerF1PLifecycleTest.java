@@ -113,9 +113,8 @@ class TrialRunnerF1PLifecycleTest {
         assertThat(record.faultProfileId()).isEqualTo("F1-P");
         assertThat(record.orderId()).isEqualTo(orderId);
         assertThat(record.trialId()).isEqualTo("t-f1p");
-        assertThat(record.faultArmedRecord()).isInstanceOf(ArmedFaultRecord.class);
-        @SuppressWarnings("unchecked")
-        ArmedFaultRecord persisted = (ArmedFaultRecord) record.faultArmedRecord();
+        assertThat(record.faultArmedRecord()).isNotNull();
+        ArmedFaultRecord persisted = record.faultArmedRecord();
         assertThat(persisted.effectiveConfig())
                 .containsEntry("faultProfileId", "F1-P")
                 .containsEntry("trialId", "t-f1p")

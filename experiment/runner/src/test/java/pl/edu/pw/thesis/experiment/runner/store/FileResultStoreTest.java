@@ -8,10 +8,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import pl.edu.pw.thesis.experiment.runner.fault.ArmedFaultRecord;
 import pl.edu.pw.thesis.experiment.runner.model.BusinessInputs;
 import pl.edu.pw.thesis.experiment.runner.model.ExperimentDefinition;
 import pl.edu.pw.thesis.experiment.runner.model.HarnessStatus;
@@ -58,7 +60,7 @@ class FileResultStoreTest {
         FileResultStore store = new FileResultStore(tmp, exp);
         store.saveExperiment(exp);
         UUID order = UUID.randomUUID();
-        store.saveTrial(completed(exp, "trial-down", order));
+        store.saveTrial(completed(exp, "trial-down", order, null));
 
         assertThatThrownBy(() -> store.saveTrial(excluded(exp, "trial-down", order)))
                 .hasMessageContaining("Refuse downgrade of durable COMPLETED");
@@ -97,7 +99,7 @@ class FileResultStoreTest {
         };
         store.saveExperiment(exp);
         UUID order = UUID.randomUUID();
-        TrialRecord completed = completed(exp, "trial-ok", order);
+        TrialRecord completed = completed(exp, "trial-ok", order, null);
 
         store.saveTrial(completed);
 
@@ -126,6 +128,33 @@ class FileResultStoreTest {
         assertThatThrownBy(store::rebuildCsvFromJsonTrials)
                 .isInstanceOf(IOException.class)
                 .hasMessageContaining("Malformed canonical trial JSON");
+    }
+
+    @Test
+    void completedTrialWithArmedFaultRecord_roundTripsWithSemanticEquals() throws Exception {
+        ExperimentDefinition exp = experiment("exp-armed-rt");
+        FileResultStore store = new FileResultStore(tmp, exp);
+        store.saveExperiment(exp);
+
+        UUID order = UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        ArmedFaultRecord armed = new ArmedFaultRecord(
+                "F0",
+                "NONE",
+                Map.of("injection", "none"),
+                Instant.parse("2026-11-03T15:33:34.984134Z"));
+        TrialRecord measured = completed(exp, "trial-armed", order, armed);
+
+        store.saveTrial(measured);
+        TrialRecord durable = store.readTrial("trial-armed");
+
+        assertThat(durable).isEqualTo(measured);
+        assertThat(durable.faultArmedRecord()).isEqualTo(armed);
+        assertThat(durable.faultArmedRecord()).isInstanceOf(ArmedFaultRecord.class);
+        // Canonical JSON still contains the armed fields (no data loss).
+        String json = Files.readString(store.trialJsonPath("trial-armed"));
+        assertThat(json).contains("\"faultProfileId\" : \"F0\"");
+        assertThat(json).contains("\"injection\" : \"none\"");
+        assertThat(json).contains("2026-11-03T15:33:34.984134Z");
     }
 
     @Test
@@ -188,7 +217,8 @@ class FileResultStoreTest {
                 "test");
     }
 
-    private static TrialRecord completed(ExperimentDefinition exp, String trialId, UUID orderId) {
+    private static TrialRecord completed(
+            ExperimentDefinition exp, String trialId, UUID orderId, ArmedFaultRecord armed) {
         return new TrialRecord(
                 TrialRecord.SCHEMA_VERSION,
                 exp.experimentId(),
@@ -225,7 +255,7 @@ class FileResultStoreTest {
                         "test-eval",
                         Instant.parse("2026-11-02T00:00:41Z")),
                 "SUCCESS",
-                null,
+                armed,
                 100,
                 null);
     }
