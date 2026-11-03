@@ -4,6 +4,7 @@
 **Od:** Cursor Agent  
 **Tryb:** IMPLEMENTATION — D-AUTH-S3 (F3-Recovered + F3-Unresolved)  
 **Branch:** `feature/th-400-s3-f3`  
+**HEAD:** `ba81686eafeba0db1b57594a1ecef45e8250d329`  
 **Base:** `c16e1f0` (local) / `origin/main` `f3ac351`  
 **Push / PR / merge:** **NOT performed / NOT authorized**
 
