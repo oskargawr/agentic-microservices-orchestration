@@ -118,6 +118,27 @@ final class RecordingActivities implements OrderFulfillmentActivities {
         };
     }
 
+    /** Non-retryable BUSINESS on every resolve (S3 remediation negative path). */
+    void failResolveWithBusiness(String message) {
+        resolveOverride = () -> {
+            throw ApplicationFailure.newNonRetryableFailure(message, ActivityPolicies.BUSINESS_FAILURE_TYPE);
+        };
+    }
+
+    /** Retryable non-503 failure on every resolve (unrelated transport). */
+    void failResolveWithHttp500(String message) {
+        resolveOverride = () -> {
+            throw ApplicationFailure.newFailure(message, "HTTP_500");
+        };
+    }
+
+    /** Retryable HTTP_503 on every resolve until Temporal exhausts retries. */
+    void failResolveAlwaysHttp503(String message) {
+        resolveOverride = () -> {
+            throw ApplicationFailure.newFailure(message, "HTTP_503");
+        };
+    }
+
     void chargeReturns(PaymentState state) {
         this.forcedChargeState = state;
     }

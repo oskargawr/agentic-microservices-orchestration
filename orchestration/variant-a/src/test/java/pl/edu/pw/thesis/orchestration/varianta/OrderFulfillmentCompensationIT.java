@@ -291,6 +291,67 @@ class OrderFulfillmentCompensationIT {
     }
 
     @Test
+    void f3Unresolved_businessResolveFailure_doesNotLeaveDangling() throws Exception {
+        HttpOrderFulfillmentActivities http = http();
+        RecordingActivities activities = new RecordingActivities(http);
+        activities.failResolveWithBusiness("controlled BUSINESS resolve failure");
+        try (TestWorkflowEnvironment testEnv = newEnv(activities)) {
+            OrderFulfillmentResult result = stub(testEnv).fulfill(new OrderFulfillmentInput(
+                    UUID.randomUUID(), "SKU-MVP-1", 1, Money.plnMinor(2599),
+                    "F3_CAPTURE_LOST_RESPONSE", "RESOLVE_TRANSPORT_OPAQUE", 1));
+
+            assertThat(result.compensationLog())
+                    .doesNotContain("experimental-opacity-unconfirmed");
+            assertThat(queryOps("payment")).contains("refund");
+            assertThat(queryOps("inventory")).contains("release");
+            assertThat(http.getPayment(result.paymentId(), null).state()).isEqualTo(PaymentState.REFUNDED);
+            assertThat(http.getReservation(result.reservationId()).state())
+                    .isEqualTo(ReservationState.RELEASED);
+        }
+    }
+
+    @Test
+    void f3Unresolved_unrelatedHttp500Resolve_doesNotLeaveDangling() throws Exception {
+        HttpOrderFulfillmentActivities http = http();
+        RecordingActivities activities = new RecordingActivities(http);
+        activities.failResolveWithHttp500("controlled unrelated HTTP_500");
+        try (TestWorkflowEnvironment testEnv = newEnv(activities)) {
+            OrderFulfillmentResult result = stub(testEnv).fulfill(new OrderFulfillmentInput(
+                    UUID.randomUUID(), "SKU-MVP-1", 1, Money.plnMinor(2599),
+                    "F3_CAPTURE_LOST_RESPONSE", "RESOLVE_TRANSPORT_OPAQUE", 1));
+
+            assertThat(result.compensationLog())
+                    .doesNotContain("experimental-opacity-unconfirmed");
+            assertThat(queryOps("payment")).contains("refund");
+            assertThat(queryOps("inventory")).contains("release");
+            assertThat(http.getPayment(result.paymentId(), null).state()).isEqualTo(PaymentState.REFUNDED);
+        }
+    }
+
+    @Test
+    void f3Unresolved_exhaustedHttp503Override_stillLeavesDangling() throws Exception {
+        HttpOrderFulfillmentActivities http = http();
+        RecordingActivities activities = new RecordingActivities(http);
+        // Force ApplicationFailure type HTTP_503 (same as HttpOrderFulfillmentActivities mapping)
+        activities.failResolveAlwaysHttp503("forced opacity-equivalent 503");
+        try (TestWorkflowEnvironment testEnv = newEnv(activities)) {
+            OrderFulfillmentResult result = stub(testEnv).fulfill(new OrderFulfillmentInput(
+                    UUID.randomUUID(), "SKU-MVP-1", 1, Money.plnMinor(2599),
+                    "F3_CAPTURE_LOST_RESPONSE", "RESOLVE_TRANSPORT_OPAQUE", 1));
+
+            assertThat(result.outcome()).isEqualTo(BusinessOutcome.AMBIGUOUS);
+            assertThat(result.compensationLog())
+                    .contains("refund-skipped:experimental-opacity-unconfirmed")
+                    .contains("release-skipped:experimental-opacity-unconfirmed");
+            assertThat(queryOps("payment")).contains("charge").doesNotContain("refund");
+            assertThat(queryOps("inventory")).contains("reserve").doesNotContain("release");
+            assertThat(http.getPayment(result.paymentId(), null).state()).isEqualTo(PaymentState.CAPTURED);
+            assertThat(http.getReservation(result.reservationId()).state())
+                    .isEqualTo(ReservationState.HELD);
+        }
+    }
+
+    @Test
     void t201_6_incompleteCompensation_realCancelThenRefundFails() throws Exception {
         HttpOrderFulfillmentActivities http = http();
         RecordingActivities activities = new RecordingActivities(http);

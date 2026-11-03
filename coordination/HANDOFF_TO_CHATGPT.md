@@ -2,58 +2,43 @@
 
 **Data:** 2026-11-03  
 **Od:** Cursor Agent  
-**Tryb:** IMPLEMENTATION — D-AUTH-S3 (F3-Recovered + F3-Unresolved)  
+**Tryb:** IMPLEMENTATION — S3 targeted remediation after independent audit  
 **Branch:** `feature/th-400-s3-f3`  
-**HEAD:** `ba81686eafeba0db1b57594a1ecef45e8250d329`  
-**Base:** `c16e1f0` (local) / `origin/main` `f3ac351`  
-**Push / PR / merge:** **NOT performed / NOT authorized**
+**Push / PR / merge / rebase:** **NOT performed / NOT authorized**
 
 ---
 
-## Summary
+## HEAD / commits (post-remediation)
 
-Owner granted **D-AUTH-S3**. Dual F3 profiles implemented end-to-end (Payment opacity, Variant A getPayment hint + compensation leave-dangling for Unresolved, Runner controllers + harness gate). Oracle API/classifier **unchanged**.
+| | |
+| --- | --- |
+| Tip (after remediation commits) | see `git rev-parse HEAD` on branch |
+| Prior audit tip | `8c5b1a12dd46a60d1360ec25aef20ab4c9cb9610` |
+| S3 impl | `ba81686eafeba0db1b57594a1ecef45e8250d329` |
+| Unpushed EOD docs (unchanged) | `c16e1f0` — **not** modified in remediation |
+| `origin/main` | `f3ac351` |
 
-## Evidence (tests)
+## Remediation summary
+
+1. **HIGH:** `handleUnresolvedPayment` catches `ActivityFailure` only when resolve hint is `RESOLVE_TRANSPORT_OPAQUE` **and** cause chain contains `ApplicationFailure` type `HTTP_503`; otherwise rethrows.  
+2. **MEDIUM gate:** F3-Unresolved acceptance requires shipment absent or `NONE` (CANCELLED rejected).  
+3. **MEDIUM lifecycle:** `TrialRunnerF3LifecycleTest` (mocked adapter/oracle; arm/verify/`effectiveConfig`/gate/verify-fail). No live Temporal.
+
+## Tests
 
 ```text
-./gradlew :services:payment:test :contracts:test \
-  :experiment:runner:test :experiment:oracle:test \
-  :orchestration:variant-a:test
+java -jar gradle/wrapper/gradle-wrapper.jar \
+  :orchestration:variant-a:test :experiment:runner:test :services:payment:test --rerun-tasks
 → BUILD SUCCESSFUL
+variant-a 37/0/0 · runner 72/0/0 · payment 14/0/0
 ```
 
-- Payment IT: opacity 503 + no DB mutation; unhinted CAPTURED (D-016)  
-- CompIT: `f3Recovered_*` SUCCESS; `f3Unresolved_*` AMBIGUOUS + CAPTURED/HELD + no refund/arrange  
-- Runner unit: F3 controllers + acceptance gate + adapter hints  
-- Regressions: F0/F1-P/F2 paths in same suites green  
+CompIT uses real Postgres + Boot jars + `TestWorkflowEnvironment` (not live Temporal cluster). Retry behavior: behavioral (exhausted 503 → leave-dangling); not quantitative attempt counts.
 
-**S3-E live Temporal E2E lab:** **not** run (optional 1 SP).
+## Re-audit verdict (this session)
 
-## Key design (Source fact)
-
-| Topic | Behavior |
-| --- | --- |
-| Opacity | `RESOLVE_TRANSPORT_OPAQUE` → HTTP 503; header-presence; no shared counter |
-| getPayment | activity takes `faultHint`; experimental path uses resolve hint; compensation/refresh unhinted except Unresolved leave-dangling |
-| Unresolved compensation | When AMBIGUOUS + opacity hint + in-memory UNKNOWN → skip refund **and** release (CAPTURED+HELD) |
-| Harness gate | profile + Oracle AMBIGUOUS + DB CAPTURED/HELD/no ARRANGED; no Oracle API change |
-
-## Limitations / audit notes
-
-- Unresolved CompIT uses `resolveAttemptLimit=1` (Temporal still retries each activity ×5).  
-- Preflight creates probe payments (same class as F1-P residue).  
-- Self-audit only — Owner independent audit still required before publication auth.  
-- Local `c16e1f0` EOD docs commit remains unpushed; S3 commits are branch-local.
-
-## Taiga / Obsidian
-
-- #35 In Progress — S3 notes + **9 SP** estimate recorded (≠ Done)  
-- #37 In Progress unchanged  
-- #68 New unchanged  
-- Vault Current Status / Weekly Log updated  
+**PASS WITH LIMITATIONS** — HIGH addressed; CANCELLED gate tightened; lifecycle mock coverage added. Remaining: `c16e1f0` still in branch history; no S3-E live Temporal; quantitative retry counts not asserted.
 
 ## Ask
 
-1. Owner audit → then separate push/PR/merge auth.  
-2. Do not mark #35/#37 Done.  
+Owner: review remediation → separate auth for push/PR (and decide fate of `c16e1f0`). Do not mark #35 Done.

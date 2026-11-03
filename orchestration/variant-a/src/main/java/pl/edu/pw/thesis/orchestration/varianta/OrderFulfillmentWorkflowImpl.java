@@ -128,8 +128,11 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
                     break;
                 }
             } catch (ActivityFailure e) {
-                // Temporal retries exhausted on retryable transport (e.g. HTTP 503 opacity).
-                // Do not invent FAILED; keep prior UNKNOWN/PENDING observation.
+                // Only exhausted HTTP_503 under explicit transport-opacity hint may continue as
+                // unresolved (F3-Unresolved). BUSINESS / other failures must propagate.
+                if (!isExhaustedTransportOpacityFailure(e, input.resolveFaultHint())) {
+                    throw e;
+                }
                 snap = null;
             }
         }
@@ -140,6 +143,9 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
                 snap = activities.getPayment(state.paymentId, input.resolveFaultHint());
                 state.paymentState = snap.state();
             } catch (ActivityFailure e) {
+                if (!isExhaustedTransportOpacityFailure(e, input.resolveFaultHint())) {
+                    throw e;
+                }
                 snap = null;
             }
         }
@@ -421,6 +427,25 @@ public class OrderFulfillmentWorkflowImpl implements OrderFulfillmentWorkflow {
 
     private static boolean isTransportOpacityHint(String hint) {
         return hint != null && "RESOLVE_TRANSPORT_OPAQUE".equals(hint.trim());
+    }
+
+    /**
+     * True only when the armed resolve hint is transport opacity and the activity failure chain
+     * contains a retryable {@code HTTP_503} {@link ApplicationFailure} (Temporal wraps it under
+     * {@link ActivityFailure} after exhausting retries).
+     */
+    private static boolean isExhaustedTransportOpacityFailure(ActivityFailure failure, String resolveHint) {
+        if (!isTransportOpacityHint(resolveHint)) {
+            return false;
+        }
+        Throwable t = failure;
+        while (t != null) {
+            if (t instanceof ApplicationFailure af && "HTTP_503".equals(af.getType())) {
+                return true;
+            }
+            t = t.getCause();
+        }
+        return false;
     }
 
     /** D-208 Option E — honest terminal labeling. */

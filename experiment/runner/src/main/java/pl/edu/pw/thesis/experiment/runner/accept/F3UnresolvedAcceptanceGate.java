@@ -50,8 +50,13 @@ public final class F3UnresolvedAcceptanceGate {
             return Optional.of("F3-Unresolved requires single reservation HELD");
         }
         Optional<ShipmentView> ship = snap.shipment();
-        if (ship.isPresent() && ship.get().state() == ShipmentState.ARRANGED) {
-            return Optional.of("F3-Unresolved forbids ARRANGED shipment");
+        // Strict: empty optional or explicit NONE only. CANCELLED/ARRANGED must not pass.
+        if (ship.isPresent()) {
+            ShipmentState st = ship.get().state();
+            if (st != ShipmentState.NONE) {
+                return Optional.of(
+                        "F3-Unresolved requires absent shipment (no row / NONE), got " + st);
+            }
         }
         return Optional.empty();
     }

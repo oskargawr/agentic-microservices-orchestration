@@ -55,33 +55,29 @@ class F3UnresolvedAcceptanceGateTest {
 
     @Test
     void f3Unresolved_rejectsArrangedShipment() {
-        UUID orderId = UUID.randomUUID();
-        BusinessSnapshot snap = new BusinessSnapshot(
-                orderId,
-                "SKU-MVP-1",
-                List.of(new ReservationView(
-                        UUID.randomUUID(), orderId, "SKU-MVP-1", 1, ReservationState.HELD)),
-                Optional.of(new PaymentView(
-                        UUID.randomUUID(), orderId, 100, "PLN", PaymentState.CAPTURED)),
-                Optional.of(new ShipmentView(UUID.randomUUID(), orderId, ShipmentState.ARRANGED)),
-                Optional.empty(),
-                List.of());
-        OracleResult result = new OracleResult(
-                BusinessOutcome.AMBIGUOUS,
-                OraclePattern.NONE,
-                OracleReasonCode.COMPENSATION_INCOMPLETE,
-                List.of(),
-                List.of(),
-                snap,
-                "wf",
-                "t",
-                OracleResult.EVALUATOR_VERSION,
-                Instant.parse("2026-11-03T00:00:00Z"));
-        assertThat(F3UnresolvedAcceptanceGate.rejectReason("F3-Unresolved", result))
+        assertThat(F3UnresolvedAcceptanceGate.rejectReason(
+                        "F3-Unresolved", ambiguousWithShipment(ShipmentState.ARRANGED)))
                 .isPresent()
                 .get()
                 .asString()
                 .contains("ARRANGED");
+    }
+
+    @Test
+    void f3Unresolved_rejectsCancelledShipment() {
+        assertThat(F3UnresolvedAcceptanceGate.rejectReason(
+                        "F3-Unresolved", ambiguousWithShipment(ShipmentState.CANCELLED)))
+                .isPresent()
+                .get()
+                .asString()
+                .contains("CANCELLED");
+    }
+
+    @Test
+    void f3Unresolved_acceptsExplicitNoneShipmentRow() {
+        assertThat(F3UnresolvedAcceptanceGate.rejectReason(
+                        "F3-Unresolved", ambiguousWithShipment(ShipmentState.NONE)))
+                .isEmpty();
     }
 
     private static OracleResult ambiguousCapturedHeld() {
@@ -96,6 +92,25 @@ class F3UnresolvedAcceptanceGateTest {
                 Optional.empty(),
                 Optional.empty(),
                 List.of());
+        return oracleAmbiguous(snap);
+    }
+
+    private static OracleResult ambiguousWithShipment(ShipmentState shipmentState) {
+        UUID orderId = UUID.randomUUID();
+        BusinessSnapshot snap = new BusinessSnapshot(
+                orderId,
+                "SKU-MVP-1",
+                List.of(new ReservationView(
+                        UUID.randomUUID(), orderId, "SKU-MVP-1", 1, ReservationState.HELD)),
+                Optional.of(new PaymentView(
+                        UUID.randomUUID(), orderId, 100, "PLN", PaymentState.CAPTURED)),
+                Optional.of(new ShipmentView(UUID.randomUUID(), orderId, shipmentState)),
+                Optional.empty(),
+                List.of());
+        return oracleAmbiguous(snap);
+    }
+
+    private static OracleResult oracleAmbiguous(BusinessSnapshot snap) {
         return new OracleResult(
                 BusinessOutcome.AMBIGUOUS,
                 OraclePattern.NONE,
